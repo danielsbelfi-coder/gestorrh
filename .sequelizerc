@@ -1,0 +1,7 @@
+const path = require ("path")
+
+const config = path.resolve(__dirname, "./config/config.js")
+
+module.exports = {
+    config
+}
