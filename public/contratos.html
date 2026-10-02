@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Contratos</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Contratos</h1>
+
+    <ul id="listaContratos"></ul>
+
+    <h2>Crear contratos</h2>
+    <form id="formCrearContratos">
+        <input type="text" id="trabajadorId" placeholder="trabajador id" required>
+        <select id="tipoContrato">
+            <option value="indefinido">Indefinido</option>
+            <option value="plazo_fijo">Plazo fijo</option>
+            <option value="obra_faena">Obra o faena</option>
+        </select>
+        <input type="date" id="fechaInicio" placeholder="Fecha inicio" required>
+        <input type="text" id="cargoId" placeholder="Cargo id" required>
+        <input type="text" id="funciones" placeholder="Funciones" required>
+        <input type="text" id="lugarPrestacionServicios" placeholder="Lugar prestación de servicios" required>
+        <select id="tipoJornada">
+            <option value="completa">Completa</option>
+            <option value="parcial">Parcial</option>
+            <option value="excluido_limitacion">Excluido limitación</option>
+        </select>
+        <input type="text" id="horasSemanales" placeholder="Horas semanales" required>
+        <input type="text" id="diasTrabajados" placeholder="Días trabajados" required>
+        <select id="sistemaRemuneracion">
+            <option value="mensual">Mensual</option>
+            <option value="diario">Diario</option>
+            <option value="semanal">Semanal</option>
+            <option value="hora">Por hora</option>
+        </select>
+        <input type="text" id="sueldoBase" placeholder="Sueldo base" required>
+        <select id="periodicidadPago">
+            <option value="mensual">Mensual</option>
+            <option value="quincenal">Quincenal</option>
+            <option value="semanal">Semanal</option>
+        </select>
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/contratos.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

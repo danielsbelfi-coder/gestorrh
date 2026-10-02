@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Empresas</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Empresas</h1>
+
+    <ul id="listaEmpresas"></ul>
+
+    <h2>Crear empresas</h2>
+    <form id="formCrearEmpresa">
+        <input type="text" id="rut" placeholder="RUT" required>
+        <input type="text" id="razonSocial" placeholder="Razón social" required>
+        <input type="text" id="representanteLegalNombre" placeholder="Representante Legal" required>
+        <input type="text" id="representanteLegalRut" placeholder="RUT representante" required>
+        <input type="text" id="direccion" placeholder="Dirección" required>
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/empresas.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

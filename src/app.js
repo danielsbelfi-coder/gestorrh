@@ -1,4 +1,5 @@
 const express = require("express")
+const path = require("path")
 const app = express()
 const empresaRoutes = require("./empresas/empresa.routes")
 const personaRoutes = require("./trabajadores/persona.routes")
@@ -11,6 +12,8 @@ const parametrosRoutes = require('./remuneraciones/parametro_legal.routes.js')
 const periodoRemuneracionRoutes = require('./remuneraciones/periodo_remuneracion.routes.js')
 const usuarioRoutes = require("./usuarios/usuario.routes.js")
 const authRoutes = require("./auth/auth.routes.js")
+const afpRoutes = require("./remuneraciones/afp.routes.js")
+const isapreRoutes = require("./remuneraciones/isapre.routes.js")
 const verificarToken = require("./shared/middlewares/auth.middleware")
 app.use(express.json());
 
@@ -24,6 +27,9 @@ app.use("/api/parametros-legales", verificarToken, parametrosRoutes)
 app.use("/api/periodos-remuneracion", verificarToken, periodoRemuneracionRoutes)
 app.use("/api/usuarios", verificarToken, usuarioRoutes)
 app.use("/api/auth", authRoutes)
+app.use("/api/afps", verificarToken, afpRoutes)
+app.use("/api/isapres", verificarToken, isapreRoutes)
+app.use(express.static(path.join(__dirname, "../public")))
 
 app.use(manejarErrores)
 

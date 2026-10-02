@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Trabajadores</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Trabajadores</h1>
+
+    <ul id="listaTrabajadores"></ul>
+
+    <h2>Crear trabajadores</h2>
+    <form id="formCrearTrabajador">
+        <input type="text" id="personaId" placeholder="Persona id" required>
+        <input type="text" id="empresaId" placeholder="empresa id" required>
+        <input type="date" id="fechaIngreso" required>
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/trabajadores.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

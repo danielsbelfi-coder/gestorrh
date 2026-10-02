@@ -7,12 +7,14 @@ const { Empresa } = require("../empresas/empresa.model");
 const { Persona } = require("../trabajadores/persona.model");
 const { Trabajador } = require("../trabajadores/trabajador.model");
 const { Usuario } = require("../usuarios/usuario.model");
-const {ParametroLegal} = require("../remuneraciones/parametro_legal.model");
+const { ParametroLegal } = require("../remuneraciones/parametro_legal.model");
 const { PeriodoRemuneracion } = require("../remuneraciones/periodo_remuneracion.model");
 const { Liquidacion } = require("../remuneraciones/liquidacion.model");
 const { UsuarioEmpresaRol } = require("../usuarios/usuario_empresa_rol.model")
 const { Rol } = require("../usuarios/rol.model")
 const { TramoImpuesto } = require("../remuneraciones/tramo_impuesto.model.js")
+const { Afp } = require("../remuneraciones/afp.model.js")
+const { Isapre } = require("../remuneraciones/isapre.model.js")
 
 
 Trabajador.belongsTo(Persona, {
@@ -117,11 +119,11 @@ Liquidacion.belongsTo(Trabajador, {
 Trabajador.hasMany(Liquidacion, {
     foreignKey: "trabajador_id"
 })
-UsuarioEmpresaRol.belongsTo(Usuario, { 
-    foreignKey: "usuario_id" 
+UsuarioEmpresaRol.belongsTo(Usuario, {
+    foreignKey: "usuario_id"
 })
-Usuario.hasMany(UsuarioEmpresaRol, { 
-    foreignKey: "usuario_id" 
+Usuario.hasMany(UsuarioEmpresaRol, {
+    foreignKey: "usuario_id"
 })
 UsuarioEmpresaRol.belongsTo(Empresa, {
     foreignKey: "empresa_id"
@@ -134,6 +136,18 @@ UsuarioEmpresaRol.belongsTo(Rol, {
 })
 Rol.hasMany(UsuarioEmpresaRol, {
     foreignKey: "rol_id"
+})
+Persona.belongsTo(Afp, {
+    foreignKey: "afp_id"
+})
+Afp.hasMany(Persona, {
+    foreignKey: "afp_id"
+})
+Persona.belongsTo(Isapre, {
+    foreignKey: "isapre_id"
+})
+Isapre.hasMany(Persona, {
+    foreignKey: "isapre_id"
 })
 
 module.exports = {
@@ -151,5 +165,7 @@ module.exports = {
     Liquidacion,
     UsuarioEmpresaRol,
     Rol,
-    TramoImpuesto
+    TramoImpuesto,
+    Afp,
+    Isapre
 }

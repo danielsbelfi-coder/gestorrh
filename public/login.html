@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GestorRH - Login</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Iniciar sesión</h1>
+    <form id="formLogin">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
+        <button type="submit">Entrar</button>
+    </form>
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+
+    <script>
+        const formulario = document.getElementById("formLogin")
+
+        formulario.addEventListener("submit", async function (evento) {
+            evento.preventDefault()
+            const email = document.getElementById("email").value
+            const password = document.getElementById("password").value
+
+            const resultado = await llamarApi("/api/auth/login", {
+                method: "POST",
+                body: JSON.stringify({ email, password })
+            })
+
+            if (resultado.status === 200) {
+                localStorage.setItem("token", resultado.datos.token)
+                window.location.href = "index.html"
+            } else {
+                document.getElementById("mensajeError").textContent = resultado.datos.error
+            }
+        })
+    </script>
+</body>
+
+</html>

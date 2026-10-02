@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Personas</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Personas</h1>
+
+    <ul id="listaPersonas"></ul>
+
+    <h2>Crear personas</h2>
+    <form id="formCrearPersona">
+        <input type="text" id="rut" placeholder="Rut" required>
+        <input type="text" id="dv" placeholder="Dv" required>
+        <input type="text" id="nombres" placeholder="Nombres" required>
+        <input type="text" id="apellidoPaterno" placeholder="apellido paterno" required>
+        <input type="text" id="nacionalidad" placeholder="Nacionalidad" required>
+        <input type="date" id="fechaNacimiento" required>
+        <input type="text" id="direccion" placeholder="Dirección" required>
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/personas.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>
