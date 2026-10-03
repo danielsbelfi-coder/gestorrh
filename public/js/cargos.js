@@ -19,6 +19,8 @@ const formulario = document.getElementById("formCrearCargo")
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
+    document.getElementById("mensajeError").textContent = ""
+
     const datos = {
         empresa_id: document.getElementById("empresaId").value,
         nombre: document.getElementById("nombre").value,

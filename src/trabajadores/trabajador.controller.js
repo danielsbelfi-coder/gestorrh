@@ -4,14 +4,18 @@ const { crearTrabajador, listarTrabajadores, obtenerTrabajadorPorId, actualizarT
 
 async function crear(req, res) {
     try {
-        const nuevoTrabajador = await crearTrabajador(req.body);
+        const nuevoTrabajador = await crearTrabajador(req.body, req.empresasPermitidas);
 
         res.status(201).json(nuevoTrabajador)
 
 
     } catch (error) {
+        if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({ error: error.message })
+
         if (error instanceof ConflictError)
             return res.status(error.statusCode).json({ error: error.message })
+        
         res.status(400).json({
             error: error.message
         })

@@ -19,6 +19,8 @@ const formulario = document.getElementById("formCrearPersona")
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
+    document.getElementById("mensajeError").textContent = ""
+
     const datos = {
         rut: document.getElementById("rut").value,
         dv: document.getElementById("dv").value,

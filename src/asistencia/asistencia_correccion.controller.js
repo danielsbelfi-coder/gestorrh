@@ -6,7 +6,8 @@ async function crear(req, res) {
     try {
         const nuevaCorreccion = await crearCorreccion({
             ...req.body,
-            asistencia_id: req.params.asistenciaId
+            asistencia_id: req.params.asistenciaId,
+            usuario_solicito_id: req.usuario.id
         }, req.empresasPermitidas);
 
         res.status(201).json(nuevaCorreccion)
@@ -26,7 +27,7 @@ async function crear(req, res) {
 
 async function aprobar(req, res) {
     try {
-        const correccionAprobada = await aprobarCorreccion(req.params.id, req.empresasPermitidas)
+        const correccionAprobada = await aprobarCorreccion(req.params.id, req.empresasPermitidas, req.usuario.id)
         res.status(200).json(correccionAprobada)
 
     } catch (error) {

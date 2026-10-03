@@ -19,6 +19,8 @@ const formulario = document.getElementById("formCrearContratos")
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
+    document.getElementById("mensajeError").textContent = ""
+
     const datos = {
         trabajador_id: document.getElementById("trabajadorId").value,
         tipo_contrato: document.getElementById("tipoContrato").value,

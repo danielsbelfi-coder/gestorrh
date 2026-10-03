@@ -4,7 +4,12 @@ const { crearAsistencia, listarAsistencias, obtenerAsistenciaPorId } = require("
 
 async function crear(req, res) {
     try {
-        const nuevaAsistencia = await crearAsistencia(req.body);
+        const nuevaAsistencia = await crearAsistencia({
+            ...req.body,
+            usuario_registro_id: req.usuario.id
+        },
+            req.empresasPermitidas
+        )
 
         res.status(201).json(nuevaAsistencia)
 
@@ -14,11 +19,16 @@ async function crear(req, res) {
             return res.status(error.statusCode).json({
                 error: error.message
             })
+        if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
         res.status(400).json({
             error: error.message
         })
     }
 }
+
 
 async function listar(req, res) {
     try {
@@ -44,7 +54,7 @@ async function obtenerPorId(req, res) {
         res.status(200).json(obtenerIdAsistencia)
 
     } catch (error) {
-       if (error instanceof NotFoundError)
+        if (error instanceof NotFoundError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

@@ -30,7 +30,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
     })
 
     if (liquidacionesEmitidas !== null) {
-        throw new ConflictError("ya existe una liquidacion para este trabajador en este periodo")
+        throw new ConflictError("ya existe una liquidación para este trabajador en este periodo")
     }
 
     const contrato = await ContratoTrabajo.findOne({
@@ -43,6 +43,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un contrato vigente para este trabajador")
     }
 
+    const diasPeriodo = 30
     const primerDia = `${mesVigente.anio}-${String(mesVigente.mes).padStart(2, "0")}-01`
     const ultimoDiaNum = new Date(mesVigente.anio, mesVigente.mes, 0).getDate()
     const ultimoDia = `${mesVigente.anio}-${String(mesVigente.mes).padStart(2, "0")}-${String(ultimoDiaNum).padStart(2, "0")}`
@@ -55,13 +56,27 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         }
     })
 
-    const diasTrabajados = asistenciasDelPeriodo.length
+    const diasNoPagados = await Asistencia.count({
+        where: {
+            trabajador_id: trabajador_id,
+            fecha: { [Op.gte]: primerDia, [Op.lte]: ultimoDia },
+            tipo: { [Op.in]: ["inasistencia", "permiso", "licencia_medica"] }
+        }
+    })
+
+    const diasTrabajados = Math.max(0, diasPeriodo - diasNoPagados)
 
     let horasExtratotal = 0
 
     const horasOrdinariasDiarias = contrato.horas_semanales / 5
 
+
+
     asistenciasDelPeriodo.forEach((asistencia) => {
+        if (asistencia.hora_entrada === null || asistencia.hora_salida === null) {
+            return
+        }
+
         const calculo = calcularHorasExtrasTrabajadas(asistencia.hora_entrada, asistencia.hora_salida)
 
         if (calculo > horasOrdinariasDiarias) {
@@ -90,9 +105,6 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No Existe un parámetro de salud vigente para la fecha del periodo")
     }
 
-
-    const diasPeriodo = 30
-
     const sueldoBaseProporcional = contrato.sueldo_base * diasTrabajados / diasPeriodo
 
     const parametroIMM = await obtenerParametroVigente("INGRESO_MINIMO_MENSUAL", primerDia)
@@ -106,7 +118,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
 
     const montoGratificacion = Math.min(gratificacionCalculada, topeMensual)
 
-    
+
     const totalHaberes = sueldoBaseProporcional + montoHorasExtra + montoGratificacion
 
     const descuentoAFP = sueldoBaseProporcional * (parametroAfp.valor / 100)
@@ -124,10 +136,10 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
 
     const tramo = await TramoImpuesto.findOne({
         where: {
-            desde_utm: { [Op.lte]: baseEnUTM},
-            [ Op.or ]: [
-                {hasta_utm: null},
-                {hasta_utm: { [Op.gte]: baseEnUTM }}
+            desde_utm: { [Op.lte]: baseEnUTM },
+            [Op.or]: [
+                { hasta_utm: null },
+                { hasta_utm: { [Op.gte]: baseEnUTM } }
             ]
         }
     })
@@ -136,7 +148,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un tramo de impuesto unico vigente para la fecha del periodo")
     }
 
-    const montoImpuestoUnico = Math.max(0, (baseTributable * tramo.tasa/100) - (tramo.rebaja_utm * valorUTM.valor))
+    const montoImpuestoUnico = Math.max(0, (baseTributable * tramo.tasa / 100) - (tramo.rebaja_utm * valorUTM.valor))
 
     const totalDescuentos = descuentoAFP + descuentoSalud
 
@@ -206,7 +218,7 @@ async function obtenerLiquidacionPorId(id, empresasPermitidas) {
     )
 
     if (liquidacion === null) {
-        throw new NotFoundError("Liquidacion no encontrada")
+        throw new NotFoundError("Liquidación no encontrada")
     }
 
     return liquidacion

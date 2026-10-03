@@ -4,12 +4,14 @@ const { crearCargo, listarCargos, obtenerCargoPorId, actualizarCargo, desactivar
 
 async function crear(req, res) {
     try {
-        const nuevoCargo = await crearCargo(req.body);
+        const nuevoCargo = await crearCargo(req.body, req.empresasPermitidas);
 
         res.status(201).json(nuevoCargo)
 
 
     } catch (error) {
+        if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({ error: error.message })
         if (error instanceof ConflictError)
             return res.status(error.statusCode).json({ error: error.message })
         res.status(400).json({ error: error.message })

@@ -2,7 +2,12 @@ const { Trabajador } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
 
-async function crearTrabajador(datos) {
+async function crearTrabajador(datos, empresasPermitidas) {
+
+    if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
+        throw new NotFoundError("Empresa no encontrada")
+    }
+    
     const trabajadorExistente = await Trabajador.findOne({
         where: {
             persona_id: datos.persona_id,

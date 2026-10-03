@@ -5,7 +5,8 @@ async function crear(req, res) {
     try {
         const nuevoAnexo = await crearAnexo({
             ...req.body,
-            contrato_id: req.params.contratoId
+            contrato_id: req.params.contratoId,
+            usuario_creo_id: req.usuario.id
         }, req.empresasPermitidas);
 
         res.status(201).json(nuevoAnexo)

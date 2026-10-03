@@ -19,6 +19,8 @@ const formulario = document.getElementById("formCrearEmpresa")
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
+    document.getElementById("mensajeError").textContent = ""
+
     const datos = {
         rut: document.getElementById("rut").value,
         razon_social: document.getElementById("razonSocial").value,

@@ -19,6 +19,8 @@ const formulario = document.getElementById("formCrearTrabajador")
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
+    document.getElementById("mensajeError").textContent = ""
+
     const datos = {
         persona_id: document.getElementById("personaId").value,
         empresa_id: document.getElementById("empresaId").value,

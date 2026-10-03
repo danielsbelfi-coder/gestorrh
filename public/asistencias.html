@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Asistencia</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Asistencia</h1>
+
+    <ul id="listaAsistencias"></ul>
+
+    <h2>Crear asistencia</h2>
+    <form id="formCrearAsistencias">
+        <input type="text" id="trabajadorId" placeholder="trabajador id" required>
+        <input type="date" id="fecha" placeholder="Fecha" required>
+        <input type="time" id="horaEntrada" placeholder="Hora entrada">
+        <input type="time" id="horaSalida" placeholder="Hora salida">
+        <select id="tipo">
+            <option value="normal">Normal</option>
+            <option value="atraso">Atraso</option>
+            <option value="inasistencia">Inasistencia</option>
+            <option value="permiso">Permiso</option>
+            <option value="vacaciones">Vacaciones</option>
+            <option value="licencia_medica">Licencia médica</option>
+        </select>
+        <select id="fuente">
+            <option value="manual">Manual</option>
+            <option value="geovictoria">GeoVictoria</option>
+            <option value="importado_csv">Importado csv</option>
+            <option value="otro">Otro</option>
+        </select>
+        <input type="text" id="observaciones" placeholder="Observaciones">
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/asistencias.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

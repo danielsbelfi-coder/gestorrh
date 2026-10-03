@@ -1,16 +1,24 @@
-const { NotFoundError } = require("../shared/errors");
+const { NotFoundError, ConflictError } = require("../shared/errors");
 const { crearContrato, listarContratos, obtenerContratoPorId } = require("./contrato.service");
 
 
 
 async function crear(req, res) {
     try {
-        const nuevoContrato = await crearContrato(req.body);
+        const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas);
 
         res.status(201).json(nuevoContrato)
 
 
     } catch (error) {
+        if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
         res.status(400).json({
             error: error.message
         })
