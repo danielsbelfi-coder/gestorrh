@@ -3,6 +3,7 @@ const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { calcularLiquidacion } = require("./liquidacion.calculator.js")
 
 
 function calcularHorasExtrasTrabajadas(horaEntrada, horaSalida) {
@@ -45,6 +46,29 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
 
     const diasPeriodo = 30
     const primerDia = `${mesVigente.anio}-${String(mesVigente.mes).padStart(2, "0")}-01`
+
+    const tramos = await TramoImpuesto.findAll({
+        where: {
+            vigencia_desde: { [Op.lte]: primerDia },
+            [Op.or]: [
+                { vigencia_hasta: null },
+                { vigencia_hasta: { [Op.gte]: primerDia } }
+            ]
+        },
+        order: [["desde_utm", "ASC"]]
+    }
+    )
+
+    const tramosParaCalculo = tramos.map(function (t) {
+        return {
+            desdeUTM: Number(t.desde_utm),
+            hastaUTM: t.hasta_utm ===null ? null : Number(t.hasta_utm),
+            tasa: Number(t.tasa),
+            rebajaUTM: Number(t.rebaja_utm)
+        }
+    })
+
+
     const ultimoDiaNum = new Date(mesVigente.anio, mesVigente.mes, 0).getDate()
     const ultimoDia = `${mesVigente.anio}-${String(mesVigente.mes).padStart(2, "0")}-${String(ultimoDiaNum).padStart(2, "0")}`
 
@@ -89,11 +113,16 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un parámetro de recargo de hora extra vigente para la fecha del periodo")
     }
 
-    const valorHoraOrdinaria = (contrato.sueldo_base / 30 * 28) / (contrato.horas_semanales * 4)
-    const valorHoraExtra = valorHoraOrdinaria * (1 + parametroRecargo.valor / 100)
-    const montoHorasExtra = horasExtratotal * valorHoraExtra
+    const parametroUF = await obtenerParametroVigente("UF", primerDia)
+    if (parametroUF === null) {
+        throw new ConflictError("No existe un parámetro de UF vigente para la fecha del periodo")
+    }
 
 
+    const parametroTopeImponible = await obtenerParametroVigente("TOPE_IMPONIBLE_UF", primerDia)
+    if (parametroTopeImponible === null) {
+        throw new ConflictError("No existe un parámetro tope imponible vigente para la fecha del periodo")
+    }
 
     const parametroAfp = await obtenerParametroVigente("TASA_AFP_MODELO", primerDia)
     if (parametroAfp === null) {
@@ -105,55 +134,39 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No Existe un parámetro de salud vigente para la fecha del periodo")
     }
 
-    const sueldoBaseProporcional = contrato.sueldo_base * diasTrabajados / diasPeriodo
-
     const parametroIMM = await obtenerParametroVigente("INGRESO_MINIMO_MENSUAL", primerDia)
     if (parametroIMM === null) {
         throw new ConflictError("No existe un parámetro de Ingreso Minimo Mensual vigente para la fecha del periodo")
     }
 
-    const topeMensual = (4.75 * parametroIMM.valor) / 12
-
-    const gratificacionCalculada = sueldoBaseProporcional * 0.25
-
-    const montoGratificacion = Math.min(gratificacionCalculada, topeMensual)
-
-
-    const totalHaberes = sueldoBaseProporcional + montoHorasExtra + montoGratificacion
-
-    const descuentoAFP = sueldoBaseProporcional * (parametroAfp.valor / 100)
-
-    const descuentoSalud = sueldoBaseProporcional * (parametroSalud.valor / 100)
-
-    const baseTributable = (sueldoBaseProporcional + montoHorasExtra + montoGratificacion) - (descuentoAFP + descuentoSalud)
-
     const valorUTM = await obtenerParametroVigente("UTM", primerDia)
     if (valorUTM === null) {
         throw new ConflictError("No existe un parámetro de impuesto unico vigente para la fecha del periodo")
     }
-
-    const baseEnUTM = baseTributable / valorUTM.valor
-
-    const tramo = await TramoImpuesto.findOne({
-        where: {
-            desde_utm: { [Op.lte]: baseEnUTM },
-            [Op.or]: [
-                { hasta_utm: null },
-                { hasta_utm: { [Op.gte]: baseEnUTM } }
-            ]
-        }
-    })
-
-    if (tramo === null) {
-        throw new ConflictError("No existe un tramo de impuesto unico vigente para la fecha del periodo")
+    
+    const datos = {
+        sueldoBase:  Number(contrato.sueldo_base),
+        horasSemanales: Number(contrato.horas_semanales),
+        diasTrabajados: diasTrabajados,
+        diasPeriodo: diasPeriodo,
+        horasExtra: horasExtratotal,
+        recargoHoraExtra: Number(parametroRecargo.valor),
+        ingresoMinimoMensual: Number(parametroIMM.valor),
+        tasaAfp: Number(parametroAfp.valor),
+        tasaSalud: Number(parametroSalud.valor),
+        topeImponibleUF: Number(parametroTopeImponible.valor),
+        valorUF: Number(parametroUF.valor),
+        valorUTM: Number(valorUTM.valor),
+        tramos: tramosParaCalculo
     }
 
-    const montoImpuestoUnico = Math.max(0, (baseTributable * tramo.tasa / 100) - (tramo.rebaja_utm * valorUTM.valor))
-
-    const totalDescuentos = descuentoAFP + descuentoSalud
-
-    const liquidoAPagar = totalHaberes - totalDescuentos - montoImpuestoUnico
-
+    let resultado
+    try {
+        resultado = calcularLiquidacion(datos)
+    } catch (error) {
+        throw new ConflictError(error.message)
+    } 
+    
     const snapshotContrato = {
         sueldo_base: contrato.sueldo_base,
         tipo_contrato: contrato.tipo_contrato,
@@ -163,11 +176,12 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
     }
 
     const detalleCalculo = {
-        afp: { codigo: "TASA_AFP_MODELO", valor: parametroAfp.valor, monto: descuentoAFP },
-        salud: { codigo: "TASA_SALUD_MINIMA", valor: parametroSalud.valor, monto: descuentoSalud },
-        horasExtra: { codigo: "RECARGO_HORA_EXTRA", valor: parametroRecargo.valor, monto: montoHorasExtra },
-        gratificacion: { codigo: "INGRESO_MINIMO_MENSUAL", topeMensual: topeMensual, monto: montoGratificacion },
-        impuestoUnico: { baseEnUTM: baseEnUTM, tasa: tramo.tasa, rebajaUtm: tramo.rebaja_utm, monto: montoImpuestoUnico }
+        afp: { codigo: "TASA_AFP_MODELO", valor: parametroAfp.valor, monto: resultado.descuentoAFP },
+        salud: { codigo: "TASA_SALUD_MINIMA", valor: parametroSalud.valor, monto: resultado.descuentoSalud },
+        horasExtra: { codigo: "RECARGO_HORA_EXTRA", valor: parametroRecargo.valor, monto: resultado.montoHorasExtra },
+        gratificacion: { codigo: "INGRESO_MINIMO_MENSUAL", topeMensual: resultado.topeMensual, monto: resultado.montoGratificacion },
+        impuestoUnico: { baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUtm: resultado.tramo.rebajaUTM, monto: resultado.montoImpuestoUnico },
+        cotizaciones: { parametrotopeImponible: parametroTopeImponible.valor, valorUF: parametroUF.valor, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones }
     }
 
     const fechaCalculo = new Date().toISOString().split("T")[0]
@@ -178,24 +192,25 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         snapshot_contrato: snapshotContrato,
         dias_trabajados: diasTrabajados,
         dias_periodo: diasPeriodo,
-        sueldo_base_proporcional: sueldoBaseProporcional,
+        sueldo_base_proporcional: resultado.sueldoBaseProporcional,
         horas_extra: horasExtratotal,
-        valor_hora_extra: valorHoraExtra,
-        monto_horas_extra: montoHorasExtra,
-        monto_gratificacion: montoGratificacion,
-        total_haberes: totalHaberes,
-        descuento_afp: descuentoAFP,
-        descuento_salud: descuentoSalud,
-        monto_impuesto_unico: montoImpuestoUnico,
-        total_descuentos: totalDescuentos,
-        liquido_a_pagar: liquidoAPagar,
+        valor_hora_extra: resultado.valorHoraExtra,
+        monto_horas_extra: resultado.montoHorasExtra,
+        monto_gratificacion: resultado.montoGratificacion,
+        total_haberes: resultado.totalHaberes,
+        descuento_afp: resultado.descuentoAFP,
+        descuento_salud: resultado.descuentoSalud,
+        monto_impuesto_unico: resultado.montoImpuestoUnico,
+        total_descuentos: resultado.totalDescuentos,
+        liquido_a_pagar: resultado.liquidoAPagar,
         detalle_calculo: detalleCalculo,
         fecha_calculo: fechaCalculo
     })
 }
 
-async function listarLiquidaciones(empresasPermitidas) {
+async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     return await Liquidacion.findAll({
+        where: { periodo_id: periodo_id },
         include: [{
             model: PeriodoRemuneracion,
             where: {

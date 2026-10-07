@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Periodos</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Periodos Remuneración</h1>
+
+    <ul id="listaPeriodos"></ul>
+
+    <h2>Crear periodos de remuneración</h2>
+    <form id="formCrearPeriodos">
+        <input type="text" id="empresaId" placeholder="empresa id" required>
+        <input type="number" id="mes" placeholder="mes" min="1" max="12" required>
+        <input type="number" id="anio" placeholder="año" required>
+        <input type="date" id="fechaApertura" placeholder="Fecha apertura" required>
+        <button type="submit">Crear</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/periodos.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

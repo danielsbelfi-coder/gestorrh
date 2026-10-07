@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - liquidaciones</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <select id="periodo"></select>
+
+    <ul id="listaLiquidaciones"></ul>
+
+    <form id="formCalcular">
+        <input type="text" id="trabajadorId" placeholder="trabajador id" required>
+        <button type="submit">Calcular</button>
+    </form>
+
+    <p id="mensajeError"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/liquidaciones.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

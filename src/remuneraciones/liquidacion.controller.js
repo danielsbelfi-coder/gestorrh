@@ -30,7 +30,7 @@ async function crear(req, res) {
 
 async function listar(req, res) {
     try {
-        const listaLiquidacion = await listarLiquidaciones(req.empresasPermitidas)
+        const listaLiquidacion = await listarLiquidaciones(req.params.periodoId, req.empresasPermitidas)
 
         res.status(200).json(listaLiquidacion)
 
