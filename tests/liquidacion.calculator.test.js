@@ -18,6 +18,8 @@ const PARAMETROS = {
     topeImponibleUF: 80,
     valorUF: 40000,
     valorUTM: 65000,
+    tasaCesantia: 0,
+    topeCesantiaUF: 135.2,
     tramos: TRAMOS
 }
 
@@ -51,8 +53,8 @@ test("mes completo con horas extra y gratificación con tope", () => {
     assert.strictEqual(resultado.montoHorasExtra, 30000)
     assert.ok(Math.abs(resultado.topeMensual - 197916.67) < 0.01)
     assert.strictEqual(resultado.sueldoBaseProporcional, 900000)
-    assert.ok(Math.abs(resultado.montoGratificacion - 197916.67) < 0.01)
-    assert.ok(Math.abs(resultado.rentaImponible - 1127916.67) < 0.01)
+    assert.equal(resultado.montoGratificacion, 197917)
+    assert.equal(resultado.rentaImponible, 1127917)
 })
 
 
@@ -83,19 +85,20 @@ test("sueldo alto: tope imponible aplicado e impuesto en el tramo más alto", ()
         horasExtra: 0
     })
 
-    assert.ok(Math.abs(resultado.rentaImponible - 30197916.67) < 0.01)
+    assert.equal(resultado.rentaImponible, 30197917)
     assert.ok(Math.abs(resultado.topeImponible - 3200000) < 0.01)
     assert.ok(Math.abs(resultado.baseCotizaciones - 3200000) < 0.01)
     assert.ok(Math.abs(resultado.descuentoAFP - 344640) < 0.01)
     assert.ok(Math.abs(resultado.descuentoSalud - 224000) < 0.01)
-    assert.ok(Math.abs(resultado.baseTributable - 29629276.67) < 0.01)
-    assert.ok(Math.abs(resultado.montoImpuestoUnico - 3708102.35) < 0.01)
-    assert.ok(Math.abs(resultado.liquidoAPagar - 25921174.32) < 0.01)
+    assert.equal(resultado.baseTributable, 29629277)
+    assert.equal(resultado.montoImpuestoUnico, 3708102)
+    assert.equal(resultado.liquidoAPagar, 25921175)
+    assert.equal(resultado.totalDescuentos, 4276742)
 })
 
 test("base de 13,55 UTM cae en el segundo tramo, sin hueco", () => {
     const resultado = conBaseEnUTM(1355000)
-   
+
     assert.ok(Math.abs(resultado.tramo.tasa - 4) < 0.01)
     assert.ok(Math.abs(resultado.montoImpuestoUnico - 200) < 0.01)
 
@@ -103,8 +106,53 @@ test("base de 13,55 UTM cae en el segundo tramo, sin hueco", () => {
 
 test("base exacta de 13,5 UTM: el límite inferior se incluye", () => {
     const resultado = conBaseEnUTM(1350000)
-   
+
     assert.ok(Math.abs(resultado.tramo.tasa - 4) < 0.01)
     assert.ok(Math.abs(resultado.montoImpuestoUnico - 0) < 0.01)
 
+})
+
+test("redondeo: la AFP con decimal .75 sube al peso siguiente", () => {
+    const resultado = calcularLiquidacion({
+        ...PARAMETROS,
+        sueldoBase: 650000,
+        horasSemanales: 42,
+        diasTrabajados: 30,
+        diasPeriodo: 30,
+        horasExtra: 0,
+        ingresoMinimoMensual: 553553,
+        tasaAfp: 11.27,
+        tasaSalud: 7,
+        topeImponibleUF: 90,
+        valorUF: 41057.2,
+        valorUTM: 71721
+    })
+
+    assert.strictEqual(resultado.montoGratificacion, 162500)
+    assert.strictEqual(resultado.rentaImponible, 812500)
+    assert.strictEqual(resultado.descuentoAFP, 91569)
+    assert.strictEqual(resultado.descuentoSalud, 56875)
+})
+
+test("cesantía: tope en UF y redondeo", () => {
+    const resultado = calcularLiquidacion({
+        ...PARAMETROS,
+        sueldoBase: 30000000,
+        horasSemanales: 42,
+        diasTrabajados: 30,
+        diasPeriodo: 30,
+        horasExtra: 0,
+        ingresoMinimoMensual: 553553,
+        tasaAfp: 10.58,
+        tasaSalud: 7,
+        topeImponibleUF: 90,
+        valorUF: 41057.2,
+        valorUTM: 71721,
+        tasaCesantia: 0.6,
+        topeCesantiaUF: 135.2
+    })
+
+    assert.strictEqual(resultado.baseCesantia, 5550933)
+    assert.strictEqual(resultado.descuentoCesantia, 33306)
+    assert.strictEqual(resultado.baseTributable, 29536202)
 })

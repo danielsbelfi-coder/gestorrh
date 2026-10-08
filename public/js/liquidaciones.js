@@ -42,6 +42,7 @@ async function cargarLiquidaciones() {
                         <p>Total Haberes: ${formatearPesos(liquidacion.total_haberes)}</p>
                         <p>Descuento AFP: ${formatearPesos(liquidacion.descuento_afp)}</p>
                         <p>Descuento salud: ${formatearPesos(liquidacion.descuento_salud)}</p>
+                        <p>Descuento cesantía: ${formatearPesos(liquidacion.descuento_cesantia)}</p>
                         <p>Monto impuesto unico: ${formatearPesos(liquidacion.monto_impuesto_unico)}</p>
                         <p>Liquido a pagar: ${formatearPesos(liquidacion.liquido_a_pagar)}</p>
                     </details>

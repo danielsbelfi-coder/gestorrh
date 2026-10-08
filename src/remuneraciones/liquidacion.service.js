@@ -1,10 +1,12 @@
-const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Asistencia, Trabajador, TramoImpuesto } = require("../shared/associations.js")
+const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Asistencia, Trabajador, TramoImpuesto, Persona, Afp } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
 const { calcularLiquidacion } = require("./liquidacion.calculator.js")
-
+const { obtenerContratoPorId } = require("../contratos/contrato.service.js")
+const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
+const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
 
 function calcularHorasExtrasTrabajadas(horaEntrada, horaSalida) {
     const [horaE, minE] = horaEntrada.split(":")
@@ -14,6 +16,21 @@ function calcularHorasExtrasTrabajadas(horaEntrada, horaSalida) {
     const minutosSalida = Number(horaS) * 60 + Number(minS)
 
     return (minutosSalida - minutosEntrada) / 60
+}
+
+function trabajadorCotizaCesantia(contrato, trabajador, primerDia){
+    const tipoContrato = contrato.tipo_contrato
+    const fechaIngreso = trabajador.fecha_ingreso
+    const anioIngreso = Number(trabajador.fecha_ingreso.slice(0, 4))
+    const anioLimite = anioIngreso + ANIOS_MAXIMO_COTIZACION_CESANTIA
+    const mesYDia = trabajador.fecha_ingreso.slice(4)
+    const fechaLimite = `${anioLimite}${mesYDia}`
+
+    if (tipoContrato === "indefinido" && fechaIngreso > FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
+        return true
+    }
+
+    return false
 }
 
 async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
@@ -44,6 +61,25 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un contrato vigente para este trabajador")
     }
 
+    const buscarTrabajador = await Trabajador.findByPk(trabajador_id, {
+        include: [
+            {
+                model: Persona,
+                include: [{ model: Afp }]
+            }
+        ]
+    })
+
+    if (buscarTrabajador === null) {
+        throw new NotFoundError("Trabajador no encontrado")
+    }
+    if (buscarTrabajador.Persona.Afp === null){
+        throw new ConflictError("El trabajador no tiene una AFP asignada")
+    }
+    if (buscarTrabajador.Persona.Afp.comision === null) {
+        throw new ConflictError("la AFP del trabajador no tiene comisión registrada")
+    }
+
     const diasPeriodo = 30
     const primerDia = `${mesVigente.anio}-${String(mesVigente.mes).padStart(2, "0")}-01`
 
@@ -62,7 +98,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
     const tramosParaCalculo = tramos.map(function (t) {
         return {
             desdeUTM: Number(t.desde_utm),
-            hastaUTM: t.hasta_utm ===null ? null : Number(t.hasta_utm),
+            hastaUTM: t.hasta_utm === null ? null : Number(t.hasta_utm),
             tasa: Number(t.tasa),
             rebajaUTM: Number(t.rebaja_utm)
         }
@@ -124,14 +160,23 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un parámetro tope imponible vigente para la fecha del periodo")
     }
 
-    const parametroAfp = await obtenerParametroVigente("TASA_AFP_MODELO", primerDia)
-    if (parametroAfp === null) {
-        throw new ConflictError("No Existe un parámetro de AFP para la fecha del periodo")
+    const parametroCotizacionAfp = await obtenerParametroVigente("COTIZACION_OBLIGATORIA_AFP", primerDia)
+    if (parametroCotizacionAfp === null) {
+        throw new ConflictError("No Existe un parámetro de la AFP del trabajador para la fecha del periodo")
     }
 
     const parametroSalud = await obtenerParametroVigente("TASA_SALUD_MINIMA", primerDia)
     if (parametroSalud === null) {
         throw new ConflictError("No Existe un parámetro de salud vigente para la fecha del periodo")
+    }
+
+    const parametroTasaCesantia = await obtenerParametroVigente("TASA_CESANTIA_TRABAJADOR", primerDia)
+    if (parametroTasaCesantia === null) {
+        throw new ConflictError("No Existe un parámetro de tasa seguro de cesantía vigente para la fecha del periodo ")
+    }
+    const parametroTopeCesantia = await obtenerParametroVigente("TOPE_CESANTIA_UF", primerDia)
+    if (parametroTopeCesantia === null) {
+        throw new ConflictError("No Existe un parámetro de tope seguro de cesantía vigente para la fecha del periodo ")
     }
 
     const parametroIMM = await obtenerParametroVigente("INGRESO_MINIMO_MENSUAL", primerDia)
@@ -143,20 +188,22 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
     if (valorUTM === null) {
         throw new ConflictError("No existe un parámetro de impuesto unico vigente para la fecha del periodo")
     }
-    
+
     const datos = {
-        sueldoBase:  Number(contrato.sueldo_base),
+        sueldoBase: Number(contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
         diasTrabajados: diasTrabajados,
         diasPeriodo: diasPeriodo,
         horasExtra: horasExtratotal,
         recargoHoraExtra: Number(parametroRecargo.valor),
         ingresoMinimoMensual: Number(parametroIMM.valor),
-        tasaAfp: Number(parametroAfp.valor),
+        tasaAfp: Number(parametroCotizacionAfp.valor) + Number(buscarTrabajador.Persona.Afp.comision),
         tasaSalud: Number(parametroSalud.valor),
         topeImponibleUF: Number(parametroTopeImponible.valor),
         valorUF: Number(parametroUF.valor),
         valorUTM: Number(valorUTM.valor),
+        topeCesantiaUF: Number(parametroTopeCesantia.valor),
+        tasaCesantia: trabajadorCotizaCesantia(contrato, buscarTrabajador, primerDia) ? Number(parametroTasaCesantia.valor) : 0,
         tramos: tramosParaCalculo
     }
 
@@ -165,8 +212,8 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         resultado = calcularLiquidacion(datos)
     } catch (error) {
         throw new ConflictError(error.message)
-    } 
-    
+    }
+
     const snapshotContrato = {
         sueldo_base: contrato.sueldo_base,
         tipo_contrato: contrato.tipo_contrato,
@@ -176,12 +223,13 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
     }
 
     const detalleCalculo = {
-        afp: { codigo: "TASA_AFP_MODELO", valor: parametroAfp.valor, monto: resultado.descuentoAFP },
+        afp: { codigo: buscarTrabajador.Persona.Afp.codigo, cotizacionObligatoria: Number(parametroCotizacionAfp.valor), comision: Number(buscarTrabajador.Persona.Afp.comision), tasaTotal: datos.tasaAfp, monto: resultado.descuentoAFP },
         salud: { codigo: "TASA_SALUD_MINIMA", valor: parametroSalud.valor, monto: resultado.descuentoSalud },
         horasExtra: { codigo: "RECARGO_HORA_EXTRA", valor: parametroRecargo.valor, monto: resultado.montoHorasExtra },
         gratificacion: { codigo: "INGRESO_MINIMO_MENSUAL", topeMensual: resultado.topeMensual, monto: resultado.montoGratificacion },
         impuestoUnico: { baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUtm: resultado.tramo.rebajaUTM, monto: resultado.montoImpuestoUnico },
-        cotizaciones: { parametrotopeImponible: parametroTopeImponible.valor, valorUF: parametroUF.valor, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones }
+        cotizaciones: { parametrotopeImponible: parametroTopeImponible.valor, valorUF: parametroUF.valor, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
+        cesantia: {cotiza: datos.tasaCesantia > 0, tasa: datos.tasaCesantia, topeUF: Number(parametroTopeCesantia.valor), topeCesantia: resultado.topeCesantia, baseCesantia: resultado.baseCesantia, monto: resultado.descuentoCesantia}
     }
 
     const fechaCalculo = new Date().toISOString().split("T")[0]
@@ -200,6 +248,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         total_haberes: resultado.totalHaberes,
         descuento_afp: resultado.descuentoAFP,
         descuento_salud: resultado.descuentoSalud,
+        descuento_cesantia: resultado.descuentoCesantia,
         monto_impuesto_unico: resultado.montoImpuestoUnico,
         total_descuentos: resultado.totalDescuentos,
         liquido_a_pagar: resultado.liquidoAPagar,

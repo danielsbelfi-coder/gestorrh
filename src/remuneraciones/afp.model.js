@@ -15,6 +15,10 @@ const Afp = sequelize.define("Afp", {
         type: DataTypes.ENUM("activo", "inactivo"),
         allowNull: false,
         defaultValue: "activo"
+    },
+    comision: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true
     }
 }, {
     tableName: "afps"

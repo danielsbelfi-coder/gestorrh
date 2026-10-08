@@ -39,6 +39,11 @@ const Liquidacion = sequelize.define("Liquidacion", {
         type: DataTypes.DECIMAL,
         allowNull: false
     },
+    descuento_cesantia:{
+        type: DataTypes.DECIMAL,
+        allowNull: false,
+        defaultValue: 0
+    },
     total_descuentos: {
         type: DataTypes.DECIMAL,
         allowNull: false
