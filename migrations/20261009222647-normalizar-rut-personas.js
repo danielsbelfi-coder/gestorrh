@@ -3,7 +3,7 @@ const { limpiarRut, calcularDv } = require("../src/shared/rut.js")
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     // 1. Leer todas las personas
     const [personas] = await queryInterface.sequelize.query(
       "SELECT id, rut FROM personas"
@@ -21,7 +21,7 @@ module.exports = {
     }
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     // Irreversible: el formato original de cada RUT no se guarda en ninguna parte
   }
 };

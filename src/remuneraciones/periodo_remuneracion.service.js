@@ -2,19 +2,25 @@ const { PeriodoRemuneracion, Empresa } = require("../shared/associations");
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
 
-async function abrirPeriodo(datos) {
+async function abrirPeriodo(datos, empresasPermitidas) {
+    if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
+        throw new NotFoundError("Empresa no encontrada")
+    }
+
     const periodoExistente = await PeriodoRemuneracion.findOne({
         where: {
             empresa_id: datos.empresa_id,
             mes: datos.mes,
             anio: datos.anio
         }
-
     })
     if (periodoExistente !== null) {
         throw new ConflictError("Ya existe un periodo de remuneraciones creado para este mes y año")
     }
-    return await PeriodoRemuneracion.create(datos)
+
+    return await PeriodoRemuneracion.create(datos, {
+        fields: ["empresa_id", "mes", "anio", "fecha_apertura"]
+    })
 }
 
 async function cerrarPeriodo(id, empresasPermitidas) {

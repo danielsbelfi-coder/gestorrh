@@ -18,7 +18,7 @@ function calcularHorasExtrasTrabajadas(horaEntrada, horaSalida) {
     return (minutosSalida - minutosEntrada) / 60
 }
 
-function trabajadorCotizaCesantia(contrato, trabajador, primerDia){
+function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     const tipoContrato = contrato.tipo_contrato
     const fechaIngreso = trabajador.fecha_ingreso
     const anioIngreso = Number(trabajador.fecha_ingreso.slice(0, 4))
@@ -38,6 +38,20 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
 
     if (mesVigente.estado !== "abierto") {
         throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+
+
+    const buscarTrabajador = await Trabajador.findByPk(trabajador_id, {
+        include: [
+            {
+                model: Persona,
+                include: [{ model: Afp }]
+            }
+        ]
+    })
+
+    if (buscarTrabajador === null || buscarTrabajador.empresa_id !== mesVigente.empresa_id) {
+        throw new NotFoundError("Trabajador no encontrado")
     }
 
     const liquidacionesEmitidas = await Liquidacion.findOne({
@@ -61,23 +75,9 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         throw new ConflictError("No existe un contrato vigente para este trabajador")
     }
 
-    const buscarTrabajador = await Trabajador.findByPk(trabajador_id, {
-        include: [
-            {
-                model: Persona,
-                include: [{ model: Afp }]
-            }
-        ]
-    })
-
-    
-    if (buscarTrabajador === null) {
-        throw new NotFoundError("Trabajador no encontrado")
-    }
-
     const persona = buscarTrabajador.Persona
 
-    if (persona.Afp === null){
+    if (persona.Afp === null) {
         throw new ConflictError("El trabajador no tiene una AFP asignada")
     }
     if (persona.Afp.comision === null) {
@@ -241,7 +241,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         gratificacion: { codigo: "INGRESO_MINIMO_MENSUAL", topeMensual: resultado.topeMensual, monto: resultado.montoGratificacion },
         impuestoUnico: { baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUtm: resultado.tramo.rebajaUTM, monto: resultado.montoImpuestoUnico },
         cotizaciones: { parametrotopeImponible: parametroTopeImponible.valor, valorUF: parametroUF.valor, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
-        cesantia: {cotiza: datos.tasaCesantia > 0, tasa: datos.tasaCesantia, topeUF: Number(parametroTopeCesantia.valor), topeCesantia: resultado.topeCesantia, baseCesantia: resultado.baseCesantia, monto: resultado.descuentoCesantia}
+        cesantia: { cotiza: datos.tasaCesantia > 0, tasa: datos.tasaCesantia, topeUF: Number(parametroTopeCesantia.valor), topeCesantia: resultado.topeCesantia, baseCesantia: resultado.baseCesantia, monto: resultado.descuentoCesantia }
     }
 
     const fechaCalculo = new Date().toISOString().split("T")[0]

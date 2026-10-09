@@ -20,7 +20,7 @@ async function crearPersona(datos, empresasPermitidas) {
     }
 
     try {
-        return await Persona.create({...datos, rut, dv}, {
+        return await Persona.create({ ...datos, rut, dv }, {
             fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES]
         })
     } catch (error) {

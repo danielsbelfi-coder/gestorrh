@@ -4,18 +4,17 @@ const { abrirPeriodo, cerrarPeriodo, listarPeriodos, obtenerPeriodoPorId } = req
 
 async function crear(req, res) {
     try {
-        const nuevoPeriodo = await abrirPeriodo(req.body)
+        const nuevoPeriodo = await abrirPeriodo(req.body, req.empresasPermitidas)
 
         res.status(201).json(nuevoPeriodo)
 
     } catch (error) {
-        if (error instanceof ConflictError)
+        if (error instanceof ConflictError || error instanceof NotFoundError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
         res.status(400).json({ error: error.message })
     }
-
 }
 
 async function cerrar(req, res) {
