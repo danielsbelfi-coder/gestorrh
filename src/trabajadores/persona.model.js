@@ -2,10 +2,13 @@ const { DataTypes } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 
 const Persona = sequelize.define("Persona", {
+    empresa_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     rut: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+        allowNull: false
     },
     dv: {
         type: DataTypes.STRING,
@@ -79,12 +82,23 @@ const Persona = sequelize.define("Persona", {
         type: DataTypes.STRING,
         allowNull: true
     },
+    plan_isapre_uf: {
+        type: DataTypes.DECIMAL(8, 4),
+        allowNull: true
+    },
     afiliado_afc: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
 }, {
-    tableName: "personas"
+    tableName: "personas",
+    indexes: [
+        {
+            unique: true,
+            fields: ["empresa_id", "rut"],
+            name: "personas_empresa_rut_unique"
+        }
+    ]
 }
 )
 

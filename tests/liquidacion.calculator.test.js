@@ -20,6 +20,7 @@ const PARAMETROS = {
     valorUTM: 65000,
     tasaCesantia: 0,
     topeCesantiaUF: 135.2,
+    planSaludUF: 0,
     tramos: TRAMOS
 }
 
@@ -155,4 +156,52 @@ test("cesantía: tope en UF y redondeo", () => {
     assert.strictEqual(resultado.baseCesantia, 5550933)
     assert.strictEqual(resultado.descuentoCesantia, 33306)
     assert.strictEqual(resultado.baseTributable, 29536202)
+})
+
+
+test("isapre: sobre el 7% de salud", () => {
+    const resultado = calcularLiquidacion({
+        ...PARAMETROS,
+        sueldoBase: 1000000,
+        horasSemanales: 42,
+        diasTrabajados: 30,
+        diasPeriodo: 30,
+        horasExtra: 0,
+        ingresoMinimoMensual: 553553,
+        tasaAfp: 10.58,
+        planSaludUF: 5,
+        topeImponibleUF: 90,
+        valorUF: 41057.2,
+        valorUTM: 71721,
+        tasaCesantia: 0.6,
+        topeCesantiaUF: 135.2
+    })
+
+    assert.strictEqual(resultado.descuentoSalud, 205286)
+    assert.strictEqual(resultado.descuentoCesantia, 7315)
+    assert.strictEqual(resultado.baseTributable, 877532)
+})
+
+
+test("isapre: menor al 7% de salud", () => {
+    const resultado = calcularLiquidacion({
+        ...PARAMETROS,
+        sueldoBase: 1000000,
+        horasSemanales: 42,
+        diasTrabajados: 30,
+        diasPeriodo: 30,
+        horasExtra: 0,
+        ingresoMinimoMensual: 553553,
+        tasaAfp: 10.58,
+        planSaludUF: 1.5,
+        topeImponibleUF: 90,
+        valorUF: 41057.2,
+        valorUTM: 71721,
+        tasaCesantia: 0.6,
+        topeCesantiaUF: 135.2
+    })
+
+    assert.strictEqual(resultado.descuentoSalud, 85338)
+    assert.strictEqual(resultado.descuentoCesantia, 7315)
+    assert.strictEqual(resultado.baseTributable, 997480)
 })

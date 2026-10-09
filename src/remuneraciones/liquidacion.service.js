@@ -70,14 +70,25 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         ]
     })
 
+    
     if (buscarTrabajador === null) {
         throw new NotFoundError("Trabajador no encontrado")
     }
-    if (buscarTrabajador.Persona.Afp === null){
+
+    const persona = buscarTrabajador.Persona
+
+    if (persona.Afp === null){
         throw new ConflictError("El trabajador no tiene una AFP asignada")
     }
-    if (buscarTrabajador.Persona.Afp.comision === null) {
+    if (persona.Afp.comision === null) {
         throw new ConflictError("la AFP del trabajador no tiene comisión registrada")
+    }
+
+    if (persona.sistema_salud === null) {
+        throw new ConflictError("El trabajador no tiene un sistema de salud asignado")
+    }
+    if (persona.sistema_salud === "Isapre" && persona.plan_isapre_uf === null) {
+        throw new ConflictError("El trabajador no tiene un valor de plan de isapre ")
     }
 
     const diasPeriodo = 30
@@ -199,6 +210,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
         ingresoMinimoMensual: Number(parametroIMM.valor),
         tasaAfp: Number(parametroCotizacionAfp.valor) + Number(buscarTrabajador.Persona.Afp.comision),
         tasaSalud: Number(parametroSalud.valor),
+        planSaludUF: persona.sistema_salud === "Isapre" ? Number(persona.plan_isapre_uf) : 0,
         topeImponibleUF: Number(parametroTopeImponible.valor),
         valorUF: Number(parametroUF.valor),
         valorUTM: Number(valorUTM.valor),
@@ -224,7 +236,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
 
     const detalleCalculo = {
         afp: { codigo: buscarTrabajador.Persona.Afp.codigo, cotizacionObligatoria: Number(parametroCotizacionAfp.valor), comision: Number(buscarTrabajador.Persona.Afp.comision), tasaTotal: datos.tasaAfp, monto: resultado.descuentoAFP },
-        salud: { codigo: "TASA_SALUD_MINIMA", valor: parametroSalud.valor, monto: resultado.descuentoSalud },
+        salud: { codigo: "TASA_SALUD_MINIMA", valor: parametroSalud.valor, sistema: persona.sistema_salud, planUF: persona.plan_isapre_uf, legal: resultado.descuentoSaludLegal, planPactado: resultado.descuentoPlanPactado, monto: resultado.descuentoSalud },
         horasExtra: { codigo: "RECARGO_HORA_EXTRA", valor: parametroRecargo.valor, monto: resultado.montoHorasExtra },
         gratificacion: { codigo: "INGRESO_MINIMO_MENSUAL", topeMensual: resultado.topeMensual, monto: resultado.montoGratificacion },
         impuestoUnico: { baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUtm: resultado.tramo.rebajaUTM, monto: resultado.montoImpuestoUnico },

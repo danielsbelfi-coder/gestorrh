@@ -13,6 +13,7 @@ function calcularLiquidacion(datos) {
         valorUTM,
         tasaCesantia,
         topeCesantiaUF,
+        planSaludUF,
         tramos
     } = datos
 
@@ -31,7 +32,9 @@ function calcularLiquidacion(datos) {
     const baseCesantia = Math.min(rentaImponible, topeCesantia)
     const descuentoCesantia = Math.round(baseCesantia *(tasaCesantia / 100))
     const descuentoAFP = Math.round(baseCotizaciones * (tasaAfp / 100))
-    const descuentoSalud = Math.round(baseCotizaciones * (tasaSalud / 100))
+    const descuentoSaludLegal = Math.round(baseCotizaciones * (tasaSalud / 100))
+    const descuentoPlanPactado = Math.round(planSaludUF * valorUF)
+    const descuentoSalud = Math.max(descuentoSaludLegal, descuentoPlanPactado)
     const baseTributable = (rentaImponible) - (descuentoAFP + descuentoSalud + descuentoCesantia)
     const baseEnUTM = baseTributable / valorUTM
     const tramo = tramos.find(function (t) {
@@ -67,6 +70,8 @@ function calcularLiquidacion(datos) {
         topeCesantia,
         baseCesantia,
         descuentoCesantia,
+        descuentoSaludLegal,
+        descuentoPlanPactado,
         tramo
     }
 

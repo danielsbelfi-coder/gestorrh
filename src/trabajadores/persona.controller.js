@@ -3,13 +3,12 @@ const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona } =
 
 async function crear(req, res) {
     try {
-        const nuevaPersona = await crearPersona(req.body);
+        const nuevaPersona = await crearPersona(req.body, req.empresasPermitidas);
 
         res.status(201).json(nuevaPersona)
 
-
     } catch (error) {
-        if (error instanceof ConflictError)
+        if (error instanceof ConflictError || error instanceof NotFoundError)
             return res.status(error.statusCode).json({ error: error.message })
         res.status(400).json({
             error: error.message

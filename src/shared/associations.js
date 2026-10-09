@@ -149,6 +149,13 @@ Persona.belongsTo(Isapre, {
 Isapre.hasMany(Persona, {
     foreignKey: "isapre_id"
 })
+Persona.belongsTo(Empresa, {
+    foreignKey: "empresa_id"
+})
+
+Empresa.hasMany(Persona, {
+    foreignKey: "empresa_id"
+})
 
 module.exports = {
     Empresa,

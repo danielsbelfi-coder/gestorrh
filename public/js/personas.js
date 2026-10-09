@@ -2,14 +2,14 @@ requiereLogin()
 
 async function cargarPersonas() {
     const resultado = await llamarApi("/api/personas")
-    
+
     if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error   
+        document.getElementById("mensajeError").textContent = resultado.datos.error
         return
     }
 
     const lista = document.getElementById("listaPersonas")
-    lista.innerHTML = resultado.datos.map(function(persona) {
+    lista.innerHTML = resultado.datos.map(function (persona) {
         return `<li>${persona.nombres} (${persona.rut}) </li>`
     }).join("")
 }
@@ -22,6 +22,7 @@ formulario.addEventListener("submit", async function (evento) {
     document.getElementById("mensajeError").textContent = ""
 
     const datos = {
+        empresa_id: document.getElementById("empresaId").value,
         rut: document.getElementById("rut").value,
         dv: document.getElementById("dv").value,
         nombres: document.getElementById("nombres").value,
