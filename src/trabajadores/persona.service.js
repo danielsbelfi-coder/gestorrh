@@ -1,6 +1,9 @@
 const { Persona } = require("../shared/associations.js")
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
+const { limpiarRut, rutEsValido } = require("../shared/rut.js")
+
+
 
 const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco", "tipo_cuenta", "numero_cuenta", "afp_id", "sistema_salud", "isapre_id", "plan_isapre_codigo", "plan_isapre_uf", "afiliado_afc"]
 
@@ -9,8 +12,15 @@ async function crearPersona(datos, empresasPermitidas) {
         throw new NotFoundError("Empresa no encontrada")
     }
 
+    const rut = limpiarRut(datos.rut)
+    const dv = String(datos.dv).trim().toUpperCase()
+
+    if (!rutEsValido(rut, dv)) {
+        throw new ValidationError("Rut inválido")
+    }
+
     try {
-        return await Persona.create(datos, {
+        return await Persona.create({...datos, rut, dv}, {
             fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES]
         })
     } catch (error) {
