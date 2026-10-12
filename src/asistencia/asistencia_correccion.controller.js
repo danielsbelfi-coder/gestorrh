@@ -8,13 +8,18 @@ async function crear(req, res) {
             ...req.body,
             asistencia_id: req.params.asistenciaId,
             usuario_solicito_id: req.usuario.id
-        }, req.empresasPermitidas);
+        }, req.empresasPermitidas,
+            req.usuario.id);
 
         res.status(201).json(nuevaCorreccion)
 
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

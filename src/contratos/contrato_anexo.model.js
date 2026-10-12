@@ -16,7 +16,7 @@ const ContratoAnexo = sequelize.define("ContratoAnexo", {
     },
     valor_anterior: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     valor_nuevo: {
         type: DataTypes.STRING,

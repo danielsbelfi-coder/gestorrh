@@ -1,13 +1,16 @@
 const { Asistencia, Trabajador } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
-async function crearAsistencia(datos, empresasPermitidas) {
+async function crearAsistencia(datos, empresasPermitidas, usuarioId) {
     const trabajador = await Trabajador.findByPk(datos.trabajador_id)
 
     if (trabajador === null || !empresasPermitidas.includes(trabajador.empresa_id)) {
         throw new NotFoundError("Trabajador no encontrado")
     }
+
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.REGISTRAR_ASISTENCIA)
 
     const asistenciaExistente = await Asistencia.findOne({
         where: {

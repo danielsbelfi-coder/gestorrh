@@ -1,13 +1,16 @@
 const { Cargo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { ConflictError, NotFoundError } = require("../shared/errors.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
-async function crearCargo(datos, empresasPermitidas) {
+async function crearCargo(datos, empresasPermitidas, usuarioId) {
     try {
 
         if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
             throw new NotFoundError("Empresa no encontrada")
         }
+
+        await exigirRol(usuarioId, Number(datos.empresa_id), PERMISOS.GESTIONAR_FICHAS)
 
         return await Cargo.create(datos, {
             fields: [

@@ -1,16 +1,19 @@
-const { Persona } = require("../shared/associations.js")
+const { Persona, Usuario } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 
 
 const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco", "tipo_cuenta", "numero_cuenta", "afp_id", "sistema_salud", "isapre_id", "plan_isapre_codigo", "plan_isapre_uf", "afiliado_afc"]
 
-async function crearPersona(datos, empresasPermitidas) {
+async function crearPersona(datos, empresasPermitidas, usuarioId) {
     if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
         throw new NotFoundError("Empresa no encontrada")
     }
+
+    await exigirRol(usuarioId, Number(datos.empresa_id), PERMISOS.GESTIONAR_FICHAS)
 
     const rut = limpiarRut(datos.rut)
     const dv = String(datos.dv).trim().toUpperCase()

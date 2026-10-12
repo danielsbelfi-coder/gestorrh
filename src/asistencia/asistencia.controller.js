@@ -1,4 +1,4 @@
-const { NotFoundError, ConflictError } = require("../shared/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { crearAsistencia, listarAsistencias, obtenerAsistenciaPorId } = require("./asistencia.service");
 
 
@@ -8,7 +8,8 @@ async function crear(req, res) {
             ...req.body,
             usuario_registro_id: req.usuario.id
         },
-            req.empresasPermitidas
+            req.empresasPermitidas,
+            req.usuario.id
         )
 
         res.status(201).json(nuevaAsistencia)
@@ -20,6 +21,10 @@ async function crear(req, res) {
                 error: error.message
             })
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

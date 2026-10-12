@@ -7,7 +7,9 @@ async function crear(req, res) {
             ...req.body,
             contrato_id: req.params.contratoId,
             usuario_creo_id: req.usuario.id
-        }, req.empresasPermitidas);
+        }, req.empresasPermitidas,
+            req.usuario.id
+        );
 
         res.status(201).json(nuevoAnexo)
 
@@ -18,6 +20,10 @@ async function crear(req, res) {
                 error: error.message
             })
         if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
@@ -38,10 +44,6 @@ async function firmar(req, res) {
                 error: error.message
             })
         if (error instanceof ConflictError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

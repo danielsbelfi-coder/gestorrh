@@ -1,10 +1,10 @@
-const { ConflictError, NotFoundError } = require("../shared/errors");
+const { ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors");
 const { crearCargo, listarCargos, obtenerCargoPorId, actualizarCargo, desactivarCargo } = require("./cargo.service");
 
 
 async function crear(req, res) {
     try {
-        const nuevoCargo = await crearCargo(req.body, req.empresasPermitidas);
+        const nuevoCargo = await crearCargo(req.body, req.empresasPermitidas, req.usuario.id);
 
         res.status(201).json(nuevoCargo)
 
@@ -13,6 +13,8 @@ async function crear(req, res) {
         if (error instanceof NotFoundError)
             return res.status(error.statusCode).json({ error: error.message })
         if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({ error: error.message })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({ error: error.message })
         res.status(400).json({ error: error.message })
     }

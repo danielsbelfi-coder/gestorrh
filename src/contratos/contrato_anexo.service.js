@@ -4,7 +4,7 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 const { PERMISOS, exigirRol } = require("../shared/permisos.js")
 
 
-async function crearAnexo(datos, empresasPermitidas) {
+async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
         "sueldo_base",
         "horas_semanales",
@@ -26,6 +26,9 @@ async function crearAnexo(datos, empresasPermitidas) {
     if (!empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
         throw new NotFoundError("Contrato no encontrado")
     }
+
+    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.CREAR_ANEXO)
+
     if (contrato.estado !== "vigente") {
         throw new ConflictError("No se puede modificar un contrato que no está vigente")
     }

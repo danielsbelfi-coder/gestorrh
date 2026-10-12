@@ -3,7 +3,7 @@ const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError, ForbiddenError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
-async function crearCorreccion(datos, empresasPermitidas) {
+async function crearCorreccion(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
         "hora_entrada",
         "hora_salida",
@@ -21,6 +21,8 @@ async function crearCorreccion(datos, empresasPermitidas) {
     if (!empresasPermitidas.includes(asistencia.Trabajador.empresa_id)) {
         throw new NotFoundError("Asistencia no encontrada")
     }
+
+    await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.SOLICITAR_CORRECCION)
 
     if (!CAMPOS_MODIFICABLES.includes(datos.campo_modificado)) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")

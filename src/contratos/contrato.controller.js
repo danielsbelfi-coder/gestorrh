@@ -1,11 +1,11 @@
-const { NotFoundError, ConflictError } = require("../shared/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { crearContrato, listarContratos, obtenerContratoPorId } = require("./contrato.service");
 
 
 
 async function crear(req, res) {
     try {
-        const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas);
+        const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas, req.usuario.id);
 
         res.status(201).json(nuevoContrato)
 
@@ -16,6 +16,10 @@ async function crear(req, res) {
                 error: error.message
             })
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
