@@ -14,7 +14,7 @@ async function crearContrato(datos, empresasPermitidas) {
             trabajador_id: datos.trabajador_id,
             estado: "vigente"
         }
-    })
+    })    
 
     if (contratoVigente !== null ) {
         throw new ConflictError("El trabajador ya tiene un contrato vigente")
@@ -26,7 +26,25 @@ async function crearContrato(datos, empresasPermitidas) {
         throw new NotFoundError("Cargo no encontrado")
     }
 
-    return await ContratoTrabajo.create(datos)
+    return await ContratoTrabajo.create(datos, {
+        fields: [
+            "trabajador_id",
+            "tipo_contrato",
+            "fecha_inicio",
+            "fecha_termino",
+            "causal_plazo_fijo",
+            "obra_faena_descripcion",
+            "cargo_id",
+            "funciones",
+            "lugar_prestacion_servicios",
+            "tipo_jornada",
+            "horas_semanales",
+            "dias_trabajados",
+            "sistema_remuneracion",
+            "sueldo_base",
+            "periodicidad_pago"
+        ]
+    })
 }
 
 async function listarContratos(empresasPermitidas) {

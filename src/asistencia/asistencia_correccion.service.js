@@ -25,7 +25,16 @@ async function crearCorreccion(datos, empresasPermitidas) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
     }
 
-    return await AsistenciaCorreccion.create(datos)
+    return await AsistenciaCorreccion.create({...datos, valor_anterior: asistencia[
+        datos.campo_modificado
+    ]}, { fields: [
+        "asistencia_id",
+        "campo_modificado",
+        "valor_anterior",
+        "valor_nuevo",
+        "motivo",
+        "usuario_solicito_id"
+    ] })
 }
 
 async function aprobarCorreccion(id, empresasPermitidas, usuarioId) {

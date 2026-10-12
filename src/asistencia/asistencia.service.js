@@ -19,7 +19,18 @@ async function crearAsistencia(datos, empresasPermitidas) {
     if (asistenciaExistente !== null) {
         throw new ConflictError("Ya existe un registro de asistencia para ese trabajador en esa fecha")
     }
-    return await Asistencia.create(datos)
+    return await Asistencia.create(datos, {
+        fields: [
+            "trabajador_id",
+            "fecha",
+            "hora_entrada",
+            "hora_salida",
+            "tipo",
+            "fuente",
+            "observaciones",
+            "usuario_registro_id"
+        ]
+    })
 }
 
 async function listarAsistencias(empresasPermitidas) {

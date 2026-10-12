@@ -9,7 +9,14 @@ async function crearCargo(datos, empresasPermitidas) {
         throw new NotFoundError("Empresa no encontrada")
     }
         
-        return await Cargo.create(datos)
+        return await Cargo.create(datos, {
+            fields : [
+                "empresa_id",
+                "nombre",
+                "departamento_id",
+                "descripcion"
+            ]
+        })
     } catch (error) {
         if (error.name === "SequelizeUniqueConstraintError") {
             throw new ConflictError("Ya existe un cargo con ese nombre")

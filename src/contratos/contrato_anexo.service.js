@@ -32,7 +32,18 @@ async function crearAnexo(datos, empresasPermitidas) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
     }
 
-    return await ContratoAnexo.create(datos)
+    return await ContratoAnexo.create({...datos, valor_anterior: contrato[
+        datos.campo_modificado
+    ]}, { fields: [
+        "contrato_id", 
+        "fecha_vigencia",
+        "campo_modificado",
+        "valor_anterior",
+        "valor_nuevo",
+        "motivo",
+        "usuario_creo_id"
+    ]}
+)
 }
 
 async function firmarAnexo(id, empresasPermitidas) {
