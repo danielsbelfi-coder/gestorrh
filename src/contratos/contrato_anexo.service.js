@@ -4,14 +4,14 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 
 async function crearAnexo(datos, empresasPermitidas) {
     const CAMPOS_MODIFICABLES = [
-        "sueldo_base", 
-        "horas_semanales", 
-        "tipo_jornada", 
-        "dias_trabajados", 
-        "funciones", 
-        "lugar_prestacion_servicios", 
-        "sistema_remuneracion", 
-        "periodicidad_pago", 
+        "sueldo_base",
+        "horas_semanales",
+        "tipo_jornada",
+        "dias_trabajados",
+        "funciones",
+        "lugar_prestacion_servicios",
+        "sistema_remuneracion",
+        "periodicidad_pago",
         "fecha_termino"
     ]
     const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
@@ -32,18 +32,22 @@ async function crearAnexo(datos, empresasPermitidas) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
     }
 
-    return await ContratoAnexo.create({...datos, valor_anterior: contrato[
-        datos.campo_modificado
-    ]}, { fields: [
-        "contrato_id", 
-        "fecha_vigencia",
-        "campo_modificado",
-        "valor_anterior",
-        "valor_nuevo",
-        "motivo",
-        "usuario_creo_id"
-    ]}
-)
+    return await ContratoAnexo.create({
+        ...datos, valor_anterior: contrato[
+            datos.campo_modificado
+        ]
+    }, {
+        fields: [
+            "contrato_id",
+            "fecha_vigencia",
+            "campo_modificado",
+            "valor_anterior",
+            "valor_nuevo",
+            "motivo",
+            "usuario_creo_id"
+        ]
+    }
+    )
 }
 
 async function firmarAnexo(id, empresasPermitidas) {
@@ -53,7 +57,7 @@ async function firmarAnexo(id, empresasPermitidas) {
     }
     const contrato = await ContratoTrabajo.findByPk(anexo.contrato_id, {
         include: [Trabajador]
-    })    
+    })
     if (!empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
         throw new NotFoundError("Anexo no encontrado")
     }

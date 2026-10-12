@@ -10,7 +10,7 @@ async function cargarCargos() {
 
     const lista = document.getElementById("listaCargos")
     lista.innerHTML = resultado.datos.map(function (cargo) {
-        return `<li>${cargo.nombre} (${cargo.empresa_id}) </li>`
+        return `<li>${escaparHtml(cargo.nombre)} (${cargo.empresa_id}) </li>`
     }).join("")
 }
 

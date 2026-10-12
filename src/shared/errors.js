@@ -29,10 +29,17 @@ class AuthenticationError extends AppError {
     }
 }
 
+class ForbiddenError extends AppError {
+    constructor(message) {
+        super(message, 403)
+    }
+}
+
 module.exports = {
     AppError,
     NotFoundError,
     ConflictError,
     ValidationError,
-    AuthenticationError
+    AuthenticationError,
+    ForbiddenError
 }

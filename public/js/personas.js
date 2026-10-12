@@ -10,7 +10,7 @@ async function cargarPersonas() {
 
     const lista = document.getElementById("listaPersonas")
     lista.innerHTML = resultado.datos.map(function (persona) {
-        return `<li>${persona.nombres} (${persona.rut}) </li>`
+        return `<li>${escaparHtml(persona.nombres)} (${escaparHtml(persona.rut)}) </li>`
     }).join("")
 }
 

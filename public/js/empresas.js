@@ -4,13 +4,13 @@ async function cargarEmpresas() {
     const resultado = await llamarApi("/api/empresas")
 
     if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error   
+        document.getElementById("mensajeError").textContent = resultado.datos.error
         return
     }
 
     const lista = document.getElementById("listaEmpresas")
-    lista.innerHTML = resultado.datos.map(function(empresa) {
-        return `<li>${empresa.razon_social} (${empresa.rut}) - ${empresa.estado} </li>`
+    lista.innerHTML = resultado.datos.map(function (empresa) {
+        return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}) - ${empresa.estado} </li>`
     }).join("")
 }
 

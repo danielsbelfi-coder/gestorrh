@@ -1,4 +1,4 @@
-const { NotFoundError, ConflictError } = require("../shared/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { crearCorreccion, aprobarCorreccion } = require("./asistencia_correccion.service");
 
 
@@ -36,6 +36,10 @@ async function aprobar(req, res) {
                 error: error.message
             })
         if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

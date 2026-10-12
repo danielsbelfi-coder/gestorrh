@@ -38,7 +38,7 @@ async function listarAsistencias(empresasPermitidas) {
         include: [{
             model: Trabajador,
             where: {
-                empresa_id: { [Op.in]: empresasPermitidas}
+                empresa_id: { [Op.in]: empresasPermitidas }
             },
             required: true
         }]

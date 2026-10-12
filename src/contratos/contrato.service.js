@@ -14,9 +14,9 @@ async function crearContrato(datos, empresasPermitidas) {
             trabajador_id: datos.trabajador_id,
             estado: "vigente"
         }
-    })    
+    })
 
-    if (contratoVigente !== null ) {
+    if (contratoVigente !== null) {
         throw new ConflictError("El trabajador ya tiene un contrato vigente")
     }
 

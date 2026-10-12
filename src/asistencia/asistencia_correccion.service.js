@@ -1,6 +1,7 @@
 const { Asistencia, AsistenciaCorreccion, Trabajador } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
-const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError, ValidationError, ForbiddenError } = require("../shared/errors.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 async function crearCorreccion(datos, empresasPermitidas) {
     const CAMPOS_MODIFICABLES = [
@@ -20,21 +21,25 @@ async function crearCorreccion(datos, empresasPermitidas) {
     if (!empresasPermitidas.includes(asistencia.Trabajador.empresa_id)) {
         throw new NotFoundError("Asistencia no encontrada")
     }
-    
+
     if (!CAMPOS_MODIFICABLES.includes(datos.campo_modificado)) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
     }
 
-    return await AsistenciaCorreccion.create({...datos, valor_anterior: asistencia[
-        datos.campo_modificado
-    ]}, { fields: [
-        "asistencia_id",
-        "campo_modificado",
-        "valor_anterior",
-        "valor_nuevo",
-        "motivo",
-        "usuario_solicito_id"
-    ] })
+    return await AsistenciaCorreccion.create({
+        ...datos, valor_anterior: asistencia[
+            datos.campo_modificado
+        ]
+    }, {
+        fields: [
+            "asistencia_id",
+            "campo_modificado",
+            "valor_anterior",
+            "valor_nuevo",
+            "motivo",
+            "usuario_solicito_id"
+        ]
+    })
 }
 
 async function aprobarCorreccion(id, empresasPermitidas, usuarioId) {
@@ -51,6 +56,7 @@ async function aprobarCorreccion(id, empresasPermitidas, usuarioId) {
     if (correccion.estado_aprobacion !== "pendiente") {
         throw new ConflictError("Modificacion ya fue procesada")
     }
+    await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.APROBAR_CORRECCION)
 
 
     await sequelize.transaction(async (t) => {
@@ -75,6 +81,6 @@ async function aprobarCorreccion(id, empresasPermitidas, usuarioId) {
 }
 
 module.exports = {
-   crearCorreccion,
-   aprobarCorreccion
+    crearCorreccion,
+    aprobarCorreccion
 }

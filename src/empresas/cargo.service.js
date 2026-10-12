@@ -5,12 +5,12 @@ const { ConflictError, NotFoundError } = require("../shared/errors.js")
 async function crearCargo(datos, empresasPermitidas) {
     try {
 
-    if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
-        throw new NotFoundError("Empresa no encontrada")
-    }
-        
+        if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
+            throw new NotFoundError("Empresa no encontrada")
+        }
+
         return await Cargo.create(datos, {
-            fields : [
+            fields: [
                 "empresa_id",
                 "nombre",
                 "departamento_id",
