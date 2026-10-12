@@ -5,6 +5,7 @@ const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
 const { calcularLiquidacion } = require("./liquidacion.calculator.js")
 const { obtenerContratoPorId } = require("../contratos/contrato.service.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
 
@@ -33,13 +34,14 @@ function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     return false
 }
 
-async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas) {
+async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, usuarioId) {
     const mesVigente = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
 
     if (mesVigente.estado !== "abierto") {
         throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
     }
 
+    await exigirRol(usuarioId, mesVigente.empresa_id, PERMISOS.CALCULAR_LIQUIDACION)
 
     const buscarTrabajador = await Trabajador.findByPk(trabajador_id, {
         include: [

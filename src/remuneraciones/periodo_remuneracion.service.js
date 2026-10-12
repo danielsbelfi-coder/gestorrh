@@ -1,11 +1,14 @@
 const { PeriodoRemuneracion, Empresa } = require("../shared/associations");
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError } = require("../shared/errors.js");
+const { PERMISOS, exigirRol } = require("../shared/permisos.js");
 
-async function abrirPeriodo(datos, empresasPermitidas) {
+async function abrirPeriodo(datos, empresasPermitidas, usuarioId) {
     if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
         throw new NotFoundError("Empresa no encontrada")
     }
+
+    await exigirRol(usuarioId, Number(datos.empresa_id), PERMISOS.GESTIONAR_PERIODO,)
 
     const periodoExistente = await PeriodoRemuneracion.findOne({
         where: {
@@ -23,11 +26,14 @@ async function abrirPeriodo(datos, empresasPermitidas) {
     })
 }
 
-async function cerrarPeriodo(id, empresasPermitidas) {
+async function cerrarPeriodo(id, empresasPermitidas, usuarioId) {
     const periodo = await obtenerPeriodoPorId(id, empresasPermitidas)
     if (periodo.estado === "cerrado") {
         throw new ConflictError("El periodo de remuneraciones ya está cerrado")
     }
+
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.GESTIONAR_PERIODO)
+
     const fechaHoy = new Date().toISOString().split("T")[0]
     await periodo.update({
         estado: "cerrado",

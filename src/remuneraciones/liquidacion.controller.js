@@ -1,4 +1,4 @@
-const { ConflictError, NotFoundError } = require("../shared/errors");
+const { ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors");
 const { crearLiquidacion, listarLiquidaciones, obtenerLiquidacionPorId } = require("./liquidacion.service");
 
 
@@ -8,7 +8,8 @@ async function crear(req, res) {
         const nuevaLiquidacion = await crearLiquidacion(
             req.params.periodoId,
             req.body.trabajador_id,
-            req.empresasPermitidas
+            req.empresasPermitidas,
+            req.usuario.id
         )
 
         res.status(201).json(nuevaLiquidacion)
@@ -19,6 +20,10 @@ async function crear(req, res) {
                 error: error.message
             })
         if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

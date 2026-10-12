@@ -1,6 +1,8 @@
 const { ContratoAnexo, ContratoTrabajo, Trabajador } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
+const { PERMISOS, exigirRol } = require("../shared/permisos.js")
+
 
 async function crearAnexo(datos, empresasPermitidas) {
     const CAMPOS_MODIFICABLES = [
@@ -50,7 +52,7 @@ async function crearAnexo(datos, empresasPermitidas) {
     )
 }
 
-async function firmarAnexo(id, empresasPermitidas) {
+async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     const anexo = await ContratoAnexo.findByPk(id)
     if (anexo === null) {
         throw new NotFoundError("Anexo no encontrado")
@@ -61,6 +63,8 @@ async function firmarAnexo(id, empresasPermitidas) {
     if (!empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
         throw new NotFoundError("Anexo no encontrado")
     }
+    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.FIRMAR_ANEXO)
+
     if (anexo.estado_firma !== "pendiente") {
         throw new ConflictError("El anexo ya fue procesado")
     }
@@ -75,7 +79,8 @@ async function firmarAnexo(id, empresasPermitidas) {
         )
         await anexo.update({
             estado_firma: "firmado",
-            fecha_firma: new Date()
+            fecha_firma: new Date(),
+            usuario_firmo_id: usuarioId
         },
             {
                 transaction: t

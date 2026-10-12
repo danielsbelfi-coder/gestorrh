@@ -14,7 +14,7 @@ const USUARIOS = [
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     const passwordHash = await bcrypt.hash(PASSWORD_PRUEBA, 10)
     const ahora = new Date()
 
@@ -47,7 +47,7 @@ module.exports = {
     })))
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     const emails = USUARIOS.map((u) => u.email)
     await queryInterface.sequelize.query(
       "DELETE FROM usuarios_empresas_roles WHERE usuario_id IN (SELECT id FROM usuarios WHERE email IN (:emails))",

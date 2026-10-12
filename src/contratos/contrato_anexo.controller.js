@@ -1,4 +1,4 @@
-const { NotFoundError, ConflictError } = require("../shared/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { crearAnexo, firmarAnexo } = require("./contrato_anexo.service");
 
 async function crear(req, res) {
@@ -29,7 +29,7 @@ async function crear(req, res) {
 
 async function firmar(req, res) {
     try {
-        const anexoFirmado = await firmarAnexo(req.params.id, req.empresasPermitidas)
+        const anexoFirmado = await firmarAnexo(req.params.id, req.empresasPermitidas, req.usuario.id)
         res.status(200).json(anexoFirmado)
 
     } catch (error) {
@@ -38,6 +38,10 @@ async function firmar(req, res) {
                 error: error.message
             })
         if (error instanceof ConflictError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

@@ -37,6 +37,10 @@ const ContratoAnexo = sequelize.define("ContratoAnexo", {
     usuario_creo_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
+    },
+    usuario_firmo_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 }, {
     tableName: "contratos_anexo"

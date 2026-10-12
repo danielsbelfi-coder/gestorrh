@@ -1,15 +1,15 @@
-const { NotFoundError, ConflictError } = require("../shared/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { abrirPeriodo, cerrarPeriodo, listarPeriodos, obtenerPeriodoPorId } = require("./periodo_remuneracion.service");
 
 
 async function crear(req, res) {
     try {
-        const nuevoPeriodo = await abrirPeriodo(req.body, req.empresasPermitidas)
+        const nuevoPeriodo = await abrirPeriodo(req.body, req.empresasPermitidas, req.usuario.id)
 
         res.status(201).json(nuevoPeriodo)
 
     } catch (error) {
-        if (error instanceof ConflictError || error instanceof NotFoundError)
+        if (error instanceof ConflictError || error instanceof NotFoundError || error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
@@ -19,7 +19,7 @@ async function crear(req, res) {
 
 async function cerrar(req, res) {
     try {
-        const periodoCerrado = await cerrarPeriodo(req.params.id, req.empresasPermitidas)
+        const periodoCerrado = await cerrarPeriodo(req.params.id, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(periodoCerrado)
 
@@ -29,6 +29,10 @@ async function cerrar(req, res) {
                 error: error.message
             })
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
