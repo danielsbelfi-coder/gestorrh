@@ -53,8 +53,10 @@ async function obtenerPersonaPorId(id, empresasPermitidas) {
     return persona
 }
 
-async function actualizarPersona(id, datos, empresasPermitidas) {
+async function actualizarPersona(id, datos, empresasPermitidas, usuarioId) {
     const persona = await obtenerPersonaPorId(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, persona.empresa_id, PERMISOS.GESTIONAR_FICHAS)
 
     return await persona.update(datos, {
         fields: CAMPOS_EDITABLES

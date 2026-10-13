@@ -46,8 +46,10 @@ async function obtenerCargoPorId(id, empresasPermitidas) {
 
 }
 
-async function actualizarCargo(id, datos, empresasPermitidas) {
+async function actualizarCargo(id, datos, empresasPermitidas, usuarioId) {
     const cargo = await obtenerCargoPorId(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, cargo.empresa_id, PERMISOS.GESTIONAR_FICHAS)
 
     const actualizar = await cargo.update(datos, {
         fields: ["departamento_id", "nombre", "descripcion", "estado"]
@@ -58,8 +60,8 @@ async function actualizarCargo(id, datos, empresasPermitidas) {
 
 }
 
-async function desactivarCargo(id, empresasPermitidas) {
-    const cargoDesactivado = await actualizarCargo(id, { estado: "inactivo" }, empresasPermitidas)
+async function desactivarCargo(id, empresasPermitidas, usuarioId) {
+    const cargoDesactivado = await actualizarCargo(id, { estado: "inactivo" }, empresasPermitidas, usuarioId)
 
     return cargoDesactivado
 }

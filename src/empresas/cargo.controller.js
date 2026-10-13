@@ -52,12 +52,16 @@ async function obtenerPorId(req, res) {
 
 async function actualizar(req, res) {
     try {
-        const cargoActualizado = await actualizarCargo(req.params.id, req.body, req.empresasPermitidas)
+        const cargoActualizado = await actualizarCargo(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(cargoActualizado)
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
@@ -67,12 +71,16 @@ async function actualizar(req, res) {
 
 async function desactivar(req, res) {
     try {
-        const cargoInactivo = await desactivarCargo(req.params.id, req.empresasPermitidas)
+        const cargoInactivo = await desactivarCargo(req.params.id, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(cargoInactivo)
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

@@ -1,4 +1,4 @@
-const { NotFoundError, ConflictError } = require("../shared/errors.js");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors.js");
 const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa } = require("./empresa.service.js");
 
 
@@ -50,7 +50,7 @@ async function obtenerPorId(req, res) {
 
 async function actualizar(req, res) {
     try {
-        const empresaActualizada = await actualizarEmpresa(req.params.id, req.body, req.empresasPermitidas)
+        const empresaActualizada = await actualizarEmpresa(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(empresaActualizada)
 
@@ -59,12 +59,15 @@ async function actualizar(req, res) {
             return res.status(error.statusCode).json({
                 error: error.message
             })
+        if (error instanceof ForbiddenError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
 
         res.status(400).json({
             error: error.message
         })
     }
-
 }
 
 async function desactivar(req, res) {

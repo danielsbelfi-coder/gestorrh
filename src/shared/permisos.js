@@ -9,7 +9,8 @@ const PERMISOS = {
     CREAR_ANEXO: ["ADMIN", "JEFE_RRHH", "RRHH"],
     FIRMAR_ANEXO: ["ADMIN", "JEFE_RRHH"],
     GESTIONAR_PERIODO: ["ADMIN", "JEFE_RRHH"],
-    CALCULAR_LIQUIDACION: ["ADMIN", "JEFE_RRHH", "RRHH"]
+    CALCULAR_LIQUIDACION: ["ADMIN", "JEFE_RRHH", "RRHH"],
+    EDITAR_EMPRESA: ["ADMIN"]
 }
 
 async function exigirRol(usuarioId, empresaId, rolesPermitidos) {

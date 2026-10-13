@@ -1,6 +1,7 @@
 const { Empresa } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 async function crearEmpresa(datos) {
     try {
@@ -14,11 +15,11 @@ async function crearEmpresa(datos) {
 }
 
 async function listarEmpresas(empresasPermitidas) {
-        return await Empresa.findAll({
-            where: {
-                id: { [Op.in]: empresasPermitidas}
-            }
-        })
+    return await Empresa.findAll({
+        where: {
+            id: { [Op.in]: empresasPermitidas }
+        }
+    })
 }
 
 async function obtenerEmpresaPorId(id, empresasPermitidas) {
@@ -30,20 +31,26 @@ async function obtenerEmpresaPorId(id, empresasPermitidas) {
     return empresa
 }
 
-async function actualizarEmpresa(id, datos, empresasPermitidas) {
+async function actualizarEmpresa(id, datos, empresasPermitidas, usuarioId) {
     const empresa = await obtenerEmpresaPorId(id, empresasPermitidas)
 
+    await exigirRol(usuarioId, empresa.id, PERMISOS.EDITAR_EMPRESA)
+
     const actualizar = await empresa.update(datos, {
-        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id", "estado" ]
+        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id"]
     })
 
     return actualizar
 }
 
 async function desactivarEmpresa(id, empresasPermitidas) {
-    const empresaDesactivada = await actualizarEmpresa(id, { estado: "inactiva" }, empresasPermitidas)
+    const empresa = await obtenerEmpresaPorId(id, empresasPermitidas)
 
-    return empresaDesactivada
+    await empresa.update({
+        estado: "inactiva"
+    })
+
+    return empresa
 }
 
 module.exports = {

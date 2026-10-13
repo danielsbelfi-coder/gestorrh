@@ -8,7 +8,7 @@ async function crear(req, res) {
         res.status(201).json(nuevaPersona)
 
     } catch (error) {
-        if (error instanceof ConflictError || error instanceof NotFoundError || ForbiddenError)
+        if (error instanceof ConflictError || error instanceof NotFoundError || error instanceof ForbiddenError)
             return res.status(error.statusCode).json({ error: error.message })
         res.status(400).json({
             error: error.message
@@ -48,12 +48,16 @@ async function obtenerPorId(req, res) {
 
 async function actualizar(req, res) {
     try {
-        const personaActualizada = await actualizarPersona(req.params.id, req.body, req.empresasPermitidas)
+        const personaActualizada = await actualizarPersona(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(personaActualizada)
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })

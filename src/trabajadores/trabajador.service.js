@@ -52,8 +52,10 @@ async function obtenerTrabajadorPorId(id, empresasPermitidas) {
 
 }
 
-async function actualizarTrabajador(id, datos, empresasPermitidas) {
+async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
     const trabajador = await obtenerTrabajadorPorId(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
 
     const actualizar = await trabajador.update(datos, {
         fields: ["fecha_ingreso", "fecha_termino", "estado"]
@@ -62,8 +64,8 @@ async function actualizarTrabajador(id, datos, empresasPermitidas) {
     return actualizar
 }
 
-async function desactivarTrabajador(id, empresasPermitidas) {
-    const trabajadorDesvinculado = await actualizarTrabajador(id, { estado: "desvinculado" }, empresasPermitidas)
+async function desactivarTrabajador(id, empresasPermitidas, usuarioId) {
+    const trabajadorDesvinculado = await actualizarTrabajador(id, { estado: "desvinculado" }, empresasPermitidas, usuarioId)
 
     return trabajadorDesvinculado
 }

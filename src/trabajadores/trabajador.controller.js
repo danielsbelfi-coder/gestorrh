@@ -57,12 +57,16 @@ async function obtenerPorId(req, res) {
 
 async function actualizar(req, res) {
     try {
-        const trabajadorActualizado = await actualizarTrabajador(req.params.id, req.body, req.empresasPermitidas)
+        const trabajadorActualizado = await actualizarTrabajador(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(trabajadorActualizado)
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
@@ -73,12 +77,16 @@ async function actualizar(req, res) {
 
 async function desactivar(req, res) {
     try {
-        const trabajadorInactivo = await desactivarTrabajador(req.params.id, req.empresasPermitidas)
+        const trabajadorInactivo = await desactivarTrabajador(req.params.id, req.empresasPermitidas, req.usuario.id)
 
         res.status(200).json(trabajadorInactivo)
 
     } catch (error) {
         if (error instanceof NotFoundError)
+            return res.status(error.statusCode).json({
+                error: error.message
+            })
+        if (error instanceof ForbiddenError)
             return res.status(error.statusCode).json({
                 error: error.message
             })
