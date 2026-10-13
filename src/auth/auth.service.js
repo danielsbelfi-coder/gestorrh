@@ -1,7 +1,7 @@
 const { Usuario } = require("../shared/associations")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
-const { AuthenticationError } = require("../shared/errors")
+const { AuthenticationError, ValidationError } = require("../shared/errors")
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
@@ -30,7 +30,37 @@ async function autenticarUsuario(email, password) {
     )
 }
 
+async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
+    if (typeof passwordActual !== "string" || passwordActual.trim() === ""
+        || typeof passwordNueva !== "string" || passwordNueva.trim() === "") {
+        throw new ValidationError("Debe ingresar la contraseña actual y la nueva")
+    }
+
+    if (passwordNueva.length < 8) {
+        throw new ValidationError("La contraseña debe tener al menos 8 caracteres")
+    }
+
+    if (passwordNueva === passwordActual) {
+        throw new ValidationError("La contraseña nueva no debe ser igual a la anterior")
+    }
+
+    const usuario = await Usuario.unscoped().findByPk(usuarioId)
+
+    const comparacion = await bcrypt.compare(passwordActual, usuario.password_hash)
+
+    if (comparacion === false) {
+        throw new ValidationError("La contraseña actual no es correcta")
+    }
+
+    const passwordHash = await bcrypt.hash(passwordNueva, 10)
+
+    await usuario.update({
+        password_hash: passwordHash
+    })
+}
+
 module.exports = {
-    autenticarUsuario
+    autenticarUsuario,
+    cambiarPassword
 }
 

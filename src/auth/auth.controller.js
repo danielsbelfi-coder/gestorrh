@@ -1,5 +1,5 @@
-const { AuthenticationError } = require("../shared/errors.js")
-const { autenticarUsuario } = require("./auth.service.js")
+const { AuthenticationError, ValidationError } = require("../shared/errors.js")
+const { autenticarUsuario, cambiarPassword } = require("./auth.service.js")
 
 
 async function login(req, res) {
@@ -16,6 +16,21 @@ async function login(req, res) {
     }
 }
 
+async function cambiar(req, res) {
+    const { password_actual, password_nueva } = req.body ?? {}
+    try {
+        await cambiarPassword(req.usuario.id, password_actual, password_nueva)
+
+        res.status(200).json({ mensaje: "Contraseña actualizada" })
+
+    } catch (error) {
+        if (error instanceof ValidationError)
+            return res.status(error.statusCode).json({ error: error.message })
+        res.status(500).json({ error: "Error interno del servidor" })
+    }
+}
+
 module.exports = {
-    login
+    login,
+    cambiar
 }
