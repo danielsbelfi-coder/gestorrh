@@ -1,91 +1,31 @@
-const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors.js");
 const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa } = require("./empresa.service.js");
 
 
 
 async function crear(req, res) {
-    try {
-        const nuevaEmpresa = await crearEmpresa(req.body);
+    const nuevaEmpresa = await crearEmpresa(req.body);
 
-        res.status(201).json(nuevaEmpresa)
-
-
-    } catch (error) {
-        if (error instanceof ConflictError)
-            return res.status(error.statusCode).json({ error: error.message })
-        res.status(400).json({ error: error.message })
-    }
+    res.status(201).json(nuevaEmpresa)
 }
 
 async function listar(req, res) {
-    try {
-        const listaEmpresa = await listarEmpresas(req.empresasPermitidas)
-
-        res.status(200).json(listaEmpresa)
-
-    } catch (error) {
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const listaEmpresa = await listarEmpresas(req.empresasPermitidas)
+    res.status(200).json(listaEmpresa)
 }
 
 async function obtenerPorId(req, res) {
-    try {
-        const obtenerIdEmpresa = await obtenerEmpresaPorId(req.params.id, req.empresasPermitidas)
-
-        res.status(200).json(obtenerIdEmpresa)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-
-        res.status(400).json({
-            error: error.message
-        })
-    }
+    const obtenerIdEmpresa = await obtenerEmpresaPorId(req.params.id, req.empresasPermitidas)
+    res.status(200).json(obtenerIdEmpresa)
 }
 
 async function actualizar(req, res) {
-    try {
-        const empresaActualizada = await actualizarEmpresa(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
-
-        res.status(200).json(empresaActualizada)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        if (error instanceof ForbiddenError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-
-        res.status(400).json({
-            error: error.message
-        })
-    }
+    const empresaActualizada = await actualizarEmpresa(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(empresaActualizada)
 }
 
 async function desactivar(req, res) {
-    try {
-        const empresaInactiva = await desactivarEmpresa(req.params.id, req.empresasPermitidas)
-
-        res.status(200).json(empresaInactiva)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const empresaInactiva = await desactivarEmpresa(req.params.id, req.empresasPermitidas)
+    res.status(200).json(empresaInactiva)
 }
 
 module.exports = {

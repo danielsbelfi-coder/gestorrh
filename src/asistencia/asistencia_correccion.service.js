@@ -55,10 +55,12 @@ async function aprobarCorreccion(id, empresasPermitidas, usuarioId) {
     if (!empresasPermitidas.includes(asistencia.Trabajador.empresa_id)) {
         throw new NotFoundError("Corrección no encontrada")
     }
+
+    await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.APROBAR_CORRECCION)
+
     if (correccion.estado_aprobacion !== "pendiente") {
         throw new ConflictError("Modificacion ya fue procesada")
     }
-    await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.APROBAR_CORRECCION)
 
 
     await sequelize.transaction(async (t) => {

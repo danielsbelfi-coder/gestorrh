@@ -28,11 +28,12 @@ async function abrirPeriodo(datos, empresasPermitidas, usuarioId) {
 
 async function cerrarPeriodo(id, empresasPermitidas, usuarioId) {
     const periodo = await obtenerPeriodoPorId(id, empresasPermitidas)
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.GESTIONAR_PERIODO)
+
     if (periodo.estado === "cerrado") {
         throw new ConflictError("El periodo de remuneraciones ya está cerrado")
     }
 
-    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.GESTIONAR_PERIODO)
 
     const fechaHoy = new Date().toISOString().split("T")[0]
     await periodo.update({

@@ -1,62 +1,20 @@
-const { NotFoundError, ConflictError, ForbiddenError } = require("../shared/errors");
 const { crearContrato, listarContratos, obtenerContratoPorId } = require("./contrato.service");
 
 
 
 async function crear(req, res) {
-    try {
-        const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas, req.usuario.id);
-
-        res.status(201).json(nuevoContrato)
-
-
-    } catch (error) {
-        if (error instanceof ConflictError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        if (error instanceof ForbiddenError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        res.status(400).json({
-            error: error.message
-        })
-    }
+    const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas, req.usuario.id);
+    res.status(201).json(nuevoContrato)
 }
 
 async function listar(req, res) {
-    try {
-        const listaContrato = await listarContratos(req.empresasPermitidas)
-
-        res.status(200).json(listaContrato)
-
-    } catch (error) {
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const listaContrato = await listarContratos(req.empresasPermitidas)
+    res.status(200).json(listaContrato)
 }
 
 async function obtenerPorId(req, res) {
-    try {
-        const obtenerIdContrato = await obtenerContratoPorId(req.params.id, req.empresasPermitidas)
-
-        res.status(200).json(obtenerIdContrato)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const obtenerIdContrato = await obtenerContratoPorId(req.params.id, req.empresasPermitidas)
+    res.status(200).json(obtenerIdContrato)
 }
 
 module.exports = {

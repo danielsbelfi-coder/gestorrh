@@ -1,69 +1,23 @@
-const { ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors");
 const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona } = require("./persona.service");
 
 async function crear(req, res) {
-    try {
-        const nuevaPersona = await crearPersona(req.body, req.empresasPermitidas, req.usuario.id);
-
-        res.status(201).json(nuevaPersona)
-
-    } catch (error) {
-        if (error instanceof ConflictError || error instanceof NotFoundError || error instanceof ForbiddenError)
-            return res.status(error.statusCode).json({ error: error.message })
-        res.status(400).json({
-            error: error.message
-        })
-    }
+    const nuevaPersona = await crearPersona(req.body, req.empresasPermitidas, req.usuario.id);
+    res.status(201).json(nuevaPersona)
 }
 
 async function listar(req, res) {
-    try {
-        const listaPersona = await listarPersonas(req.empresasPermitidas)
-
-        res.status(200).json(listaPersona)
-
-    } catch (error) {
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const listaPersona = await listarPersonas(req.empresasPermitidas)
+    res.status(200).json(listaPersona)
 }
 
 async function obtenerPorId(req, res) {
-    try {
-        const obtenerIdPersona = await obtenerPersonaPorId(req.params.id, req.empresasPermitidas)
-
-        res.status(200).json(obtenerIdPersona)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        res.status(500).json({
-            error: error.message
-        })
-    }
+    const obtenerIdPersona = await obtenerPersonaPorId(req.params.id, req.empresasPermitidas)
+    res.status(200).json(obtenerIdPersona)
 }
 
 async function actualizar(req, res) {
-    try {
-        const personaActualizada = await actualizarPersona(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
-
-        res.status(200).json(personaActualizada)
-
-    } catch (error) {
-        if (error instanceof NotFoundError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        if (error instanceof ForbiddenError)
-            return res.status(error.statusCode).json({
-                error: error.message
-            })
-        res.status(400).json({ error: error.message })
-    }
-
+    const personaActualizada = await actualizarPersona(req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(personaActualizada)
 }
 
 module.exports = {
