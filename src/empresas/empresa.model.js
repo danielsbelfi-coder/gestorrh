@@ -4,7 +4,6 @@ const { sequelize } = require("../shared/database.js")
 const Empresa = sequelize.define("Empresa", {
   rut: {
     type: DataTypes.STRING,
-    unique: true,
     allowNull: false
   },
   razon_social: {

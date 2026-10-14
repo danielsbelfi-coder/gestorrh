@@ -24,7 +24,6 @@ module.exports = {
       email: u.email,
       password_hash: passwordHash,
       estado: "activo",
-      es_soporte_plataforma: false,
       createdAt: ahora,
       updatedAt: ahora
     })))

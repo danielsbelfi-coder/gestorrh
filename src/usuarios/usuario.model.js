@@ -19,9 +19,9 @@ const Usuario = sequelize.define("Usuario", {
         type: DataTypes.ENUM("activo", "inactivo"),
         defaultValue: "activo"
     },
-    es_soporte_plataforma: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+    rol_plataforma: {
+        type: DataTypes.ENUM("soporte", "comercial"),
+        allowNull: true
     },
     cuenta_id: {
         type: DataTypes.INTEGER,

@@ -34,7 +34,7 @@ const verificarToken = async (req, res, next) => {
 
         let empresasPermitidas = vinculos.map((vinculo) => vinculo.empresa_id)
 
-        const soporte = usuario.es_soporte_plataforma
+        const soporte = usuario.rol_plataforma === "soporte"
 
         if (soporte === true) {
             const acceso = await Empresa.findAll({
