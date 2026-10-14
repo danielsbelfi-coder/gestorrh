@@ -22,7 +22,16 @@ const Usuario = sequelize.define("Usuario", {
     es_soporte_plataforma: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
-    }
+    },
+    cuenta_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    es_admin_cuenta: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
 
 }, {
     tableName: "usuarios",

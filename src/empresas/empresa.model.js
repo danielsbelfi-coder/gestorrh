@@ -35,6 +35,14 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.ENUM("activa", "inactiva"),
     defaultValue: "activa"
   },
+  cuenta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  fecha_desactivacion: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
 }, {
   tableName: "empresas"
 })

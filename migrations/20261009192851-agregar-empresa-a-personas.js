@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     // 1. Crear la columna, todavía opcional, con llave foránea a empresas
     await queryInterface.addColumn("personas", "empresa_id", {
       type: Sequelize.INTEGER,
@@ -29,7 +29,7 @@ module.exports = {
     })
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     await queryInterface.removeColumn("personas", "empresa_id")
   }
 };
