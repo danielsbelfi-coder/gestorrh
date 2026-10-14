@@ -1,7 +1,7 @@
-const { Usuario } = require("../shared/associations")
+const { Usuario, Cuenta } = require("../shared/associations")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
-const { AuthenticationError, ValidationError } = require("../shared/errors")
+const { AuthenticationError, ValidationError, ForbiddenError } = require("../shared/errors")
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
@@ -11,6 +11,7 @@ async function autenticarUsuario(email, password) {
         || typeof email !== "string" || email.trim() === "") {
         throw new AuthenticationError("Credenciales inválidas")
     }
+
     const usuario = await Usuario.unscoped().findOne({
         where: {
             email
@@ -21,6 +22,15 @@ async function autenticarUsuario(email, password) {
 
     if (usuario === null || passwordValida === false || usuario.estado !== "activo") {
         throw new AuthenticationError("Credenciales inválidas")
+    }
+
+
+    if (usuario.cuenta_id !== null) {
+        const cuenta = await Cuenta.findByPk(usuario.cuenta_id)
+
+        if (cuenta.estado === "cancelada") {
+            throw new ForbiddenError("La cuenta fue cancelada. Contacta a la plataforma para recuperar tu información")
+        }
     }
 
     return jwt.sign(
@@ -63,4 +73,3 @@ module.exports = {
     autenticarUsuario,
     cambiarPassword
 }
-

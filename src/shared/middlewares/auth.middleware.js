@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken")
-const { Usuario, UsuarioEmpresaRol, Empresa } = require("../associations");
+const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta } = require("../associations");
 const { AuthenticationError } = require("../errors");
 
 const verificarToken = async (req, res, next) => {
@@ -24,6 +24,14 @@ const verificarToken = async (req, res, next) => {
 
         if (usuario === null || usuario.estado !== "activo") {
             throw new AuthenticationError("Usuario no válido")
+        }
+
+        if (usuario.cuenta_id !== null) {
+            const cuenta = await Cuenta.findByPk(usuario.cuenta_id)
+
+            if (cuenta.estado === "cancelada") {
+                throw new AuthenticationError("Cuenta cancelada")
+            }
         }
 
         req.usuario = usuario

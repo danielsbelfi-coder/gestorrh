@@ -36,7 +36,11 @@ const Cuenta = sequelize.define("Cuenta", {
         allowNull: true
     },
 }, {
-    tableName: "cuentas"
+    tableName: "cuentas",
+    name: {
+        singular: "Cuenta",
+        plural: "Cuentas"
+    }
 })
 
 module.exports = {

@@ -1,4 +1,4 @@
-const { UsuarioEmpresaRol, Rol } = require("./associations");
+const { UsuarioEmpresaRol, Rol, Empresa, Cuenta } = require("./associations");
 const { ForbiddenError } = require("./errors");
 
 const PERMISOS = {
@@ -21,6 +21,18 @@ async function exigirRol(usuarioId, empresaId, rolesPermitidos) {
 
     if (vinculo === null || !rolesPermitidos.includes(vinculo.Rol.codigo)) {
         throw new ForbiddenError("No tienes permisos para realizar esta acción")
+    }
+
+    const empresa = await Empresa.findByPk(empresaId, {
+        include: [Cuenta]
+    })
+
+    if (empresa.Cuenta.estado !== "activa") {
+        throw new ForbiddenError("La cuenta no está activa: solo se permite consultar información")
+    }
+
+    if (empresa.estado !== "activa") {
+        throw new ForbiddenError("La empresa está inactiva: solo se permite consultar información")
     }
 }
 
