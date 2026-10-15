@@ -34,6 +34,10 @@ const verificarToken = async (req, res, next) => {
             }
         }
 
+        if (usuario.debe_cambiar_password === true && req.originalUrl !== "/api/auth/cambiar-password") {
+            return res.status(403).json({ error: "Debes cambiar contraseña antes de continuar" })
+        }
+
         req.usuario = usuario
 
         const vinculos = await UsuarioEmpresaRol.findAll({

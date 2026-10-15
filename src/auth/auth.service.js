@@ -33,11 +33,13 @@ async function autenticarUsuario(email, password) {
         }
     }
 
-    return jwt.sign(
+    const token = jwt.sign(
         { sub: usuario.id },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN }
     )
+
+    return { token, debeCambiarPassword: usuario.debe_cambiar_password }
 }
 
 async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
@@ -65,7 +67,8 @@ async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
     const passwordHash = await bcrypt.hash(passwordNueva, 10)
 
     await usuario.update({
-        password_hash: passwordHash
+        password_hash: passwordHash,
+        debe_cambiar_password: false
     })
 }
 

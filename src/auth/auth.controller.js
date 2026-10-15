@@ -3,8 +3,8 @@ const { autenticarUsuario, cambiarPassword } = require("./auth.service.js")
 
 async function login(req, res) {
     const { email, password } = req.body ?? {}
-    const token = await autenticarUsuario(email, password)
-    res.status(200).json({ token })
+    const resultado = await autenticarUsuario(email, password)
+    res.status(200).json(resultado)
 }
 
 async function cambiar(req, res) {
