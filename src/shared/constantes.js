@@ -1,0 +1,5 @@
+const DIAS_CONSERVACION_DATOS = 90
+
+module.exports = {
+    DIAS_CONSERVACION_DATOS
+}

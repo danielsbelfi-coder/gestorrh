@@ -3,7 +3,7 @@ const { Op } = require("sequelize")
 const { exigirRol, PERMISOS, exigirCuentaActiva } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ForbiddenError, ValidationError } = require("../shared/errors.js")
 const { sequelize } = require("../shared/database.js")
-const DIAS_CONSERVACION_DATOS = 90
+const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 
 async function crearEmpresa(datos, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)

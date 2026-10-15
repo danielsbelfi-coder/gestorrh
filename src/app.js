@@ -14,8 +14,10 @@ const usuarioRoutes = require("./usuarios/usuario.routes.js")
 const authRoutes = require("./auth/auth.routes.js")
 const afpRoutes = require("./remuneraciones/afp.routes.js")
 const isapreRoutes = require("./remuneraciones/isapre.routes.js")
+const cuentaRoutes = require("./cuentas/cuenta.routes.js")
 const verificarToken = require("./shared/middlewares/auth.middleware")
 const requiereSoporte = require("./shared/middlewares/requiere-soporte.middleware.js")
+const requiereComercial = require("./shared/middlewares/requiere-comercial.middleware.js")
 app.use(express.json());
 
 app.use("/api/empresas", verificarToken, empresaRoutes)
@@ -30,8 +32,8 @@ app.use("/api/usuarios", verificarToken, requiereSoporte, usuarioRoutes)
 app.use("/api/auth", authRoutes)
 app.use("/api/afps", verificarToken, afpRoutes)
 app.use("/api/isapres", verificarToken, isapreRoutes)
+app.use("/api/cuentas", verificarToken, requiereComercial, cuentaRoutes)
 app.use(express.static(path.join(__dirname, "../public")))
-
 app.use(manejarErrores)
 
 module.exports = {
