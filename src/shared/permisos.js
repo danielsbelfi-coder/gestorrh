@@ -36,7 +36,16 @@ async function exigirRol(usuarioId, empresaId, rolesPermitidos) {
     }
 }
 
+async function exigirCuentaActiva(cuentaId) {
+    const cuenta = await Cuenta.findByPk(cuentaId)
+
+    if (cuenta.estado !== "activa") {
+        throw new ForbiddenError("La cuenta no está activa: solo se permite consultar información")
+    }
+}
+
 module.exports = {
     PERMISOS,
-    exigirRol
+    exigirRol,
+    exigirCuentaActiva
 }

@@ -1,9 +1,9 @@
-const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa } = require("./empresa.service.js");
+const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa, reactivarEmpresa } = require("./empresa.service.js");
 
 
 
 async function crear(req, res) {
-    const nuevaEmpresa = await crearEmpresa(req.body);
+    const nuevaEmpresa = await crearEmpresa(req.body, req.usuario);
 
     res.status(201).json(nuevaEmpresa)
 }
@@ -24,8 +24,13 @@ async function actualizar(req, res) {
 }
 
 async function desactivar(req, res) {
-    const empresaInactiva = await desactivarEmpresa(req.params.id, req.empresasPermitidas)
+    const empresaInactiva = await desactivarEmpresa(req.params.id, req.usuario, req.body?.confirmar)
     res.status(200).json(empresaInactiva)
+}
+
+async function reactivar(req, res) {
+    const empresaActiva = await reactivarEmpresa(req.params.id, req.usuario)
+    res.status(200).json(empresaActiva)
 }
 
 module.exports = {
@@ -33,5 +38,6 @@ module.exports = {
     listar,
     obtenerPorId,
     actualizar,
-    desactivar
+    desactivar,
+    reactivar
 }
