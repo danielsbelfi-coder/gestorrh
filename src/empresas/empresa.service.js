@@ -4,9 +4,19 @@ const { exigirRol, PERMISOS, exigirCuentaActiva } = require("../shared/permisos.
 const { NotFoundError, ConflictError, ForbiddenError, ValidationError } = require("../shared/errors.js")
 const { sequelize } = require("../shared/database.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
+const { limpiarRut, rutEsValido } = require("../shared/rut.js")
+
+
 
 async function crearEmpresa(datos, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)
+
+    const rut = limpiarRut(datos.rut)
+    const dv = String(datos.dv).trim().toUpperCase()
+
+    if (!rutEsValido(rut, dv)) {
+        throw new ValidationError("El RUT de la empresa no es válido")
+    }
 
     const rolAdmin = await Rol.findOne({
         where: {
@@ -18,10 +28,13 @@ async function crearEmpresa(datos, usuario) {
         return await sequelize.transaction(async (t) => {
             const empresa = await Empresa.create({
                 ...datos,
+                rut: rut,
+                dv: dv,
                 cuenta_id: usuario.cuenta_id
             }, {
                 fields: ["cuenta_id",
                     "rut",
+                    "dv",
                     "razon_social",
                     "nombre_fantasia",
                     "representante_legal_nombre",

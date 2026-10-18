@@ -10,7 +10,7 @@ async function cargarEmpresas() {
 
     const lista = document.getElementById("listaEmpresas")
     lista.innerHTML = resultado.datos.map(function (empresa) {
-        return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}) - ${empresa.estado} </li>`
+        return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)}) - ${empresa.estado} </li>`
     }).join("")
 }
 
@@ -23,6 +23,7 @@ formulario.addEventListener("submit", async function (evento) {
 
     const datos = {
         rut: document.getElementById("rut").value,
+        dv: document.getElementById("dv").value,
         razon_social: document.getElementById("razonSocial").value,
         representante_legal_nombre: document.getElementById("representanteLegalNombre").value,
         representante_legal_rut: document.getElementById("representanteLegalRut").value,

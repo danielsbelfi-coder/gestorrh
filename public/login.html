@@ -33,7 +33,12 @@
 
             if (resultado.status === 200) {
                 localStorage.setItem("token", resultado.datos.token)
-                window.location.href = "index.html"
+
+                if (resultado.datos.debeCambiarPassword === true) {
+                    window.location.href = "cambiar-password.html"
+                } else {
+                    window.location.href = "index.html"
+                }
             } else {
                 document.getElementById("mensajeError").textContent = resultado.datos.error
             }

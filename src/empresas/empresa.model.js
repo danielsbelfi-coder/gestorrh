@@ -6,6 +6,10 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.STRING,
     allowNull: false
   },
+  dv: {
+    type: DataTypes.STRING(1),
+    allowNull: false
+  },
   razon_social: {
     type: DataTypes.STRING,
     allowNull: false
