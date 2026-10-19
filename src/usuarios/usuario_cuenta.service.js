@@ -202,6 +202,28 @@ async function quitarRolEmpresa(id, empresaId, usuario) {
     return vinculo
 }
 
+async function restablecerPasswordCuenta(id, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    if (objetivo.id === usuario.id) {
+        throw new ForbiddenError("Para cambiar tu propia contraseña usa la opción Cambiar contraseña")
+    }
+
+    const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
+
+    await objetivo.update({
+        password_hash: passwordHash,
+        debe_cambiar_password: true
+    })
+
+    return {
+        usuario: { id: objetivo.id, nombre: objetivo.nombre, email: objetivo.email },
+        passwordInicial
+    }
+}
+
 module.exports = {
     listarUsuariosCuenta,
     crearUsuarioCuenta,
@@ -210,5 +232,6 @@ module.exports = {
     editarUsuarioCuenta,
     cambiarAdminCuenta,
     asignarRolEmpresa,
-    quitarRolEmpresa
+    quitarRolEmpresa,
+    restablecerPasswordCuenta
 }

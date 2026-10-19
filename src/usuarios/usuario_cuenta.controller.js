@@ -1,4 +1,4 @@
-const { listarUsuariosCuenta, crearUsuarioCuenta, editarUsuarioCuenta, desactivarUsuarioCuenta, reactivarUsuarioCuenta, cambiarAdminCuenta, asignarRolEmpresa, quitarRolEmpresa } = require("./usuario_cuenta.service")
+const { listarUsuariosCuenta, crearUsuarioCuenta, editarUsuarioCuenta, desactivarUsuarioCuenta, reactivarUsuarioCuenta, cambiarAdminCuenta, asignarRolEmpresa, quitarRolEmpresa, restablecerPasswordCuenta } = require("./usuario_cuenta.service")
 
 
 async function listar(req, res) {
@@ -49,6 +49,11 @@ async function quitarRol(req, res) {
     res.status(200).json(rolQuitado)
 }
 
+async function restablecerPassword(req, res) {
+    const nuevaPass = await restablecerPasswordCuenta(req.params.id, req.usuario)
+
+    res.status(200).json(nuevaPass)
+}
 
 module.exports = {
     listar,
@@ -58,5 +63,6 @@ module.exports = {
     reactivar,
     cambiarAdmin,
     asignarRol,
-    quitarRol
+    quitarRol,
+    restablecerPassword
 }
