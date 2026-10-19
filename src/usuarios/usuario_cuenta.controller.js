@@ -1,4 +1,4 @@
-const { listarUsuariosCuenta, crearUsuarioCuenta } = require("./usuario_cuenta.service")
+const { listarUsuariosCuenta, crearUsuarioCuenta, editarUsuarioCuenta, desactivarUsuarioCuenta, reactivarUsuarioCuenta, cambiarAdminCuenta } = require("./usuario_cuenta.service")
 
 
 async function listar(req, res) {
@@ -13,7 +13,36 @@ async function crear(req, res) {
     res.status(201).json(crearUsuario)
 }
 
+async function editar(req, res) {
+    const editarUsuario = await editarUsuarioCuenta(req.params.id, req.body ?? {}, req.usuario)
+
+    res.status(200).json(editarUsuario)
+}
+
+async function desactivar(req, res) {
+    const desactivarUsuario = await desactivarUsuarioCuenta(req.params.id, req.usuario)
+
+    res.status(200).json(desactivarUsuario)
+}
+
+async function reactivar(req, res) {
+    const reactivarUsuario = await reactivarUsuarioCuenta(req.params.id, req.usuario)
+
+    res.status(200).json(reactivarUsuario)
+}
+
+async function cambiarAdmin(req, res) {
+    const nuevoAdmin = await cambiarAdminCuenta(req.params.id, req.body?.es_admin_cuenta, req.usuario)
+
+    res.status(200).json(nuevoAdmin)
+}
+
+
 module.exports = {
     listar,
-    crear
+    crear,
+    editar,
+    desactivar,
+    reactivar,
+    cambiarAdmin
 }

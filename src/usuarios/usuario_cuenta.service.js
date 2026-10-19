@@ -1,7 +1,17 @@
 const { Usuario, UsuarioEmpresaRol, Empresa, Rol } = require("../shared/associations.js")
-const { ValidationError, ConflictError } = require("../shared/errors.js")
+const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
 const { exigirCuentaActiva } = require("../shared/permisos.js")
 const { generarPasswordInicial } = require("../shared/password.js")
+
+async function obtenerUsuarioCuenta(id, usuario) {
+    const objetivo = await Usuario.findByPk(id)
+
+    if (objetivo === null || objetivo.cuenta_id !== usuario.cuenta_id) {
+        throw new NotFoundError("Usuario no encontrado")
+    }
+
+    return objetivo
+}
 
 async function listarUsuariosCuenta(usuario) {
     return await Usuario.findAll({
@@ -52,7 +62,95 @@ async function crearUsuarioCuenta(datos, usuario) {
     }
 }
 
+async function desactivarUsuarioCuenta(id, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    if (objetivo.id === usuario.id) {
+        throw new ForbiddenError("No puedes desactivar tu propio usuario")
+    }
+
+    if (objetivo.estado === "inactivo") {
+        throw new ConflictError("El usuario ya está inactivo")
+    }
+
+    await objetivo.update({
+        estado: "inactivo"
+    })
+    return objetivo
+}
+
+async function reactivarUsuarioCuenta(id, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    if (objetivo.estado === "activo") {
+        throw new ConflictError("El usuario ya está activo")
+    }
+
+    await objetivo.update({
+        estado: "activo"
+    })
+
+    return objetivo
+}
+
+async function editarUsuarioCuenta(id, datos, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    try {
+        await (objetivo.update(datos, {
+            fields: [
+                "nombre",
+                "email"
+            ]
+        }))
+
+        return objetivo
+
+    } catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            throw new ConflictError("Ya existe un usuario con ese email")
+        }
+        throw error
+    }
+
+}
+
+async function cambiarAdminCuenta(id, esAdmin, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    if (typeof esAdmin !== "boolean") {
+        throw new ValidationError("Debe indicar es_admin_cuenta como true o false")
+    }
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    if (objetivo.id === usuario.id && esAdmin === false) {
+        throw new ForbiddenError("No puedes quitarte tu propio permiso de administrador")
+    }
+
+    if (objetivo.es_admin_cuenta === esAdmin) {
+        throw new ConflictError(esAdmin ? "El usuario ya es administrador de la cuenta" : "El usuario no es administrador de la cuenta")
+    }
+
+    await objetivo.update({
+        es_admin_cuenta: esAdmin
+    })
+
+    return objetivo
+}
+
+
 module.exports = {
     listarUsuariosCuenta,
-    crearUsuarioCuenta
+    crearUsuarioCuenta,
+    desactivarUsuarioCuenta,
+    reactivarUsuarioCuenta,
+    editarUsuarioCuenta,
+    cambiarAdminCuenta
 }
