@@ -2,6 +2,8 @@ const { Usuario, UsuarioEmpresaRol, Empresa, Rol } = require("../shared/associat
 const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
 const { exigirCuentaActiva } = require("../shared/permisos.js")
 const { generarPasswordInicial } = require("../shared/password.js")
+const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
+
 
 async function obtenerUsuarioCuenta(id, usuario) {
     const objetivo = await Usuario.findByPk(id)
@@ -145,6 +147,60 @@ async function cambiarAdminCuenta(id, esAdmin, usuario) {
     return objetivo
 }
 
+async function asignarRolEmpresa(id, empresaId, codigoRol, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    if (!codigoRol) {
+        throw new ValidationError("Debe indicar el rol")
+    }
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+    const empresa = await obtenerEmpresaDeCuenta(empresaId, usuario)
+
+    const rol = await Rol.findOne({ where: { codigo: codigoRol } })
+
+    if (rol === null) {
+        throw new ValidationError("El rol indicado no existe")
+    }
+
+    const vinculo = await UsuarioEmpresaRol.findOne({
+        where: { usuario_id: objetivo.id, empresa_id: empresa.id }
+    })
+
+    if (vinculo === null) {
+        return await UsuarioEmpresaRol.create({
+            usuario_id: objetivo.id,
+            empresa_id: empresa.id,
+            rol_id: rol.id,
+            estado: "activo"
+        })
+    }
+
+    await vinculo.update({ rol_id: rol.id, estado: "activo" })
+    return vinculo
+}
+
+async function quitarRolEmpresa(id, empresaId, usuario) {
+    await exigirCuentaActiva(usuario.cuenta_id)
+
+    const objetivo = await obtenerUsuarioCuenta(id, usuario)
+    const empresa = await obtenerEmpresaDeCuenta(empresaId, usuario)
+
+    const vinculo = await UsuarioEmpresaRol.findOne({
+        where: { usuario_id: objetivo.id, empresa_id: empresa.id }
+    })
+
+    if (vinculo === null) {
+        throw new NotFoundError("El usuario no tiene un rol en esta empresa")
+    }
+
+    if (vinculo.estado === "inactivo") {
+        throw new ConflictError("El rol en esta empresa ya fue quitado")
+    }
+
+    await vinculo.update({ estado: "inactivo" })
+    return vinculo
+}
 
 module.exports = {
     listarUsuariosCuenta,
@@ -152,5 +208,7 @@ module.exports = {
     desactivarUsuarioCuenta,
     reactivarUsuarioCuenta,
     editarUsuarioCuenta,
-    cambiarAdminCuenta
+    cambiarAdminCuenta,
+    asignarRolEmpresa,
+    quitarRolEmpresa
 }

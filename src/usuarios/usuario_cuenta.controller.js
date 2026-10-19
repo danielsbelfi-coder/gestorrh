@@ -1,4 +1,4 @@
-const { listarUsuariosCuenta, crearUsuarioCuenta, editarUsuarioCuenta, desactivarUsuarioCuenta, reactivarUsuarioCuenta, cambiarAdminCuenta } = require("./usuario_cuenta.service")
+const { listarUsuariosCuenta, crearUsuarioCuenta, editarUsuarioCuenta, desactivarUsuarioCuenta, reactivarUsuarioCuenta, cambiarAdminCuenta, asignarRolEmpresa, quitarRolEmpresa } = require("./usuario_cuenta.service")
 
 
 async function listar(req, res) {
@@ -37,6 +37,18 @@ async function cambiarAdmin(req, res) {
     res.status(200).json(nuevoAdmin)
 }
 
+async function asignarRol(req, res) {
+    const nuevoRol = await asignarRolEmpresa(req.params.id, req.params.empresaId, req.body?.rol, req.usuario)
+
+    res.status(200).json(nuevoRol)
+}
+
+async function quitarRol(req, res) {
+    const rolQuitado = await quitarRolEmpresa(req.params.id, req.params.empresaId, req.usuario)
+
+    res.status(200).json(rolQuitado)
+}
+
 
 module.exports = {
     listar,
@@ -44,5 +56,7 @@ module.exports = {
     editar,
     desactivar,
     reactivar,
-    cambiarAdmin
+    cambiarAdmin,
+    asignarRol,
+    quitarRol
 }

@@ -148,5 +148,6 @@ module.exports = {
     obtenerEmpresaPorId,
     actualizarEmpresa,
     desactivarEmpresa,
-    reactivarEmpresa
+    reactivarEmpresa,
+    obtenerEmpresaDeCuenta
 }
