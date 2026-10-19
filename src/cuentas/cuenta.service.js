@@ -1,5 +1,4 @@
-const crypto = require("crypto")
-const bcrypt = require("bcrypt")
+const { generarPasswordInicial } = require("../shared/password.js")
 const { Cuenta, Usuario } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
 const { ValidationError, ConflictError, NotFoundError } = require("../shared/errors.js")
@@ -20,8 +19,7 @@ async function crearCuenta(datos) {
         throw new ValidationError("Debe indicar el nombre y el email del administrador de la cuenta")
     }
 
-    const passwordInicial = crypto.randomBytes(9).toString("base64url")
-    const passwordHash = await bcrypt.hash(passwordInicial, 10)
+    const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
 
     try {
         return await sequelize.transaction(async (t) => {

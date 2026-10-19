@@ -18,6 +18,8 @@ const cuentaRoutes = require("./cuentas/cuenta.routes.js")
 const verificarToken = require("./shared/middlewares/auth.middleware")
 const requiereSoporte = require("./shared/middlewares/requiere-soporte.middleware.js")
 const requiereComercial = require("./shared/middlewares/requiere-comercial.middleware.js")
+const usuarioCuentaRoutes = require("./usuarios/usuario_cuenta.routes.js")
+const requiereAdminCuenta = require("./shared/middlewares/requiere-admin-cuenta.middleware.js")
 app.use(express.json());
 
 app.use("/api/empresas", verificarToken, empresaRoutes)
@@ -33,6 +35,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/afps", verificarToken, afpRoutes)
 app.use("/api/isapres", verificarToken, isapreRoutes)
 app.use("/api/cuentas", verificarToken, requiereComercial, cuentaRoutes)
+app.use("/api/cuenta/usuarios", verificarToken, requiereAdminCuenta, usuarioCuentaRoutes)
 app.use(express.static(path.join(__dirname, "../public")))
 app.use(manejarErrores)
 
