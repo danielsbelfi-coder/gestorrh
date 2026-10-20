@@ -23,6 +23,7 @@ formulario.addEventListener("submit", async function (evento) {
 
     if (resultado.status === 200) {
         mensaje.textContent = "Contraseña actualizada"
+        localStorage.setItem("token", resultado.datos.token)
         setTimeout(function () {
             window.location.href = "index.html"
         }, 1500)

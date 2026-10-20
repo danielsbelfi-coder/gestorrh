@@ -9,9 +9,9 @@ async function login(req, res) {
 
 async function cambiar(req, res) {
     const { password_actual, password_nueva } = req.body ?? {}
-    await cambiarPassword(req.usuario.id, password_actual, password_nueva)
+    const token = await cambiarPassword(req.usuario.id, password_actual, password_nueva)
 
-    res.status(200).json({ mensaje: "Contraseña actualizada" })
+    res.status(200).json({ mensaje: "Contraseña actualizada", token })
 }
 
 function usuarioEnUso(req, res) {

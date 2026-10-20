@@ -5,6 +5,13 @@ const { AuthenticationError, ValidationError, ForbiddenError } = require("../sha
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
+function generarToken(usuarioId) {
+    return jwt.sign(
+        { sub: usuarioId },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+    )
+}
 
 async function autenticarUsuario(email, password) {
     if (typeof password !== "string" || password.trim() === ""
@@ -33,11 +40,7 @@ async function autenticarUsuario(email, password) {
         }
     }
 
-    const token = jwt.sign(
-        { sub: usuario.id },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
-    )
+    const token = generarToken(usuario.id)
 
     return { token, debeCambiarPassword: usuario.debe_cambiar_password }
 }
@@ -68,8 +71,11 @@ async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
 
     await usuario.update({
         password_hash: passwordHash,
-        debe_cambiar_password: false
+        debe_cambiar_password: false,
+        password_cambiado_en: new Date()
     })
+
+    return generarToken(usuario.id)
 }
 
 module.exports = {

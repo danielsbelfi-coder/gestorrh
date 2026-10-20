@@ -34,6 +34,14 @@ const verificarToken = async (req, res, next) => {
             }
         }
 
+        if (usuario.password_cambiado_en !== null) {
+            const cambioEnSegundos = Math.floor(usuario.password_cambiado_en.getTime() / 1000)
+
+            if (tokenPayload.iat < cambioEnSegundos) {
+                throw new AuthenticationError("Token anterior al último cambio de contraseña")
+            }
+        }
+
         if (usuario.debe_cambiar_password === true && req.originalUrl !== "/api/auth/cambiar-password") {
             return res.status(403).json({ error: "Debes cambiar contraseña antes de continuar" })
         }

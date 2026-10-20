@@ -45,7 +45,8 @@ async function restablecerPasswordSoporte(id) {
 
     await usuario.update({
         password_hash: passwordHash,
-        debe_cambiar_password: true
+        debe_cambiar_password: true,
+        password_cambiado_en: new Date()
     })
 
     return {

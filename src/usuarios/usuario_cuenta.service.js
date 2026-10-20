@@ -215,7 +215,8 @@ async function restablecerPasswordCuenta(id, usuario) {
 
     await objetivo.update({
         password_hash: passwordHash,
-        debe_cambiar_password: true
+        debe_cambiar_password: true,
+        password_cambiado_en: new Date()
     })
 
     return {

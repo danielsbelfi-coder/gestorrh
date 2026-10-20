@@ -36,7 +36,11 @@ const Usuario = sequelize.define("Usuario", {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
-    }
+    },
+    password_cambiado_en: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
 }, {
     tableName: "usuarios",
     defaultScope: {
