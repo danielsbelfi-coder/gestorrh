@@ -1,4 +1,4 @@
-const { crearUsuario, listarUsuarios, obtenerUsuarioPorId, actualizarUsuario, desactivarUsuario } = require("./usuario.service");
+const { crearUsuario, listarUsuarios, obtenerUsuarioPorId, actualizarUsuario, desactivarUsuario, restablecerPasswordSoporte } = require("./usuario.service");
 
 
 async function crear(req, res) {
@@ -29,10 +29,16 @@ async function desactivar(req, res) {
     res.status(200).json(usuarioInactivo)
 }
 
+async function restablecerPasword(req, res) {
+    const respass = await restablecerPasswordSoporte(req.params.id)
+    res.status(200).json(respass)
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
     actualizar,
-    desactivar
+    desactivar,
+    restablecerPasword
 }

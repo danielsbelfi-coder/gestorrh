@@ -1,31 +1,30 @@
-const { ValidationError, ConflictError, NotFoundError } = require("../shared/errors.js")
+const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
 const { Usuario } = require("../shared/associations")
+const { generarPasswordInicial } = require("../shared/password.js")
 const bcrypt = require("bcrypt")
 
 async function crearUsuario(datos) {
     try {
         if (typeof datos.password !== "string" || datos.password.trim() === "") {
-        throw new ValidationError("La contraseña es obligatoria")
-    }
-    const passwordHash = await bcrypt.hash(datos.password, 10)
+            throw new ValidationError("La contraseña es obligatoria")
+        }
+        const passwordHash = await bcrypt.hash(datos.password, 10)
 
-    const nuevoUsuario = await Usuario.create({
-        nombre: datos.nombre,
-        email: datos.email,
-        estado: datos.estado,
-        password_hash: passwordHash
-    })
+        const nuevoUsuario = await Usuario.create({
+            nombre: datos.nombre,
+            email: datos.email,
+            estado: datos.estado,
+            password_hash: passwordHash
+        })
 
-    return nuevoUsuario
+        return nuevoUsuario
 
     } catch (error) {
         if (error.name === "SequelizeUniqueConstraintError") {
             throw new ConflictError("Ya existe un usuario con ese email")
         }
         throw error
-    } 
-
-    
+    }
 }
 
 async function actualizarUsuario(id, datos) {
@@ -35,20 +34,8 @@ async function actualizarUsuario(id, datos) {
         throw new NotFoundError("Usuario no encontrado")
     }
 
-    const datosActualizados = {
-        ...datos
-    }
-
-    const campos = ["nombre", "email", "estado"]
-
-    if (datos.password) {
-        datosActualizados.password_hash = await bcrypt.hash(datos.password, 10)
-        delete datosActualizados.password
-        campos.push("password_hash")
-    }
-    
-    return await usuarioExistente.update(datosActualizados, {
-        fields: campos
+    return await usuarioExistente.update(datos, {
+        fields: ["nombre", "email", "estado"]
     })
 }
 
@@ -68,8 +55,32 @@ async function obtenerUsuarioPorId(id) {
 
 async function desactivarUsuario(id) {
     const usuarioDesactivado = await actualizarUsuario(id, { estado: "inactivo" })
-    
-        return usuarioDesactivado
+
+    return usuarioDesactivado
+}
+
+async function restablecerPasswordSoporte(id) {
+    const usuario = await obtenerUsuarioPorId(id)
+
+    if (usuario.cuenta_id === null) {
+        throw new ForbiddenError("Solo se puede restablecer la contraseña de usuarios de una cuenta")
+    }
+
+    const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
+
+    await usuario.update({
+        password_hash: passwordHash,
+        debe_cambiar_password: true
+    })
+
+    return {
+        usuario: {
+            id: usuario.id,
+            nombre: usuario.nombre,
+            email: usuario.email
+        },
+        passwordInicial
+    }
 }
 
 module.exports = {
@@ -77,5 +88,6 @@ module.exports = {
     actualizarUsuario,
     listarUsuarios,
     obtenerUsuarioPorId,
-    desactivarUsuario
+    desactivarUsuario,
+    restablecerPasswordSoporte
 }
