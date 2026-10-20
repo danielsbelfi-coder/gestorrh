@@ -1,31 +1,6 @@
-const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
+const { NotFoundError, ForbiddenError } = require("../shared/errors.js")
 const { Usuario } = require("../shared/associations")
 const { generarPasswordInicial } = require("../shared/password.js")
-const bcrypt = require("bcrypt")
-
-async function crearUsuario(datos) {
-    try {
-        if (typeof datos.password !== "string" || datos.password.trim() === "") {
-            throw new ValidationError("La contraseña es obligatoria")
-        }
-        const passwordHash = await bcrypt.hash(datos.password, 10)
-
-        const nuevoUsuario = await Usuario.create({
-            nombre: datos.nombre,
-            email: datos.email,
-            estado: datos.estado,
-            password_hash: passwordHash
-        })
-
-        return nuevoUsuario
-
-    } catch (error) {
-        if (error.name === "SequelizeUniqueConstraintError") {
-            throw new ConflictError("Ya existe un usuario con ese email")
-        }
-        throw error
-    }
-}
 
 async function actualizarUsuario(id, datos) {
     const usuarioExistente = await Usuario.findByPk(id)
@@ -84,7 +59,6 @@ async function restablecerPasswordSoporte(id) {
 }
 
 module.exports = {
-    crearUsuario,
     actualizarUsuario,
     listarUsuarios,
     obtenerUsuarioPorId,

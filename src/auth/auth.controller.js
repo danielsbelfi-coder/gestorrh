@@ -14,7 +14,14 @@ async function cambiar(req, res) {
     res.status(200).json({ mensaje: "Contraseña actualizada" })
 }
 
+function usuarioEnUso(req, res) {
+    const { id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma } = req.usuario
+
+    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma })
+}
+
 module.exports = {
     login,
-    cambiar
+    cambiar,
+    usuarioEnUso
 }
