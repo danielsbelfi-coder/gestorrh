@@ -58,7 +58,7 @@ async function cargarUsuarios() {
 }
 
 async function cargarEmpresas() {
-    const resultado = await llamarApi("/api/empresas")
+    const resultado = await llamarApi("/api/cuenta/empresas")
 
     if (resultado.status !== 200) {
         mensaje.textContent = resultado.datos.error
@@ -66,7 +66,7 @@ async function cargarEmpresas() {
     }
 
     document.getElementById("rolEmpresa").innerHTML = resultado.datos.map((empresa) =>
-        `<option value="${empresa.id}">${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)})</option>`
+        `<option value="${empresa.id}">${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)})${empresa.estado === "inactiva" ? " — inactiva" : ""}</option>`
     ).join("")
 }
 

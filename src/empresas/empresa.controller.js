@@ -1,4 +1,4 @@
-const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa, reactivarEmpresa } = require("./empresa.service.js");
+const { crearEmpresa, listarEmpresas, obtenerEmpresaPorId, actualizarEmpresa, desactivarEmpresa, reactivarEmpresa, listarEmpresasCuenta } = require("./empresa.service.js");
 
 
 
@@ -33,11 +33,17 @@ async function reactivar(req, res) {
     res.status(200).json(empresaActiva)
 }
 
+async function listarCuenta(req, res) {
+    const listaEmpresaCuenta = await listarEmpresasCuenta(req.usuario)
+    res.status(200).json(listaEmpresaCuenta)
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
     actualizar,
     desactivar,
-    reactivar
+    reactivar,
+    listarCuenta
 }

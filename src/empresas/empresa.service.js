@@ -142,6 +142,14 @@ async function reactivarEmpresa(id, usuario) {
     return empresa
 }
 
+async function listarEmpresasCuenta(usuario) {
+    return await Empresa.findAll({
+        where: { cuenta_id: usuario.cuenta_id },
+        attributes: ["id", "rut", "dv", "razon_social", "estado"],
+        order: [["razon_social", "ASC"]]
+    })
+}
+
 module.exports = {
     crearEmpresa,
     listarEmpresas,
@@ -149,5 +157,6 @@ module.exports = {
     actualizarEmpresa,
     desactivarEmpresa,
     reactivarEmpresa,
-    obtenerEmpresaDeCuenta
+    obtenerEmpresaDeCuenta,
+    listarEmpresasCuenta
 }
