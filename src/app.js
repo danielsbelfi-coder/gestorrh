@@ -1,4 +1,5 @@
 const express = require("express")
+const helmet = require("helmet")
 const path = require("path")
 const app = express()
 const empresaRoutes = require("./empresas/empresa.routes")
@@ -21,6 +22,7 @@ const requiereComercial = require("./shared/middlewares/requiere-comercial.middl
 const usuarioCuentaRoutes = require("./usuarios/usuario_cuenta.routes.js")
 const requiereAdminCuenta = require("./shared/middlewares/requiere-admin-cuenta.middleware.js")
 const empresaCuentaRouter = require("./empresas/empresa_cuenta.routes.js")
+app.use(helmet())
 app.use(express.json());
 
 app.use("/api/empresas", verificarToken, empresaRoutes)
