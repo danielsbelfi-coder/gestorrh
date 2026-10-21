@@ -96,7 +96,7 @@ async function cancelarCuenta(id, confirmar) {
     }
 
     if (confirmar !== true) {
-        throw new ValidationError(`Al cancelar, los usuarios de la cuenta perderán el acceso y sus datos se eliminarán en ${DIAS_CONSERVACION_DATOS} días si no se reactiva. Para continuar, envía confirmar: true`)
+        throw new ValidationError(`Al cancelar, los usuarios de la cuenta perderán el acceso y sus datos se eliminarán en ${DIAS_CONSERVACION_DATOS} días si no se reactiva. ¿Confirmas la cancelación?`)
     }
 
     await cuenta.update({

@@ -114,7 +114,7 @@ async function desactivarEmpresa(id, usuario, confirmar) {
     }
 
     if (confirmar !== true) {
-        throw new ValidationError(`Al desactivar, la empresa quedará en solo lectura y sus datos se eliminarán en ${DIAS_CONSERVACION_DATOS} días si no se reactiva. Para continuar, envía confirmar: true`)
+        throw new ValidationError(`Al desactivar, la empresa quedará en solo lectura y sus datos se eliminarán en ${DIAS_CONSERVACION_DATOS} días si no se reactiva. ¿Confirmas la desactivación?`)
     }
 
     await empresa.update({
@@ -145,7 +145,7 @@ async function reactivarEmpresa(id, usuario) {
 async function listarEmpresasCuenta(usuario) {
     return await Empresa.findAll({
         where: { cuenta_id: usuario.cuenta_id },
-        attributes: ["id", "rut", "dv", "razon_social", "estado"],
+        attributes: ["id", "rut", "dv", "razon_social", "estado", "fecha_desactivacion"],
         order: [["razon_social", "ASC"]]
     })
 }

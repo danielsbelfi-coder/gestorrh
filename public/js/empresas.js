@@ -1,7 +1,10 @@
 requiereLogin()
 
+let esAdminCuenta = false
+
 async function cargarEmpresas() {
-    const resultado = await llamarApi("/api/empresas")
+    const ruta = esAdminCuenta ? "/api/cuenta/empresas" : "/api/empresas"
+    const resultado = await llamarApi(ruta)
 
     if (resultado.status !== 200) {
         document.getElementById("mensajeError").textContent = resultado.datos.error
@@ -10,8 +13,26 @@ async function cargarEmpresas() {
 
     const lista = document.getElementById("listaEmpresas")
     lista.innerHTML = resultado.datos.map(function (empresa) {
-        return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)}) - ${empresa.estado} </li>`
+        const estado = empresa.estado === "inactiva"
+            ? `inactiva desde ${escaparHtml(empresa.fecha_desactivacion)}`
+            : "activa"
+
+        let boton = ""
+
+        if (esAdminCuenta) {
+            boton = empresa.estado === "activa"
+                ? `<button data-accion="desactivar" data-id="${empresa.id}">Desactivar</button>`
+                : `<button data-accion="reactivar" data-id="${empresa.id}">Reactivar</button>`
+        }
+        return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)}) - ${estado} ${boton}</li>`
+
     }).join("")
+}
+
+async function iniciar() {
+    const resultado = await llamarApi("/api/auth/usuario")
+    esAdminCuenta = resultado.status === 200 && resultado.datos.es_admin_cuenta === true
+    cargarEmpresas()
 }
 
 const formulario = document.getElementById("formCrearEmpresa")
@@ -44,4 +65,40 @@ formulario.addEventListener("submit", async function (evento) {
     cargarEmpresas()
 })
 
-document.addEventListener("DOMContentLoaded", cargarEmpresas)
+document.getElementById("listaEmpresas").addEventListener("click", async function (evento) {
+    const accion = evento.target.dataset.accion
+    const id = evento.target.dataset.id
+
+    if (!accion) {
+        return
+    }
+
+    document.getElementById("mensajeError").textContent = ""
+    let resultado
+
+    if (accion === "desactivar") {
+        resultado = await llamarApi(`/api/empresas/${id}/desactivar`, { method: "PATCH" })
+
+        if (resultado.status === 400) {
+            if (!confirm(resultado.datos.error)) {
+                return
+            }
+
+            resultado = await llamarApi(`/api/empresas/${id}/desactivar`, {
+                method: "PATCH",
+                body: JSON.stringify({ confirmar: true })
+            })
+        }
+    } else if (accion === "reactivar") {
+        resultado = await llamarApi(`/api/empresas/${id}/reactivar`, { method: "PATCH" })
+    }
+
+    if (resultado.status !== 200) {
+        document.getElementById("mensajeError").textContent = resultado.datos.error
+        return
+    }
+
+    cargarEmpresas()
+})
+
+document.addEventListener("DOMContentLoaded", iniciar)
