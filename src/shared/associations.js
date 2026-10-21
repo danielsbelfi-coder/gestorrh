@@ -16,7 +16,7 @@ const { TramoImpuesto } = require("../remuneraciones/tramo_impuesto.model.js")
 const { Afp } = require("../remuneraciones/afp.model.js")
 const { Isapre } = require("../remuneraciones/isapre.model.js");
 const { Cuenta } = require("../cuentas/cuenta.model.js");
-
+const { Plan } = require("../cuentas/plan.model.js");
 
 Trabajador.belongsTo(Persona, {
     foreignKey: "persona_id"
@@ -172,6 +172,14 @@ Usuario.belongsTo(Cuenta, {
 Cuenta.hasMany(Usuario, {
     foreignKey: "cuenta_id"
 })
+Cuenta.belongsTo(Plan, {
+    foreignKey: "plan_id"
+})
+
+Plan.hasMany(Cuenta, {
+    foreignKey: "plan_id"
+})
+
 
 module.exports = {
     Empresa,
@@ -191,5 +199,6 @@ module.exports = {
     TramoImpuesto,
     Afp,
     Isapre,
-    Cuenta
+    Cuenta,
+    Plan
 }

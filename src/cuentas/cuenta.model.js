@@ -35,6 +35,15 @@ const Cuenta = sequelize.define("Cuenta", {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
+    plan_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    usuarios_adicionales: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    }
 }, {
     tableName: "cuentas",
     name: {
