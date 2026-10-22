@@ -3,7 +3,7 @@ const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = requir
 const { exigirCuentaActiva } = require("../shared/permisos.js")
 const { generarPasswordInicial } = require("../shared/password.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
-
+const { verificarCupoUsuarios } = require("../cuentas/consumo.service.js")
 
 async function obtenerUsuarioCuenta(id, usuario) {
     const objetivo = await Usuario.findByPk(id)
@@ -36,6 +36,8 @@ async function crearUsuarioCuenta(datos, usuario) {
 
     if (!datos.nombre || !datos.email)
         throw new ValidationError("Debe indicar el nombre y el email del usuario")
+
+    await verificarCupoUsuarios(usuario.cuenta_id)
 
     const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
 
@@ -91,6 +93,8 @@ async function reactivarUsuarioCuenta(id, usuario) {
     if (objetivo.estado === "activo") {
         throw new ConflictError("El usuario ya está activo")
     }
+
+    await verificarCupoUsuarios(usuario.cuenta_id)
 
     await objetivo.update({
         estado: "activo"

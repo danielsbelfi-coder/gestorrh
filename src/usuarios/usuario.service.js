@@ -1,4 +1,4 @@
-const { NotFoundError, ForbiddenError } = require("../shared/errors.js")
+const { NotFoundError, ForbiddenError, ConflictError } = require("../shared/errors.js")
 const { Usuario } = require("../shared/associations")
 const { generarPasswordInicial } = require("../shared/password.js")
 
@@ -10,7 +10,7 @@ async function actualizarUsuario(id, datos) {
     }
 
     return await usuarioExistente.update(datos, {
-        fields: ["nombre", "email", "estado"]
+        fields: ["nombre", "email"]
     })
 }
 
@@ -29,9 +29,13 @@ async function obtenerUsuarioPorId(id) {
 }
 
 async function desactivarUsuario(id) {
-    const usuarioDesactivado = await actualizarUsuario(id, { estado: "inactivo" })
+    const usuario = await obtenerUsuarioPorId(id)
 
-    return usuarioDesactivado
+    if (usuario.estado === "inactivo") {
+        throw new ConflictError("El usuario ya está inactivo")
+    }
+
+    return await usuario.update({ estado: "inactivo" })
 }
 
 async function restablecerPasswordSoporte(id) {

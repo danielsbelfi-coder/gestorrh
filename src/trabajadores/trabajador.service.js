@@ -1,7 +1,9 @@
-const { Trabajador, Persona } = require("../shared/associations.js")
+const { Trabajador, Persona, Empresa } = require("../shared/associations.js")
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
+const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
+const { esFechaValida } = require("../shared/fechas.js")
 
 async function crearTrabajador(datos, empresasPermitidas, usuarioId) {
     const empresaId = Number(datos.empresa_id)
@@ -57,11 +59,43 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
 
     await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
 
-    const actualizar = await trabajador.update(datos, {
-        fields: ["fecha_ingreso", "fecha_termino", "estado"]
-    })
+    if (datos.fecha_ingreso !== undefined && !esFechaValida(datos.fecha_ingreso)) {
+        throw new ValidationError("Fecha de ingreso inválida")
+    }
 
-    return actualizar
+    if (datos.fecha_termino !== undefined && datos.fecha_termino !== null && !esFechaValida(datos.fecha_termino)) {
+        throw new ValidationError("Fecha de término inválida")
+    }
+
+
+    const campos = ["fecha_ingreso", "fecha_termino", "estado"]
+
+    const antes = {
+        estado: trabajador.estado,
+        fecha_ingreso: trabajador.fecha_ingreso,
+        fecha_termino: trabajador.fecha_termino
+    }
+
+    const despues = {
+        estado: datos.estado !== undefined ? datos.estado : antes.estado,
+        fecha_ingreso: datos.fecha_ingreso !== undefined ? datos.fecha_ingreso : antes.fecha_ingreso,
+        fecha_termino: datos.fecha_termino !== undefined ? datos.fecha_termino : antes.fecha_termino
+    }
+
+    if (despues.fecha_termino !== null && despues.fecha_termino < despues.fecha_ingreso) {
+        throw new ValidationError("La fecha de término no puede ser anterior a la fecha de ingreso")
+    }
+
+    const meses = mesesQueSuma(antes, despues)
+
+    if (meses.length === 0) {
+        return await trabajador.update(datos, { fields: campos })
+    }
+
+    const empresa = await Empresa.findByPk(trabajador.empresa_id)
+
+    return await conLimiteTrabajadores(empresa.cuenta_id, meses, (transaction) =>
+        trabajador.update(datos, { fields: campos, transaction }))
 }
 
 async function desactivarTrabajador(id, empresasPermitidas, usuarioId) {
