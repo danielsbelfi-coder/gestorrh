@@ -17,7 +17,7 @@ async function cambiar(req, res) {
 function usuarioEnUso(req, res) {
     const { id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma } = req.usuario
 
-    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma })
+    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma, cuenta_estado: req.cuentaEstado ?? null })
 }
 
 module.exports = {

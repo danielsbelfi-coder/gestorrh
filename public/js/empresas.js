@@ -1,6 +1,7 @@
 requiereLogin()
 
 let esAdminCuenta = false
+let cuentaCancelada = false
 
 async function cargarEmpresas() {
     const ruta = esAdminCuenta ? "/api/cuenta/empresas" : "/api/empresas"
@@ -20,9 +21,13 @@ async function cargarEmpresas() {
         let boton = ""
 
         if (esAdminCuenta) {
-            boton = empresa.estado === "activa"
-                ? `<button data-accion="desactivar" data-id="${empresa.id}">Desactivar</button>`
-                : `<button data-accion="reactivar" data-id="${empresa.id}">Reactivar</button>`
+            if (!cuentaCancelada) {
+                boton = empresa.estado === "activa"
+                    ? `<button data-accion="desactivar" data-id="${empresa.id}">Desactivar</button>`
+                    : `<button data-accion="reactivar" data-id="${empresa.id}">Reactivar</button>`
+            }
+
+            boton += ` <button data-accion="exportar" data-id="${empresa.id}">Exportar datos</button>`
         }
         return `<li>${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)}) - ${estado} ${boton}</li>`
 
@@ -32,6 +37,13 @@ async function cargarEmpresas() {
 async function iniciar() {
     const resultado = await llamarApi("/api/auth/usuario")
     esAdminCuenta = resultado.status === 200 && resultado.datos.es_admin_cuenta === true
+    cuentaCancelada = resultado.status === 200 && resultado.datos.cuenta_estado === "cancelada"
+
+    if (cuentaCancelada) {
+        document.getElementById("seccionCrearEmpresa").hidden = true
+        document.getElementById("mensajeError").textContent = "La cuenta está cancelada. Puedes descargar los datos de cada empresa con \"Exportar datos\" durante el plazo de conservación."
+    }
+
     cargarEmpresas()
 }
 
@@ -74,6 +86,17 @@ document.getElementById("listaEmpresas").addEventListener("click", async functio
     }
 
     document.getElementById("mensajeError").textContent = ""
+
+    if (accion === "exportar") {
+        const resultado = await descargarArchivo(`/api/cuenta/empresas/${id}/exportar`)
+
+        if (resultado.status !== 200) {
+            document.getElementById("mensajeError").textContent = resultado.datos.error
+        }
+
+        return
+    }
+
     let resultado
 
     if (accion === "desactivar") {
@@ -95,6 +118,7 @@ document.getElementById("listaEmpresas").addEventListener("click", async functio
 
     if (resultado.status !== 200) {
         document.getElementById("mensajeError").textContent = resultado.datos.error
+
         return
     }
 

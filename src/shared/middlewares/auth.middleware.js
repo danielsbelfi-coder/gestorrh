@@ -2,6 +2,19 @@ const jwt = require("jsonwebtoken")
 const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta } = require("../associations");
 const { AuthenticationError } = require("../errors");
 
+const RUTAS_CUENTA_CANCELADA = [
+    "GET /api/auth/usuario",
+    "PATCH /api/auth/cambiar-password",
+    "GET /api/cuenta/empresas"
+]
+
+function rutaPermitidaCuentaCancelada(req) {
+    const ruta = req.originalUrl.split("?")[0]
+
+    return RUTAS_CUENTA_CANCELADA.includes(`${req.method} ${ruta}`)
+        || (req.method === "GET" && /^\/api\/cuenta\/empresas\/\d+\/exportar$/.test(ruta))
+}
+
 const verificarToken = async (req, res, next) => {
     try {
 
@@ -29,8 +42,16 @@ const verificarToken = async (req, res, next) => {
         if (usuario.cuenta_id !== null) {
             const cuenta = await Cuenta.findByPk(usuario.cuenta_id)
 
+            req.cuentaEstado = cuenta.estado
+
             if (cuenta.estado === "cancelada") {
-                throw new AuthenticationError("Cuenta cancelada")
+                if (usuario.es_admin_cuenta !== true) {
+                    throw new AuthenticationError("Cuenta cancelada")
+                }
+
+                if (!rutaPermitidaCuentaCancelada(req)) {
+                    return res.status(403).json({ error: "La cuenta está cancelada: solo puedes exportar tus datos" })
+                }
             }
         }
 

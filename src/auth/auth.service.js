@@ -31,18 +31,23 @@ async function autenticarUsuario(email, password) {
         throw new AuthenticationError("Credenciales inválidas")
     }
 
+    let cuentaCancelada = false
 
     if (usuario.cuenta_id !== null) {
         const cuenta = await Cuenta.findByPk(usuario.cuenta_id)
 
         if (cuenta.estado === "cancelada") {
-            throw new ForbiddenError("La cuenta fue cancelada. Contacta a la plataforma para recuperar tu información")
+            if (usuario.es_admin_cuenta !== true) {
+                throw new ForbiddenError("La cuenta fue cancelada. Contacta a la plataforma para recuperar tu información")
+            }
+
+            cuentaCancelada = true
         }
     }
 
     const token = generarToken(usuario.id)
 
-    return { token, debeCambiarPassword: usuario.debe_cambiar_password }
+    return { token, debeCambiarPassword: usuario.debe_cambiar_password, cuentaCancelada }
 }
 
 async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {

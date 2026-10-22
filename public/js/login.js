@@ -15,9 +15,12 @@ formulario.addEventListener("submit", async function (evento) {
 
         if (resultado.datos.debeCambiarPassword === true) {
             window.location.href = "cambiar-password.html"
+        } else if (resultado.datos.cuentaCancelada === true) {
+            window.location.href = "empresas.html"
         } else {
             window.location.href = "index.html"
         }
+        
     } else {
         document.getElementById("mensajeError").textContent = resultado.datos.error
     }

@@ -34,3 +34,32 @@ function escaparHtml(texto) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;")
 }
+
+async function descargarArchivo(ruta) {
+    const token = localStorage.getItem("token")
+
+    const respuesta = await fetch(ruta, {
+        headers: { "Authorization": "Bearer " + token }
+    })
+
+    if (!respuesta.ok) {
+        const datos = await respuesta.json()
+        return { status: respuesta.status, datos }
+    }
+
+    const disposicion = respuesta.headers.get("Content-Disposition") ?? ""
+    const coincidencia = disposicion.match(/filename="(.+)"/)
+    const nombre = coincidencia ? coincidencia[1] : "descarga"
+
+    const blob = await respuesta.blob()
+    const url = URL.createObjectURL(blob)
+
+    const enlace = document.createElement("a")
+    enlace.href = url
+    enlace.download = nombre
+    enlace.click()
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+    return { status: respuesta.status }
+}

@@ -13,6 +13,16 @@ async function mostrarMenu() {
         return
     }
 
+    if (resultado.status === 200 && resultado.datos.cuenta_estado === "cancelada") {
+        document.getElementById("menu").innerHTML = `
+        <nav>
+            <a href="empresas.html">Exportar datos</a> |
+            <a href="cambiar-password.html">Cambiar contraseña</a>
+        </nav>
+        `
+        return
+    }
+
     if (resultado.status === 200 && resultado.datos.es_admin_cuenta === true) {
         enlacesAdmin = ` | <a href="usuarios.html">Usuarios</a> | <a href="consumo.html">Consumo del plan</a>`
     }
