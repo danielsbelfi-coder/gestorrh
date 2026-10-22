@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Consumo del plan</title>
+</head>
+
+<body>
+    <div id="menu"></div>
+    <h1>Consumo del plan</h1>
+
+    <p>Plan: <strong id="nombrePlan"></strong></p>
+
+    <form id="formPeriodo">
+        <select id="mes">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+        </select>
+        <input type="number" id="anio" min="2000" max="2100" required>
+        <button type="submit">Consultar</button>
+    </form>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Concepto</th>
+                <th>Usados</th>
+                <th>Límite</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoConsumo"></tbody>
+    </table>
+
+    <p id="aviso"></p>
+    <p id="mensaje"></p>
+
+    <script src="js/api.js"></script>
+    <script src="js/consumo.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+
+</html>

@@ -1,8 +1,8 @@
-const { crearCuenta, listarCuentas, suspenderCuenta, cancelarCuenta, reactivarCuenta } = require("./cuenta.service");
+const { crearCuenta, listarCuentas, suspenderCuenta, cancelarCuenta, reactivarCuenta, cambiarPlanCuenta, listarPlanes } = require("./cuenta.service");
 
 
 async function crear(req, res) {
-    const nuevaCuenta = await crearCuenta(req.body);
+    const nuevaCuenta = await crearCuenta(req.body ?? {});
 
     res.status(201).json(nuevaCuenta)
 }
@@ -27,10 +27,22 @@ async function reactivar(req, res) {
     res.status(200).json(cuentaActivada)
 }
 
+async function cambiarPlan(req, res) {
+    const cuenta = await cambiarPlanCuenta(req.params.id, req.body ?? {})
+    res.json(cuenta)
+}
+
+async function planes(req, res) {
+    const lista = await listarPlanes()
+    res.status(200).json(lista)
+}
+
 module.exports = {
     crear,
     listar,
     suspender,
     cancelar,
-    reactivar
+    reactivar,
+    cambiarPlan,
+    planes
 }

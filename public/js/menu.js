@@ -1,10 +1,20 @@
 async function mostrarMenu() {
-    let enlaceUsuarios = ""
+    let enlacesAdmin = ""
 
     const resultado = await llamarApi("/api/auth/usuario")
 
+    if (resultado.status === 200 && resultado.datos.rol_plataforma === "comercial") {
+        document.getElementById("menu").innerHTML = `
+        <nav>
+            <a href="cuentas.html">Cuentas</a> |
+            <a href="cambiar-password.html">Cambiar contraseña</a>
+        </nav>
+        `
+        return
+    }
+
     if (resultado.status === 200 && resultado.datos.es_admin_cuenta === true) {
-        enlaceUsuarios = ` | <a href="usuarios.html">Usuarios</a>`
+        enlacesAdmin = ` | <a href="usuarios.html">Usuarios</a> | <a href="consumo.html">Consumo del plan</a>`
     }
 
     document.getElementById("menu").innerHTML = `
@@ -16,7 +26,7 @@ async function mostrarMenu() {
         <a href="cargos.html">Cargos</a> |
         <a href="periodos.html">Periodos</a> |
         <a href="asistencias.html">Asistencias</a> |
-        <a href="liquidaciones.html">Liquidaciones</a>${enlaceUsuarios} |
+        <a href="liquidaciones.html">Liquidaciones</a>${enlacesAdmin} |
         <a href="cambiar-password.html">Cambiar contraseña</a>
     </nav>
     `

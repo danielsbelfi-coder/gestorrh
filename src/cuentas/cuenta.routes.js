@@ -1,5 +1,5 @@
 const express = require("express")
-const { crear, listar, suspender, cancelar, reactivar } = require("./cuenta.controller")
+const { crear, listar, suspender, cancelar, reactivar, cambiarPlan } = require("./cuenta.controller")
 const { consumoDeCuenta } = require("./consumo.controller")
 const router = express.Router()
 
@@ -9,5 +9,6 @@ router.patch("/:id/suspender", suspender)
 router.patch("/:id/cancelar", cancelar)
 router.patch("/:id/reactivar", reactivar)
 router.get("/:id/consumo", consumoDeCuenta)
+router.patch("/:id/plan", cambiarPlan)
 
 module.exports = router

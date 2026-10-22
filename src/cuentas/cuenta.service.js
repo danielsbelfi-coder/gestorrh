@@ -1,11 +1,9 @@
 const { generarPasswordInicial } = require("../shared/password.js")
-const { Cuenta, Usuario } = require("../shared/associations.js")
+const { Cuenta, Usuario, Plan } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
 const { ValidationError, ConflictError, NotFoundError } = require("../shared/errors.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
-
-
 
 async function crearCuenta(datos) {
     const rut = limpiarRut(datos.rut_titular)
@@ -19,6 +17,9 @@ async function crearCuenta(datos) {
         throw new ValidationError("Debe indicar el nombre y el email del administrador de la cuenta")
     }
 
+    const planId = await validarPlan(datos.plan_id)
+    const adicionales = datos.usuarios_adicionales === undefined ? 0 : validarAdicionales(datos.usuarios_adicionales)
+
     const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
 
     try {
@@ -26,14 +27,18 @@ async function crearCuenta(datos) {
             const cuenta = await Cuenta.create({
                 ...datos,
                 rut_titular: rut,
-                dv_titular: dv
+                dv_titular: dv,
+                plan_id: planId,
+                usuarios_adicionales: adicionales
             }, {
                 fields: [
                     "nombre",
                     "rut_titular",
                     "dv_titular",
                     "razon_social_titular",
-                    "email_contacto"
+                    "email_contacto",
+                    "plan_id",
+                    "usuarios_adicionales"
                 ],
                 transaction: t
             })
@@ -62,7 +67,17 @@ async function crearCuenta(datos) {
 }
 
 async function listarCuentas() {
-    return await Cuenta.findAll({ order: [["id", "ASC"]] })
+    return await Cuenta.findAll({
+        include: { model: Plan, attributes: ["nombre"] },
+        order: [["id", "ASC"]]
+    })
+}
+
+async function listarPlanes() {
+    return await Plan.findAll({
+        attributes: ["id", "nombre", "max_trabajadores", "usuarios_incluidos", "activo"],
+        order: [["max_trabajadores", "ASC"]]
+    })
 }
 
 async function obtenerCuenta(id) {
@@ -122,10 +137,60 @@ async function reactivarCuenta(id) {
     return cuenta
 }
 
+async function cambiarPlanCuenta(id, datos) {
+    const cuenta = await obtenerCuenta(id)
+
+    if (datos.plan_id === undefined && datos.usuarios_adicionales === undefined) {
+        throw new ValidationError("Debe indicar el plan, los usuarios adicionales o ambos")
+    }
+
+    const cambios = {}
+
+    if (datos.plan_id !== undefined) {
+        cambios.plan_id = await validarPlan(datos.plan_id)
+    }
+
+    if (datos.usuarios_adicionales !== undefined) {
+        cambios.usuarios_adicionales = validarAdicionales(datos.usuarios_adicionales)
+    }
+
+    await cuenta.update(cambios)
+
+    return cuenta
+}
+
+async function validarPlan(planIdCrudo) {
+    const planId = Number(planIdCrudo)
+
+    if (planIdCrudo === undefined || !Number.isInteger(planId)) {
+        throw new ValidationError("Debe indicar el plan")
+    }
+
+    const plan = await Plan.findByPk(planId)
+
+    if (plan === null || !plan.activo) {
+        throw new ValidationError("El plan indicado no existe o no está disponible")
+    }
+
+    return plan.id
+}
+
+function validarAdicionales(valor) {
+    const adicionales = Number(valor)
+
+    if (!Number.isInteger(adicionales) || adicionales < 0) {
+        throw new ValidationError("Los usuarios adicionales deben ser un número entero igual o mayor a 0")
+    }
+
+    return adicionales
+}
+
 module.exports = {
     crearCuenta,
     listarCuentas,
     suspenderCuenta,
     cancelarCuenta,
-    reactivarCuenta
+    reactivarCuenta,
+    cambiarPlanCuenta,
+    listarPlanes
 }
