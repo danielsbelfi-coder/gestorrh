@@ -14,6 +14,7 @@ const PASOS_EMPRESA = [
     { tabla: "trabajadores", filtro: "empresa_id = :empresaId" },
     { tabla: "personas", filtro: "empresa_id = :empresaId" },
     { tabla: "cargos", filtro: "empresa_id = :empresaId" },
+    { tabla: "conceptos_remuneracion", filtro: "empresa_id = :empresaId"},
     { tabla: "usuarios_empresas_roles", filtro: "empresa_id = :empresaId" },
     { tabla: "empresas", filtro: "id = :empresaId" }
 ]
