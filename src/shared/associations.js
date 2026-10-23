@@ -17,6 +17,8 @@ const { Afp } = require("../remuneraciones/afp.model.js")
 const { Isapre } = require("../remuneraciones/isapre.model.js");
 const { Cuenta } = require("../cuentas/cuenta.model.js");
 const { Plan } = require("../cuentas/plan.model.js");
+const { Eliminacion } = require("../eliminacion/eliminacion.model.js");
+
 
 Trabajador.belongsTo(Persona, {
     foreignKey: "persona_id"
@@ -200,5 +202,6 @@ module.exports = {
     Afp,
     Isapre,
     Cuenta,
-    Plan
+    Plan,
+    Eliminacion
 }

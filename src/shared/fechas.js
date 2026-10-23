@@ -8,6 +8,13 @@ function esFechaValida(texto) {
     return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === texto
 }
 
+function sumarDias(texto, dias) {
+    const fecha = new Date(`${texto}T00:00:00Z`)
+    fecha.setUTCDate(fecha.getUTCDate() + dias)
+    return fecha.toISOString().slice(0, 10)
+}
+
 module.exports = {
-    esFechaValida
+    esFechaValida,
+    sumarDias
 }

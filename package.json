@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "eliminar-vencidos": "node scripts/eliminar-vencidos.js"
   },
   "keywords": [],
   "author": "",

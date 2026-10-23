@@ -35,6 +35,10 @@ const Cuenta = sequelize.define("Cuenta", {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
+    fecha_eliminacion_datos: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     plan_id: {
         type: DataTypes.INTEGER,
         allowNull: true

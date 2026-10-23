@@ -4,6 +4,7 @@ const { sequelize } = require("../shared/database.js")
 const { ValidationError, ConflictError, NotFoundError } = require("../shared/errors.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
+const { sumarDias } = require("../shared/fechas.js")
 
 async function crearCuenta(datos) {
     const rut = limpiarRut(datos.rut_titular)
@@ -67,10 +68,17 @@ async function crearCuenta(datos) {
 }
 
 async function listarCuentas() {
-    return await Cuenta.findAll({
+    const cuentas = await Cuenta.findAll({
         include: { model: Plan, attributes: ["nombre"] },
         order: [["id", "ASC"]]
     })
+
+    return cuentas.map((cuenta) => ({
+        ...cuenta.toJSON(),
+        fecha_eliminacion: cuenta.fecha_cancelacion && cuenta.fecha_eliminacion_datos === null
+            ? sumarDias(cuenta.fecha_cancelacion, DIAS_CONSERVACION_DATOS)
+            : null
+    }))
 }
 
 async function listarPlanes() {
@@ -79,6 +87,8 @@ async function listarPlanes() {
         order: [["max_trabajadores", "ASC"]]
     })
 }
+
+
 
 async function obtenerCuenta(id) {
     const cuenta = await Cuenta.findByPk(id)
@@ -90,6 +100,25 @@ async function obtenerCuenta(id) {
     return cuenta
 }
 
+
+async function reactivarCuenta(id) {
+    const cuenta = await obtenerCuenta(id)
+
+    if (cuenta.fecha_eliminacion_datos !== null) {
+        throw new ConflictError("Los datos de esta cuenta ya fueron eliminados. Para retomar el servicio hay que crear una cuenta nueva")
+    }
+
+    if (cuenta.estado === "activa") {
+        throw new ConflictError("La cuenta se encuentra activa")
+    }
+
+    await cuenta.update({
+        estado: "activa",
+        fecha_cancelacion: null
+    })
+
+    return cuenta
+}
 
 async function suspenderCuenta(id) {
     const cuenta = await obtenerCuenta(id)
@@ -122,20 +151,6 @@ async function cancelarCuenta(id, confirmar) {
     return cuenta
 }
 
-async function reactivarCuenta(id) {
-    const cuenta = await obtenerCuenta(id)
-
-    if (cuenta.estado === "activa") {
-        throw new ConflictError("La cuenta se encuentra activa")
-    }
-
-    await cuenta.update({
-        estado: "activa",
-        fecha_cancelacion: null
-    })
-
-    return cuenta
-}
 
 async function cambiarPlanCuenta(id, datos) {
     const cuenta = await obtenerCuenta(id)

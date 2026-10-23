@@ -5,6 +5,7 @@ const { NotFoundError, ConflictError, ForbiddenError, ValidationError } = requir
 const { sequelize } = require("../shared/database.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
+const { sumarDias } = require("../shared/fechas.js")
 
 
 
@@ -143,11 +144,18 @@ async function reactivarEmpresa(id, usuario) {
 }
 
 async function listarEmpresasCuenta(usuario) {
-    return await Empresa.findAll({
+    const empresas = await Empresa.findAll({
         where: { cuenta_id: usuario.cuenta_id },
         attributes: ["id", "rut", "dv", "razon_social", "estado", "fecha_desactivacion"],
         order: [["razon_social", "ASC"]]
     })
+
+    return empresas.map((empresa) => ({
+        ...empresa.toJSON(),
+        fecha_eliminacion: empresa.fecha_desactivacion
+            ? sumarDias(empresa.fecha_desactivacion, DIAS_CONSERVACION_DATOS)
+            : null
+    }))
 }
 
 module.exports = {
