@@ -5,6 +5,10 @@ const mensaje = document.getElementById("mensaje")
 let cuentas = []
 
 function botonesCuenta(cuenta) {
+    if (cuenta.fecha_eliminacion_datos) {
+        return `<button data-accion="consumo" data-id="${cuenta.id}">Ver consumo</button>`
+    }
+
     const botones = []
 
     if (cuenta.estado === "activa") {
@@ -22,6 +26,18 @@ function botonesCuenta(cuenta) {
     return botones.join(" ")
 }
 
+function textoEstadoCuenta(cuenta) {
+    if (cuenta.fecha_eliminacion_datos) {
+        return `cancelada, datos eliminados el ${formatearFecha(cuenta.fecha_eliminacion_datos)}`
+    }
+
+    if (cuenta.fecha_eliminacion) {
+        return `cancelada, se eliminará el ${formatearFecha(cuenta.fecha_eliminacion)}`
+    }
+
+    return cuenta.estado
+}
+
 async function cargarCuentas() {
     const resultado = await llamarApi("/api/cuentas")
 
@@ -36,7 +52,7 @@ async function cargarCuentas() {
         <td>${escaparHtml(cuenta.nombre)}</td>
         <td>${escaparHtml(cuenta.rut_titular)}-${escaparHtml(cuenta.dv_titular)}</td>
         <td>${escaparHtml(cuenta.email_contacto ?? "")}</td>
-        <td>${escaparHtml(cuenta.estado)}</td>
+        <td>${escaparHtml(textoEstadoCuenta(cuenta))}</td>
         <td>${cuenta.Plan ? escaparHtml(cuenta.Plan.nombre) : "Sin plan"}</td>
         <td>${escaparHtml(cuenta.usuarios_adicionales)}</td>
         <td>${botonesCuenta(cuenta)}</td>
@@ -45,9 +61,10 @@ async function cargarCuentas() {
     const selectCuenta = document.getElementById("planCuenta")
     const seleccionada = selectCuenta.value
 
-    selectCuenta.innerHTML = cuentas.map((cuenta) =>
-        `<option value="${cuenta.id}">${escaparHtml(cuenta.nombre)}</option>`
-    ).join("")
+    selectCuenta.innerHTML = cuentas
+        .filter((cuenta) => !cuenta.fecha_eliminacion_datos)
+        .map((cuenta) => `<option value="${cuenta.id}">${escaparHtml(cuenta.nombre)}</option>`
+        ).join("")
 
     if (seleccionada) {
         selectCuenta.value = seleccionada

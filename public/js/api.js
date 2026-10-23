@@ -63,3 +63,8 @@ async function descargarArchivo(ruta) {
 
     return { status: respuesta.status }
 }
+
+function formatearFecha(texto) {
+    const [anio, mes, dia] = texto.split("-")
+    return `${dia}-${mes}-${anio}`
+}

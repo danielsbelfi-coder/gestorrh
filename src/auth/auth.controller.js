@@ -1,3 +1,5 @@
+const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
+const { sumarDias } = require("../shared/fechas.js")
 const { autenticarUsuario, cambiarPassword } = require("./auth.service.js")
 
 
@@ -17,7 +19,11 @@ async function cambiar(req, res) {
 function usuarioEnUso(req, res) {
     const { id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma } = req.usuario
 
-    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma, cuenta_estado: req.cuentaEstado ?? null })
+    const cuentaFechaEliminacion = req.cuentaFechaCancelacion
+        ? sumarDias(req.cuentaFechaCancelacion, DIAS_CONSERVACION_DATOS)
+        : null
+
+    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma, cuenta_estado: req.cuentaEstado ?? null, cuenta_fecha_eliminacion: cuentaFechaEliminacion })
 }
 
 module.exports = {

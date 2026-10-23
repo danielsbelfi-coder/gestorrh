@@ -14,9 +14,15 @@ async function cargarEmpresas() {
 
     const lista = document.getElementById("listaEmpresas")
     lista.innerHTML = resultado.datos.map(function (empresa) {
-        const estado = empresa.estado === "inactiva"
-            ? `inactiva desde ${escaparHtml(empresa.fecha_desactivacion)}`
-            : "activa"
+        let estado = "activa"
+
+        if (empresa.estado === "inactiva") {
+            estado = `Inactiva desde ${escaparHtml(formatearFecha(empresa.fecha_desactivacion))}`
+        }
+
+        if (empresa.fecha_eliminacion) {
+            estado += `. Sus datos se eliminarán el ${escaparHtml(formatearFecha(empresa.fecha_eliminacion))} si no se reactiva`
+        }
 
         let boton = ""
 
@@ -41,7 +47,7 @@ async function iniciar() {
 
     if (cuentaCancelada) {
         document.getElementById("seccionCrearEmpresa").hidden = true
-        document.getElementById("mensajeError").textContent = "La cuenta está cancelada. Puedes descargar los datos de cada empresa con \"Exportar datos\" durante el plazo de conservación."
+        document.getElementById("mensajeError").textContent = `La cuenta está cancelada. Sus datos se eliminarán el ${formatearFecha(resultado.datos.cuenta_fecha_eliminacion)}. Hasta esa fecha puedes descargarlos con "Exportar datos".`
     }
 
     cargarEmpresas()

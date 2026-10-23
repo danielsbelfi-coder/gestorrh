@@ -43,6 +43,7 @@ const verificarToken = async (req, res, next) => {
             const cuenta = await Cuenta.findByPk(usuario.cuenta_id)
 
             req.cuentaEstado = cuenta.estado
+            req.cuentaFechaCancelacion = cuenta.fecha_cancelacion
 
             if (cuenta.estado === "cancelada") {
                 if (usuario.es_admin_cuenta !== true) {
