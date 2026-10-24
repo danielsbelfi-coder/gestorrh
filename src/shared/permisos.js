@@ -11,7 +11,9 @@ const PERMISOS = {
     GESTIONAR_PERIODO: ["ADMIN", "JEFE_RRHH"],
     CALCULAR_LIQUIDACION: ["ADMIN", "JEFE_RRHH", "RRHH"],
     CONFIGURAR_CONCEPTOS: ["ADMIN", "JEFE_RRHH"],
-    EDITAR_EMPRESA: ["ADMIN"]
+    EDITAR_EMPRESA: ["ADMIN"],
+    REGISTRAR_VARIABLES: ["ADMIN", "JEFE_RRHH", "RRHH"],
+    APROBAR_VARIABLES: ["ADMIN", "JEFE_RRHH"],
 }
 
 async function exigirRol(usuarioId, empresaId, rolesPermitidos) {

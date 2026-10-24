@@ -5,6 +5,7 @@ const { Eliminacion, Empresa } = require("../shared/associations.js")
 const TRABAJADORES_DE_EMPRESA = "SELECT id FROM trabajadores WHERE empresa_id = :empresaId"
 
 const PASOS_EMPRESA = [
+    { tabla: "variables_periodo", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "asistencia_correcciones", filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "asistencias", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "liquidaciones", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
@@ -14,7 +15,7 @@ const PASOS_EMPRESA = [
     { tabla: "trabajadores", filtro: "empresa_id = :empresaId" },
     { tabla: "personas", filtro: "empresa_id = :empresaId" },
     { tabla: "cargos", filtro: "empresa_id = :empresaId" },
-    { tabla: "conceptos_remuneracion", filtro: "empresa_id = :empresaId"},
+    { tabla: "conceptos_remuneracion", filtro: "empresa_id = :empresaId" },
     { tabla: "usuarios_empresas_roles", filtro: "empresa_id = :empresaId" },
     { tabla: "empresas", filtro: "id = :empresaId" }
 ]

@@ -18,7 +18,8 @@ const { Isapre } = require("../remuneraciones/isapre.model.js");
 const { Cuenta } = require("../cuentas/cuenta.model.js");
 const { Plan } = require("../cuentas/plan.model.js");
 const { Eliminacion } = require("../eliminacion/eliminacion.model.js");
-const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracion.model.js")
+const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracion.model.js");
+const { VariablePeriodo } = require("../remuneraciones/variable_periodo.model.js");
 
 
 
@@ -190,6 +191,37 @@ Empresa.hasMany(ConceptoRemuneracion, {
     foreignKey: "empresa_id"
 })
 
+VariablePeriodo.belongsTo(PeriodoRemuneracion, {
+    foreignKey: "periodo_id"
+})
+
+PeriodoRemuneracion.hasMany(VariablePeriodo, {
+    foreignKey: "periodo_id"
+})
+
+VariablePeriodo.belongsTo(Trabajador, {
+    foreignKey: "trabajador_id"
+})
+Trabajador.hasMany(VariablePeriodo, {
+    foreignKey: "trabajador_id"
+})
+
+VariablePeriodo.belongsTo(ConceptoRemuneracion, {
+    foreignKey: "concepto_id"
+})
+ConceptoRemuneracion.hasMany(VariablePeriodo, {
+    foreignKey: "concepto_id"
+})
+
+VariablePeriodo.belongsTo(Usuario, {
+    foreignKey: "usuario_registro_id",
+    as: "registrador"
+})
+VariablePeriodo.belongsTo(Usuario, {
+    foreignKey: "aprobado_por_id",
+    as: "aprobador"
+})
+
 
 module.exports = {
     Empresa,
@@ -212,5 +244,6 @@ module.exports = {
     Cuenta,
     Plan,
     Eliminacion,
-    ConceptoRemuneracion
+    ConceptoRemuneracion,
+    VariablePeriodo
 }
