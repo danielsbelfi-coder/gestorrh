@@ -23,7 +23,8 @@ const Asistencia = sequelize.define("Asistencia", {
             "normal",
             "atraso",
             "inasistencia",
-            "permiso",
+            "permiso_con_goce",
+            "permiso_sin_goce",
             "vacaciones",
             "licencia_medica"
         ),

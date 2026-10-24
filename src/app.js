@@ -26,6 +26,7 @@ const consumoCuentaRoutes = require("./cuentas/consumo_cuenta.routes.js")
 const planRoutes = require("./cuentas/plan.routes.js")
 const conceptoRoutes = require("./remuneraciones/concepto_remuneracion.routes.js")
 const variableRoutes = require("./remuneraciones/variable_periodo.routes.js")
+const resumenAsistenciaRoutes = require("./asistencia/resumen_asistencia.routes.js")
 
 app.use(helmet())
 app.use(express.json());
@@ -49,6 +50,7 @@ app.use("/api/cuenta/consumo", verificarToken, requiereAdminCuenta, consumoCuent
 app.use("/api/planes", verificarToken, requiereComercial, planRoutes)
 app.use("/api/conceptos", verificarToken, conceptoRoutes)
 app.use("/api/variables", verificarToken, variableRoutes)
+app.use("/api/resumenes-asistencia", verificarToken, resumenAsistenciaRoutes)
 
 app.use(express.static(path.join(__dirname, "../public")))
 app.use(manejarErrores)

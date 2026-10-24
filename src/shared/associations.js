@@ -20,6 +20,7 @@ const { Plan } = require("../cuentas/plan.model.js");
 const { Eliminacion } = require("../eliminacion/eliminacion.model.js");
 const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracion.model.js");
 const { VariablePeriodo } = require("../remuneraciones/variable_periodo.model.js");
+const { ResumenAsistencia } = require("../asistencia/resumen_asistencia.model.js")
 
 
 
@@ -221,7 +222,26 @@ VariablePeriodo.belongsTo(Usuario, {
     foreignKey: "aprobado_por_id",
     as: "aprobador"
 })
+ResumenAsistencia.belongsTo(PeriodoRemuneracion, {
+    foreignKey: "periodo_id"
+})
+PeriodoRemuneracion.hasMany(ResumenAsistencia, {
+    foreignKey: "periodo_id"
+})
 
+ResumenAsistencia.belongsTo(Trabajador, {
+    foreignKey: "trabajador_id"
+})
+Trabajador.hasMany(ResumenAsistencia, {
+    foreignKey: "trabajador_id"
+})
+
+ResumenAsistencia.belongsTo(Usuario, {
+    foreignKey: "usuario_registro_id", as: "registrador"
+})
+ResumenAsistencia.belongsTo(Usuario, {
+    foreignKey: "aprobado_por_id", as: "aprobador"
+})
 
 module.exports = {
     Empresa,
@@ -245,5 +265,6 @@ module.exports = {
     Plan,
     Eliminacion,
     ConceptoRemuneracion,
-    VariablePeriodo
+    VariablePeriodo,
+    ResumenAsistencia
 }

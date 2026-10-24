@@ -133,7 +133,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         where: {
             trabajador_id: trabajador_id,
             fecha: { [Op.gte]: primerDia, [Op.lte]: ultimoDia },
-            tipo: { [Op.in]: ["inasistencia", "permiso", "licencia_medica"] }
+            tipo: { [Op.in]: ["inasistencia", "permiso_sin_goce", "licencia_medica"] }
         }
     })
 
