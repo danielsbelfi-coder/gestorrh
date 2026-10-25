@@ -1,13 +1,13 @@
 const { crearLiquidacion, listarLiquidaciones, obtenerLiquidacionPorId } = require("./liquidacion.service");
 
 async function crear(req, res) {
-    const nuevaLiquidacion = await crearLiquidacion(
+    const resultado = await crearLiquidacion(
         req.params.periodoId,
         req.body?.trabajador_id,
         req.empresasPermitidas,
         req.usuario.id
     )
-    res.status(201).json(nuevaLiquidacion)
+    res.status(201).json(resultado)
 }
 
 async function listar(req, res) {
