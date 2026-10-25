@@ -1,4 +1,4 @@
-const { Empresa, Rol, UsuarioEmpresaRol } = require("../shared/associations.js")
+const { Empresa, Rol, UsuarioEmpresaRol, Mutualidad } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { exigirRol, PERMISOS, exigirCuentaActiva } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ForbiddenError, ValidationError } = require("../shared/errors.js")
@@ -7,7 +7,29 @@ const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { sumarDias } = require("../shared/fechas.js")
 
+const TASA_ADICIONAL_MUTUAL_MAXIMA = 20
 
+async function validarMutualidad(datos) {
+    const id = datos.mutualidad_id
+
+    if (id !== undefined && id !== null) {
+        const mutualidad = /^\d+$/.test(String(id)) ? await Mutualidad.findByPk(id) : null
+
+        if (mutualidad === null || mutualidad.estado !== "activo") {
+            throw new ValidationError("La mutualidad indicada no existe o no está activa")
+        }
+    }
+
+    const tasa = datos.tasa_adicional_mutual
+
+    if (tasa !== undefined) {
+        const esNumero = (typeof tasa === "number" || typeof tasa === "string") && tasa !== "" && Number.isFinite(Number(tasa))
+
+        if (!esNumero || Number(tasa) < 0 || Number(tasa) > TASA_ADICIONAL_MUTUAL_MAXIMA) {
+            throw new ValidationError(`La tasa adicional de la mutualidad debe ser un número entre 0 y ${TASA_ADICIONAL_MUTUAL_MAXIMA}`)
+        }
+    }
+}
 
 async function crearEmpresa(datos, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)
@@ -18,6 +40,8 @@ async function crearEmpresa(datos, usuario) {
     if (!rutEsValido(rut, dv)) {
         throw new ValidationError("El RUT de la empresa no es válido")
     }
+
+    await validarMutualidad(datos)
 
     const rolAdmin = await Rol.findOne({
         where: {
@@ -41,7 +65,9 @@ async function crearEmpresa(datos, usuario) {
                     "representante_legal_nombre",
                     "representante_legal_rut",
                     "direccion",
-                    "mutualidad_id"],
+                    "mutualidad_id",
+                    "tasa_adicional_mutual"
+                ],
 
                 transaction: t
             }
@@ -88,8 +114,10 @@ async function actualizarEmpresa(id, datos, empresasPermitidas, usuarioId) {
 
     await exigirRol(usuarioId, empresa.id, PERMISOS.EDITAR_EMPRESA)
 
+    await validarMutualidad(datos)
+
     const actualizar = await empresa.update(datos, {
-        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id"]
+        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id", "tasa_adicional_mutual"]
     })
 
     return actualizar
