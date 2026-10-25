@@ -1,4 +1,4 @@
-const { guardarResumen, listarResumenes, aprobarResumen, devolverResumen } = require("./resumen_asistencia.service.js")
+const { guardarResumen, listarResumenes, aprobarResumen, devolverResumen, generarDesdeAsistencia } = require("./resumen_asistencia.service.js")
 
 async function listar(req, res) {
     const resumenes = await listarResumenes(req.query.periodo_id, req.empresasPermitidas)
@@ -20,9 +20,15 @@ async function devolver(req, res) {
     res.status(200).json(resumen)
 }
 
+async function generar(req, res) {
+    const resultados = await generarDesdeAsistencia(req.body?.periodo_id, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(resultados)
+}
+
 module.exports = {
     listar,
     guardar,
     aprobar,
-    devolver
+    devolver,
+    generar
 }
