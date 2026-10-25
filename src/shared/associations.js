@@ -262,6 +262,12 @@ Liquidacion.belongsTo(Liquidacion, {
     foreignKey: "reemplaza_a_id",
     as: "versionAnterior"
 })
+Empresa.belongsTo(Mutualidad, {
+    foreignKey: "mutualidad_id"
+})
+Mutualidad.hasMany(Empresa, {
+    foreignKey: "mutualidad_id"
+})
 
 module.exports = {
     Empresa,

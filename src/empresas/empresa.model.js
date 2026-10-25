@@ -34,6 +34,11 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+  tasa_adicional_mutual: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: false,
+    defaultValue: 0
+  },
   estado: {
     type: DataTypes.ENUM("activa", "inactiva"),
     defaultValue: "activa"
