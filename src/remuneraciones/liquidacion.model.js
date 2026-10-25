@@ -79,7 +79,7 @@ const Liquidacion = sequelize.define("Liquidacion", {
     estado: {
         type: DataTypes.ENUM(
             "calculada",
-            "cerrada",
+            "emitida",
         ),
         allowNull: false,
         defaultValue: "calculada"
@@ -106,6 +106,10 @@ const Liquidacion = sequelize.define("Liquidacion", {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
+    },
+    motivo_version: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: "liquidaciones",

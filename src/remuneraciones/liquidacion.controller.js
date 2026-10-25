@@ -7,7 +7,7 @@ async function crear(req, res) {
         req.empresasPermitidas,
         req.usuario.id
     )
-    res.status(201).json(resultado)
+    res.status(resultado.reemplazada ? 200 : 201).json(resultado)
 }
 
 async function listar(req, res) {

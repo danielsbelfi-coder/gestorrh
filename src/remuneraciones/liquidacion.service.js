@@ -163,8 +163,8 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true }
     })
 
-    if (vigente !== null) {
-        throw new ConflictError("Ya existe una liquidación vigente para este trabajador en este periodo")
+    if (vigente !== null && vigente.estado !== "calculada") {
+        throw new ConflictError("La liquidación ya fue emitida; para modificarla use el recálculo")
     }
 
     const contrato = await ContratoTrabajo.findOne({
@@ -266,52 +266,65 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         variablesPendientes: pendientes
     }
 
+    const campos = {
+        snapshot_contrato: {
+            sueldo_base: contrato.sueldo_base,
+            horas_semanales: contrato.horas_semanales,
+            tipo_contrato: contrato.tipo_contrato,
+            cargo_id: contrato.cargo_id,
+            sistema_remuneracion: contrato.sistema_remuneracion,
+            periodicidad_pago: contrato.periodicidad_pago
+        },
+        dias_trabajados: diasPagados,
+        dias_periodo: DIAS_MES_COMERCIAL,
+        sueldo_base_proporcional: montoDe("SUELDO_BASE"),
+        horas_extra: lineasHoras.reduce((suma, l) => suma + l.cantidad, 0),
+        valor_hora_extra: Math.round(resultado.valorHora * 1.5),
+        monto_horas_extra: lineasHoras.reduce((suma, l) => suma + l.monto, 0),
+        monto_gratificacion: montoDe("GRATIFICACION"),
+        total_haberes: resultado.totalHaberes,
+        descuento_afp: montoDe("AFP"),
+        descuento_salud: montoDe("SALUD") + montoDe("SALUD_ADICIONAL_ISAPRE"),
+        descuento_cesantia: montoDe("CESANTIA"),
+        monto_impuesto_unico: montoDe("IMPUESTO_UNICO"),
+        total_descuentos: resultado.totalDescuentos,
+        liquido_a_pagar: resultado.liquidoAPagar,
+        saldo_pago_exceso: resultado.nuevoSaldoPendiente,
+        detalle_calculo: detalleCalculo,
+        fecha_calculo: new Date().toISOString().slice(0, 10)
+    }
+
+    const filasLineas = (liquidacionId) => lineasOrdenadas.map((linea, indice) => ({
+        liquidacion_id: liquidacionId,
+        concepto_id: linea.concepto.id,
+        codigo: linea.concepto.codigo,
+        nombre: linea.concepto.nombre,
+        tipo: linea.concepto.tipo,
+        imponible: linea.concepto.imponible,
+        tributable: linea.concepto.tributable,
+        base_gratificacion: linea.concepto.base_gratificacion,
+        cantidad: linea.cantidad,
+        monto: linea.monto,
+        orden: indice + 1
+    }))
+
     const liquidacion = await sequelize.transaction(async (transaction) => {
+        if (vigente !== null) {
+            await vigente.update(campos, { transaction })
+            await LiquidacionLinea.destroy({ where: { liquidacion_id: vigente.id }, transaction })
+            await LiquidacionLinea.bulkCreate(filasLineas(vigente.id), { transaction })
+            return vigente
+        }
+
         const nueva = await Liquidacion.create({
             periodo_id: periodo.id,
             trabajador_id: trabajador.id,
-            snapshot_contrato: {
-                sueldo_base: contrato.sueldo_base,
-                horas_semanales: contrato.horas_semanales,
-                tipo_contrato: contrato.tipo_contrato,
-                cargo_id: contrato.cargo_id,
-                sistema_remuneracion: contrato.sistema_remuneracion,
-                periodicidad_pago: contrato.periodicidad_pago
-            },
-            dias_trabajados: diasPagados,
-            dias_periodo: DIAS_MES_COMERCIAL,
-            sueldo_base_proporcional: montoDe("SUELDO_BASE"),
-            horas_extra: lineasHoras.reduce((suma, l) => suma + l.cantidad, 0),
-            valor_hora_extra: Math.round(resultado.valorHora * 1.5),
-            monto_horas_extra: lineasHoras.reduce((suma, l) => suma + l.monto, 0),
-            monto_gratificacion: montoDe("GRATIFICACION"),
-            total_haberes: resultado.totalHaberes,
-            descuento_afp: montoDe("AFP"),
-            descuento_salud: montoDe("SALUD") + montoDe("SALUD_ADICIONAL_ISAPRE"),
-            descuento_cesantia: montoDe("CESANTIA"),
-            monto_impuesto_unico: montoDe("IMPUESTO_UNICO"),
-            total_descuentos: resultado.totalDescuentos,
-            liquido_a_pagar: resultado.liquidoAPagar,
-            saldo_pago_exceso: resultado.nuevoSaldoPendiente,
-            detalle_calculo: detalleCalculo,
-            fecha_calculo: new Date().toISOString().slice(0, 10),
+            ...campos,
             version: 1,
             vigente: true
         }, { transaction })
 
-        await LiquidacionLinea.bulkCreate(lineasOrdenadas.map((linea, indice) => ({
-            liquidacion_id: nueva.id,
-            concepto_id: linea.concepto.id,
-            codigo: linea.concepto.codigo,
-            nombre: linea.concepto.nombre,
-            tipo: linea.concepto.tipo,
-            imponible: linea.concepto.imponible,
-            tributable: linea.concepto.tributable,
-            base_gratificacion: linea.concepto.base_gratificacion,
-            cantidad: linea.cantidad,
-            monto: linea.monto,
-            orden: indice + 1
-        })), { transaction })
+        await LiquidacionLinea.bulkCreate(filasLineas(nueva.id), { transaction })
 
         return nueva
     })
@@ -320,7 +333,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         ? [`Hay ${pendientes} variable(s) pendiente(s) de aprobación que no se consideraron en el cálculo`]
         : []
 
-    return { liquidacion, advertencias }
+    return { liquidacion, advertencias, reemplazada: vigente !== null }
 }
 
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
