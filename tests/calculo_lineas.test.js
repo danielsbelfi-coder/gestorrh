@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { calcularLineasBase, calcularLiquidacionPorLineas } = require("../src/remuneraciones/calculo_lineas.js")
+const { calcularLineasBase, calcularLiquidacionPorLineas, buscarTramo } = require("../src/remuneraciones/calculo_lineas.js")
 
 function concepto(codigo, tipo, marcas = {}) {
     return { codigo, tipo, imponible: false, tributable: false, base_gratificacion: false, recargo_hora_extra: null, ...marcas }
@@ -183,4 +183,28 @@ test("líquido negativo: se cuadra en cero con el ajuste y queda saldo para el m
     assert.strictEqual(r.liquidoAPagar, 0)
     assert.strictEqual(r.nuevoSaldoPendiente, 96404)
     assert.strictEqual(r.totalHaberes, r.totalDescuentos)
+})
+
+test("base de 13,55 UTM cae en el segundo tramo, sin hueco", () => {
+    assert.strictEqual(buscarTramo(TRAMOS, 13.55).tasa, 4)
+})
+
+test("base exacta de 13,5 UTM: el límite inferior se incluye", () => {
+    assert.strictEqual(buscarTramo(TRAMOS, 13.5).tasa, 4)
+})
+
+test("cesantía: se topa en 135,2 UF, distinto del tope imponible de 90 UF", () => {
+    const r = liquidar({ sueldoBase: 10000000 })
+
+    assert.strictEqual(r.baseCotizaciones, 3600000)
+    assert.strictEqual(r.baseCesantia, 5408000)
+    assert.strictEqual(monto(r, "CESANTIA"), 32448)
+})
+
+test("isapre bajo el 7%: se descuenta el 7% legal y no hay adicional", () => {
+    const r = liquidar({ sueldoBase: 900000, planSaludUF: 1.5 })
+
+    assert.strictEqual(monto(r, "SALUD"), 76854)
+    assert.strictEqual(r.descuentoAdicionalIsapre, 0)
+    assert.strictEqual(r.lineas.some((l) => l.concepto.codigo === "SALUD_ADICIONAL_ISAPRE"), false)
 })

@@ -164,5 +164,6 @@ module.exports = {
     calcularLineasBase,
     sumarSegun,
     valorHoraOrdinaria,
+    buscarTramo,
     calcularLiquidacionPorLineas
 }
