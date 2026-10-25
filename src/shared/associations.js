@@ -21,6 +21,7 @@ const { Eliminacion } = require("../eliminacion/eliminacion.model.js");
 const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracion.model.js");
 const { VariablePeriodo } = require("../remuneraciones/variable_periodo.model.js");
 const { ResumenAsistencia } = require("../asistencia/resumen_asistencia.model.js")
+const { LiquidacionLinea } = require("../remuneraciones/liquidacion_linea.model.js")
 
 
 
@@ -242,6 +243,24 @@ ResumenAsistencia.belongsTo(Usuario, {
 ResumenAsistencia.belongsTo(Usuario, {
     foreignKey: "aprobado_por_id", as: "aprobador"
 })
+LiquidacionLinea.belongsTo(Liquidacion, {
+    foreignKey: "liquidacion_id"
+})
+Liquidacion.hasMany(LiquidacionLinea, {
+    foreignKey: "liquidacion_id"
+})
+
+LiquidacionLinea.belongsTo(ConceptoRemuneracion, {
+    foreignKey: "concepto_id"
+})
+ConceptoRemuneracion.hasMany(LiquidacionLinea, {
+    foreignKey: "concepto_id"
+})
+
+Liquidacion.belongsTo(Liquidacion, {
+    foreignKey: "reemplaza_a_id",
+    as: "versionAnterior"
+})
 
 module.exports = {
     Empresa,
@@ -266,5 +285,6 @@ module.exports = {
     Eliminacion,
     ConceptoRemuneracion,
     VariablePeriodo,
-    ResumenAsistencia
+    ResumenAsistencia,
+    LiquidacionLinea
 }

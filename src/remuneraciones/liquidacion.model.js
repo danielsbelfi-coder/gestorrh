@@ -39,7 +39,7 @@ const Liquidacion = sequelize.define("Liquidacion", {
         type: DataTypes.DECIMAL,
         allowNull: false
     },
-    descuento_cesantia:{
+    descuento_cesantia: {
         type: DataTypes.DECIMAL,
         allowNull: false,
         defaultValue: 0
@@ -87,13 +87,34 @@ const Liquidacion = sequelize.define("Liquidacion", {
     fecha_calculo: {
         type: DataTypes.DATEONLY,
         allowNull: false
+    },
+    version: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    },
+    vigente: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+    },
+    reemplaza_a_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    saldo_pago_exceso: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
     }
 }, {
     tableName: "liquidaciones",
     indexes: [
         {
             unique: true,
-            fields: ["periodo_id", "trabajador_id"]
+            fields: ["trabajador_id", "periodo_id"],
+            where: { vigente: true },
+            name: "liquidaciones_trabajador_periodo_vigente_unique"
         }
     ]
 }
