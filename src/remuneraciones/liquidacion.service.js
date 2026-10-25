@@ -4,7 +4,7 @@ const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Trabajador, TramoImpu
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { sequelize } = require("../shared/database.js")
 const { calcularDiasPago, DIAS_MES_COMERCIAL } = require("./dias_pago.js")
@@ -352,9 +352,61 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
     return { liquidacion, advertencias: advertenciasDe(pendientes), reemplazada: vigente !== null }
 }
 
+async function recalcularLiquidacion(periodo_id, liquidacion_id, motivo, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.CALCULAR_LIQUIDACION)
+
+    const anterior = await Liquidacion.findOne({
+        where: { id: liquidacion_id, periodo_id: periodo.id }
+    })
+
+    if (anterior === null) {
+        throw new NotFoundError("Liquidación no encontrada")
+    }
+
+    if (typeof motivo !== "string" || motivo.trim() === "") {
+        throw new ValidationError("Debe indicar el motivo del recálculo")
+    }
+
+    if (periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+    if (!anterior.vigente) {
+        throw new ConflictError("Solo se puede recalcular la versión vigente de la liquidación")
+    }
+    if (anterior.estado === "calculada") {
+        throw new ConflictError("La liquidación está en borrador; recalcúlela desde el cálculo normal")
+    }
+
+    const trabajador = await obtenerTrabajadorDelPeriodo(periodo, anterior.trabajador_id)
+
+    const { campos, lineasOrdenadas, pendientes } = await prepararCalculo(periodo, trabajador)
+
+    const liquidacion = await sequelize.transaction(async (transaction) => {
+        await anterior.update({ vigente: false }, { transaction })
+
+        const nueva = await Liquidacion.create({
+            periodo_id: periodo.id,
+            trabajador_id: trabajador.id,
+            ...campos,
+            version: anterior.version + 1,
+            vigente: true,
+            reemplaza_a_id: anterior.id,
+            motivo_version: motivo.trim()
+        }, { transaction })
+
+        await LiquidacionLinea.bulkCreate(filasLineas(lineasOrdenadas, nueva.id), { transaction })
+
+        return nueva
+    })
+
+    return { liquidacion, advertencias: advertenciasDe(pendientes) }
+}
+
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     return await Liquidacion.findAll({
-        where: { periodo_id: periodo_id },
+        where: { periodo_id: periodo_id, vigente: true },
         include: [{
             model: PeriodoRemuneracion,
             where: {
@@ -387,5 +439,6 @@ async function obtenerLiquidacionPorId(id, empresasPermitidas) {
 module.exports = {
     crearLiquidacion,
     listarLiquidaciones,
-    obtenerLiquidacionPorId
+    obtenerLiquidacionPorId,
+    recalcularLiquidacion
 }
