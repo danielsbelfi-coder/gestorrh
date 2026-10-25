@@ -22,6 +22,7 @@ const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracio
 const { VariablePeriodo } = require("../remuneraciones/variable_periodo.model.js");
 const { ResumenAsistencia } = require("../asistencia/resumen_asistencia.model.js")
 const { LiquidacionLinea } = require("../remuneraciones/liquidacion_linea.model.js")
+const { Mutualidad } = require("../remuneraciones/mutualidad.model.js")
 
 
 
@@ -279,6 +280,7 @@ module.exports = {
     Rol,
     TramoImpuesto,
     Afp,
+    Mutualidad,
     Isapre,
     Cuenta,
     Plan,
