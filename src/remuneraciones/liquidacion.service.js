@@ -142,16 +142,30 @@ async function obtenerTramos(fecha) {
     }))
 }
 
-async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, usuarioId) {
-    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+function filasLineas(lineasOrdenadas, liquidacionId) {
+    return lineasOrdenadas.map((linea, indice) => ({
+        liquidacion_id: liquidacionId,
+        concepto_id: linea.concepto.id,
+        codigo: linea.concepto.codigo,
+        nombre: linea.concepto.nombre,
+        tipo: linea.concepto.tipo,
+        imponible: linea.concepto.imponible,
+        tributable: linea.concepto.tributable,
+        base_gratificacion: linea.concepto.base_gratificacion,
+        cantidad: linea.cantidad,
+        monto: linea.monto,
+        orden: indice + 1
+    }))
+}
 
-    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.CALCULAR_LIQUIDACION)
+function advertenciasDe(pendientes) {
+    return pendientes > 0
+        ? [`Hay ${pendientes} variable(s) pendiente(s) de aprobación que no se consideraron en el cálculo`]
+        : []
+}
 
-    if (periodo.estado !== "abierto") {
-        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
-    }
-
-    const trabajador = await Trabajador.findByPk(trabajador_id, {
+async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
+    const trabajador = await Trabajador.findByPk(trabajadorId, {
         include: [{ model: Persona, include: [{ model: Afp }] }]
     })
 
@@ -159,14 +173,10 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         throw new NotFoundError("Trabajador no encontrado")
     }
 
-    const vigente = await Liquidacion.findOne({
-        where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true }
-    })
+    return trabajador
+}
 
-    if (vigente !== null && vigente.estado !== "calculada") {
-        throw new ConflictError("La liquidación ya fue emitida; para modificarla use el recálculo")
-    }
-
+async function prepararCalculo(periodo, trabajador) {
     const contrato = await ContratoTrabajo.findOne({
         where: { trabajador_id: trabajador.id, estado: "vigente" }
     })
@@ -294,25 +304,35 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         fecha_calculo: new Date().toISOString().slice(0, 10)
     }
 
-    const filasLineas = (liquidacionId) => lineasOrdenadas.map((linea, indice) => ({
-        liquidacion_id: liquidacionId,
-        concepto_id: linea.concepto.id,
-        codigo: linea.concepto.codigo,
-        nombre: linea.concepto.nombre,
-        tipo: linea.concepto.tipo,
-        imponible: linea.concepto.imponible,
-        tributable: linea.concepto.tributable,
-        base_gratificacion: linea.concepto.base_gratificacion,
-        cantidad: linea.cantidad,
-        monto: linea.monto,
-        orden: indice + 1
-    }))
+    return { campos, lineasOrdenadas, pendientes }
+}
+
+async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.CALCULAR_LIQUIDACION)
+
+    if (periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+
+    const trabajador = await obtenerTrabajadorDelPeriodo(periodo, trabajador_id)
+
+    const vigente = await Liquidacion.findOne({
+        where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true }
+    })
+
+    if (vigente !== null && vigente.estado !== "calculada") {
+        throw new ConflictError("La liquidación ya fue emitida; para modificarla use el recálculo")
+    }
+
+    const { campos, lineasOrdenadas, pendientes } = await prepararCalculo(periodo, trabajador)
 
     const liquidacion = await sequelize.transaction(async (transaction) => {
         if (vigente !== null) {
             await vigente.update(campos, { transaction })
             await LiquidacionLinea.destroy({ where: { liquidacion_id: vigente.id }, transaction })
-            await LiquidacionLinea.bulkCreate(filasLineas(vigente.id), { transaction })
+            await LiquidacionLinea.bulkCreate(filasLineas(lineasOrdenadas, vigente.id), { transaction })
             return vigente
         }
 
@@ -324,16 +344,12 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
             vigente: true
         }, { transaction })
 
-        await LiquidacionLinea.bulkCreate(filasLineas(nueva.id), { transaction })
+        await LiquidacionLinea.bulkCreate(filasLineas(lineasOrdenadas, nueva.id), { transaction })
 
         return nueva
     })
 
-    const advertencias = pendientes > 0
-        ? [`Hay ${pendientes} variable(s) pendiente(s) de aprobación que no se consideraron en el cálculo`]
-        : []
-
-    return { liquidacion, advertencias, reemplazada: vigente !== null }
+    return { liquidacion, advertencias: advertenciasDe(pendientes), reemplazada: vigente !== null }
 }
 
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
