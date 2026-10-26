@@ -110,6 +110,11 @@ const Liquidacion = sequelize.define("Liquidacion", {
     motivo_version: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    total_aportes_empleador: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
     }
 }, {
     tableName: "liquidaciones",
