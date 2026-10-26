@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador, camposPrevision } = require("../src/remuneraciones/archivo_previred.js")
+const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador, camposPrevision, camposEmpleador } = require("../src/remuneraciones/archivo_previred.js")
 
 const limites = { a: 649039, b: 947990, c: 1478539 }
 
@@ -72,4 +72,40 @@ test("isapre: renta en el 77, plan en UF con coma, legal y adicional; nada en Fo
     assert.strictEqual(campos[63], 0)
     assert.strictEqual(campos[69], 0)
     assert.deepStrictEqual(campos.slice(74, 81), ["01", "", 1072299, 2, "4,5", 75061, 109000])
+})
+
+const empleador = {
+    rentaImponible: 1072299, rima: 0, tipoJornada: "completa", expectativaVida: 7721, rentabilidadProtegida: 9651,
+    mutual: { codigo: "01", monto: 20159 },
+    cesantia: { base: 1072299, trabajador: 6434, empleador: 25735 },
+    pagador: { rut: "61603000", dv: "0" }
+}
+
+test("mutual, jornada, reforma, cesantía y pagador", () => {
+    const campos = asignar(lineaVacia(), camposEmpleador(empleador))
+
+    assert.deepStrictEqual(campos.slice(91, 98), [0, 1, 7721, 9651, "01", 1072299, 20159])
+    assert.deepStrictEqual(campos.slice(99, 104), [1072299, 6434, 25735, 61603000, "0"])
+    assert.strictEqual(campos[70], 0)
+})
+
+test("ISL, plazo fijo, jornada parcial y sin licencia", () => {
+    const campos = asignar(lineaVacia(), camposEmpleador({
+        ...empleador,
+        tipoJornada: "parcial",
+        mutual: { codigo: "00", monto: 9973 },
+        cesantia: { base: 1072299, trabajador: 0, empleador: 32169 },
+        pagador: null
+    }))
+
+    assert.strictEqual(campos[63], 1072299)
+    assert.strictEqual(campos[70], 9973)
+    assert.deepStrictEqual(campos.slice(92, 98), [2, 7721, 9651, "00", 0, 0])
+    assert.deepStrictEqual(campos.slice(99, 104), [1072299, 0, 32169, 0, ""])
+})
+
+test("sin seguro de cesantía: los campos 100 a 102 quedan en cero", () => {
+    const campos = asignar(lineaVacia(), camposEmpleador({ ...empleador, cesantia: { base: 1072299, trabajador: 0, empleador: 0 } }))
+
+    assert.deepStrictEqual(campos.slice(99, 102), [0, 0, 0])
 })

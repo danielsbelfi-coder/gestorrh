@@ -72,6 +72,43 @@ function camposPrevision(datos) {
     }
 }
 
+const CODIGO_ISL = "00"
+
+function camposEmpleador(datos) {
+    const renta = datos.rentaImponible
+
+    const campos = {
+        92: datos.rima,
+        93: datos.tipoJornada === "parcial" ? 2 : 1,
+        94: datos.expectativaVida,
+        95: datos.rentabilidadProtegida
+    }
+
+    if (datos.mutual.codigo === CODIGO_ISL) {
+        campos[64] = renta
+        campos[71] = datos.mutual.monto
+        campos[96] = CODIGO_ISL
+    } else {
+        campos[96] = datos.mutual.codigo
+        campos[97] = renta
+        campos[98] = datos.mutual.monto
+    }
+
+    const { base, trabajador, empleador } = datos.cesantia
+    if (trabajador + empleador > 0) {
+        campos[100] = base
+        campos[101] = trabajador
+        campos[102] = empleador
+    }
+
+    if (datos.pagador) {
+        campos[103] = Number(datos.pagador.rut)
+        campos[104] = datos.pagador.dv
+    }
+
+    return campos
+}
+
 function tramoAsignacionFamiliar(renta, limites) {
     if (renta <= limites.a) {
         return "A"
@@ -90,5 +127,6 @@ module.exports = {
     lineaVacia,
     asignar,
     camposTrabajador,
-    camposPrevision
+    camposPrevision,
+    camposEmpleador
 }
