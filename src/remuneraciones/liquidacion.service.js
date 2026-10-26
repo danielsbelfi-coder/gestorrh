@@ -1,15 +1,18 @@
 const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Trabajador, TramoImpuesto,
     Persona, Afp, ConceptoRemuneracion,
-    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa, LicenciaMedica } = require("../shared/associations.js")
+    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa, LicenciaMedica, ContratoAnexo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { sequelize } = require("../shared/database.js")
-const { calcularDiasPago, DIAS_MES_COMERCIAL, rimaDelMes } = require("./dias_pago.js")
+const { calcularDiasPago, DIAS_MES_COMERCIAL, rimaDelMes, diasPorTramo } = require("./dias_pago.js")
 const { calcularLiquidacionPorLineas } = require("./calculo_lineas.js")
 const { calcularAportesEmpleador } = require("./aportes_empleador.js")
+const { contratoDelMes } = require("./contrato_del_mes.js")
+const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
+const { sumarDias } = require("../shared/fechas.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -164,6 +167,29 @@ async function licenciasConRima(trabajadorId, periodo) {
     return resultado
 }
 
+async function fechasDeAusencia(trabajadorId, periodo, resumen, licencias) {
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    const inasistencias = await fechasDeMarcas(trabajadorId, "inasistencia", primerDia, ultimoDia)
+    const permisos = await fechasDeMarcas(trabajadorId, "permiso_sin_goce", primerDia, ultimoDia)
+
+    if (inasistencias.length !== resumen.dias_inasistencia || permisos.length !== resumen.dias_permiso_sin_goce) {
+        throw new ConflictError("Hay un cambio de sueldo a mitad de mes: los días de inasistencia y de permiso sin goce del resumen deben estar registrados con fecha en la asistencia")
+    }
+
+    const diasLicencia = []
+    for (const licencia of licencias) {
+        let fecha = licencia.fecha_inicio > primerDia ? licencia.fecha_inicio : primerDia
+        const hasta = licencia.fecha_termino < ultimoDia ? licencia.fecha_termino : ultimoDia
+
+        while (fecha <= hasta) {
+            diasLicencia.push(fecha)
+            fecha = sumarDias(fecha, 1)
+        }
+    }
+
+    return [...inasistencias, ...permisos, ...diasLicencia]
+}
+
 const CODIGOS_PARAMETROS = {
     valorUF: "UF",
     valorUTM: "UTM",
@@ -252,8 +278,20 @@ async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
 }
 
 async function prepararCalculo(periodo, trabajador) {
-    const contrato = await ContratoTrabajo.findOne({
+    const contratoVigente = await ContratoTrabajo.findOne({
         where: { trabajador_id: trabajador.id, estado: "vigente" }
+    })
+
+    if (contratoVigente === null) {
+        throw new ConflictError("No existe un contrato vigente para este trabajador")
+    }
+
+    const anexos = await ContratoAnexo.findAll({ where: { contrato_id: contratoVigente.id } })
+    const { contrato, tramosSueldo } = contratoDelMes({
+        contrato: contratoVigente.toJSON(),
+        anexos: anexos.map((anexo) => anexo.toJSON()),
+        anio: periodo.anio,
+        mes: periodo.mes
     })
 
     if (contrato === null) {
@@ -288,6 +326,22 @@ async function prepararCalculo(periodo, trabajador) {
         resumen
     })
 
+    const licenciasDelMes = await licenciasConRima(trabajador.id, periodo)
+
+    const fechasAusencia = tramosSueldo.length > 1
+        ? await fechasDeAusencia(trabajador.id, periodo, resumen, licenciasDelMes)
+        : []
+
+    const tramosConDias = diasPorTramo({
+        tramos: tramosSueldo,
+        anio: periodo.anio,
+        mes: periodo.mes,
+        diasPagados,
+        fechaIngreso: trabajador.fecha_ingreso,
+        fechaTermino: trabajador.fecha_termino,
+        fechasAusencia
+    })
+
     const primerDia = `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`
     const parametros = await obtenerParametrosDelMes(primerDia)
     const tramos = await obtenerTramos(primerDia)
@@ -308,6 +362,7 @@ async function prepararCalculo(periodo, trabajador) {
         sueldoBase: Number(contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
         diasPagados,
+        tramosSueldo: tramosConDias,
         variables: aprobadas,
         minutosAtraso: resumen.minutos_atraso,
         ingresoMinimoMensual: parametros.ingresoMinimoMensual,
@@ -331,7 +386,7 @@ async function prepararCalculo(periodo, trabajador) {
         throw new ConflictError(error.message)
     }
 
-    const licenciasDelMes = await licenciasConRima(trabajador.id, periodo)
+
     const rimaMes = rimaDelMes(licenciasDelMes, periodo.anio, periodo.mes)
     const baseSeguroSocial = Math.min(resultado.baseCotizaciones + rimaMes, resultado.topeImponible)
 
@@ -365,6 +420,7 @@ async function prepararCalculo(periodo, trabajador) {
             vacaciones: resumen.dias_vacaciones,
             minutosAtraso: resumen.minutos_atraso
         },
+        sueldo: { tramos: tramosConDias },
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },

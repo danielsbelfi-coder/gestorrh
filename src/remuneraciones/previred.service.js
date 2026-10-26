@@ -7,6 +7,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { datosPrevired, problemasPrevired } = require("./datos_previred.js")
 const { lineasTrabajador } = require("./archivo_previred.js")
+const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
 
 const CODIGOS_TRAMOS = {
     a: "ASIG_FAMILIAR_TRAMO_A_HASTA",
@@ -28,20 +29,6 @@ async function obtenerLimitesTramo(fecha) {
     }
 
     return limites
-}
-
-async function fechasDeMarcas(trabajadorId, tipo, primerDia, ultimoDia) {
-    const marcas = await Asistencia.findAll({
-        where: {
-            trabajador_id: trabajadorId,
-            tipo,
-            estado_aprobacion: "aprobada",
-            fecha: { [Op.between]: [primerDia, ultimoDia] }
-        },
-        attributes: ["fecha"]
-    })
-
-    return marcas.map((marca) => marca.fecha)
 }
 
 async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
