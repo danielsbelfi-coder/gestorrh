@@ -2,6 +2,7 @@ const { Op } = require("sequelize")
 const { sequelize } = require("../src/shared/database.js")
 const { ParametroLegal, TramoImpuesto } = require("../src/shared/associations.js")
 const { CODIGOS_PARAMETROS } = require("../src/remuneraciones/liquidacion.service.js")
+const { CODIGOS_TRAMOS } = require("../src/remuneraciones/previred.service.js")
 
 function leerMes(texto) {
     if (!/^\d{4}-\d{2}$/.test(texto ?? "")) {
@@ -77,7 +78,7 @@ async function main() {
     console.log(`  Se copian: ${aCopiar.map((p) => `${p.codigo}=${p.valor}`).join(", ") || "ninguno"}`)
     console.log(`  Tramos: ${copiarTramos ? `se copian ${tramos.length}` : "ya existen, no se copian"}`)
 
-    const requeridos = Object.values(CODIGOS_PARAMETROS)
+    const requeridos = [...Object.values(CODIGOS_PARAMETROS), ...Object.values(CODIGOS_TRAMOS)]
     const disponibles = new Set([...aCopiar.map((p) => p.codigo), ...codigosExistentes])
     const faltantes = requeridos.filter((codigo) => !disponibles.has(codigo))
 
