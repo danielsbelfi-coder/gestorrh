@@ -19,7 +19,7 @@ const LiquidacionLinea = sequelize.define("LiquidacionLinea", {
         allowNull: false
     },
     tipo: {
-        type: DataTypes.ENUM("haber", "descuento"),
+        type: DataTypes.ENUM("haber", "descuento", "aporte_empleador"),
         allowNull: false
     },
     imponible: {
