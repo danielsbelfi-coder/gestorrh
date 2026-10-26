@@ -32,14 +32,16 @@ function sumarSegun(lineas, marca) {
     }, 0)
 }
 
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, variables, minutosAtraso, ingresoMinimoMensual, conceptos }) {
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, conceptos }) {
     const valorHora = valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
+
+    const tramos = tramosSueldo ?? [{ sueldo: sueldoBase, dias: diasPagados }]
 
     lineas.push({
         concepto: conceptos.SUELDO_BASE,
         cantidad: diasPagados,
-        monto: Math.round(sueldoBase * diasPagados / DIAS_MES_COMERCIAL)
+        monto: Math.round(tramos.reduce((suma, tramo) => suma + tramo.sueldo * tramo.dias, 0) / DIAS_MES_COMERCIAL)
     })
 
     for (const grupo of agruparVariables(variables)) {

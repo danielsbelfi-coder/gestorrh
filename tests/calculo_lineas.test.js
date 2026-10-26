@@ -208,3 +208,16 @@ test("isapre bajo el 7%: se descuenta el 7% legal y no hay adicional", () => {
     assert.strictEqual(r.descuentoAdicionalIsapre, 0)
     assert.strictEqual(r.lineas.some((l) => l.concepto.codigo === "SALUD_ADICIONAL_ISAPRE"), false)
 })
+
+test("aumento a mitad de mes: sueldo por tramos y horas extra al valor hora del sueldo final", () => {
+    const resultado = calcular({
+        sueldoBase: 900000,
+        tramosSueldo: [{ desdeDia: 1, sueldo: 800000, dias: 14 }, { desdeDia: 15, sueldo: 900000, dias: 16 }],
+        variables: [{ concepto: CONCEPTOS.HORAS_EXTRA_50, cantidad: "4.00", monto: null }]
+    })
+
+    assert.strictEqual(monto(resultado, "SUELDO_BASE"), 853333)
+    assert.strictEqual(resultado.valorHora, 5000)
+    assert.strictEqual(monto(resultado, "HORAS_EXTRA_50"), 30000)
+    assert.strictEqual(monto(resultado, "GRATIFICACION"), 220833)
+})
