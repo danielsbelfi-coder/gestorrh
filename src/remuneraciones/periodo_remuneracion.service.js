@@ -1,4 +1,4 @@
-const { PeriodoRemuneracion, Empresa, Trabajador } = require("../shared/associations");
+const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo } = require("../shared/associations");
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js");
 const { PERMISOS, exigirRol } = require("../shared/permisos.js");
@@ -34,13 +34,19 @@ async function cerrarPeriodo(id, empresasPermitidas, usuarioId) {
         throw new ConflictError("El periodo de remuneraciones ya está cerrado")
     }
 
+    const problemas = await problemasDeCierre(periodo)
+
+    if (problemas.length > 0) {
+        return { cerrado: false, problemas }
+    }
 
     const fechaHoy = new Date().toISOString().split("T")[0]
     await periodo.update({
         estado: "cerrado",
         fecha_cierre: fechaHoy
     })
-    return periodo
+
+    return { cerrado: true, periodo }
 }
 
 async function listarPeriodos(empresasPermitidas) {
@@ -83,12 +89,46 @@ async function trabajadoresDelPeriodo(periodo) {
     })
 }
 
+async function problemasDeCierre(periodo) {
+    const trabajadores = await trabajadoresDelPeriodo(periodo)
+    const problemas = []
+
+    for (const trabajador of trabajadores) {
+        const filtro = { periodo_id: periodo.id, trabajador_id: trabajador.id }
+        const motivos = []
+
+        const resumen = await ResumenAsistencia.findOne({ where: filtro })
+        if (resumen === null || resumen.estado !== "aprobado") {
+            motivos.push("El resumen de asistencia no está aprobado")
+        }
+
+        const liquidacion = await Liquidacion.findOne({ where: { ...filtro, vigente: true } })
+        if (liquidacion === null) {
+            motivos.push("No tiene liquidación")
+        } else if (liquidacion.estado !== "emitida") {
+            motivos.push("La liquidación está en borrador (sin emitir)")
+        }
+
+        const pendientes = await VariablePeriodo.count({ where: { ...filtro, estado: "pendiente" } })
+        if (pendientes > 0) {
+            motivos.push(`Tiene ${pendientes} variable(s) pendiente(s) de aprobación`)
+        }
+
+        if (motivos.length > 0) {
+            problemas.push({ trabajador_id: trabajador.id, motivos })
+        }
+    }
+
+    return problemas
+}
+
 module.exports = {
     abrirPeriodo,
     cerrarPeriodo,
     listarPeriodos,
     obtenerPeriodoPorId,
     rangoDelPeriodo,
-    trabajadoresDelPeriodo
+    trabajadoresDelPeriodo,
+    problemasDeCierre
 }
 

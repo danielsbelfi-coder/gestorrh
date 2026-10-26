@@ -7,8 +7,16 @@ async function crear(req, res) {
 }
 
 async function cerrar(req, res) {
-    const periodoCerrado = await cerrarPeriodo(req.params.id, req.empresasPermitidas, req.usuario.id)
-    res.status(200).json(periodoCerrado)
+    const resultado = await cerrarPeriodo(req.params.id, req.empresasPermitidas, req.usuario.id)
+
+    if (!resultado.cerrado) {
+        return res.status(409).json({
+            error: `No se puede cerrar el periodo: ${resultado.problemas.length} trabajador(es) con pendientes`,
+            problemas: resultado.problemas
+        })
+    }
+
+    res.status(200).json(resultado.periodo)
 }
 
 async function listar(req, res) {
