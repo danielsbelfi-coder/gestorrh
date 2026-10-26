@@ -1,4 +1,8 @@
 const { crearLiquidacion, listarLiquidaciones, obtenerLiquidacionPorId, recalcularLiquidacion, emitirLiquidacion, emitirLiquidacionesPeriodo } = require("./liquidacion.service");
+const PDFDocument = require("pdfkit")
+const { documentoLiquidacion, documentosPeriodo } = require("./documento_liquidacion.service")
+const { dibujarLiquidacion, TAMANO_PAGINA } = require("./dibujar_liquidacion")
+
 
 async function crear(req, res) {
     const resultado = await crearLiquidacion(
@@ -50,11 +54,43 @@ async function emitirPeriodo(req, res) {
     res.status(resultado.problemas.length > 0 ? 409 : 200).json(resultado)
 }
 
+function sufijoPeriodo(periodo) {
+    return `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}`
+}
+
+function enviarPdf(res, nombreArchivo, documentos, conAportes) {
+    const doc = new PDFDocument({ size: TAMANO_PAGINA, margin: 40 })
+
+    res.attachment(nombreArchivo)
+    doc.pipe(res)
+
+    documentos.forEach((datos, indice) => {
+        if (indice > 0) {
+            doc.addPage()
+        }
+        dibujarLiquidacion(doc, datos, { conAportes })
+    })
+
+    doc.end()
+}
+
+async function documento(req, res) {
+    const { periodo, documentos } = await documentoLiquidacion(req.params.periodoId, req.params.id, req.empresasPermitidas)
+    enviarPdf(res, `liquidacion-${req.params.id}-${sufijoPeriodo(periodo)}.pdf`, documentos, req.query.con_aportes === "1")
+}
+
+async function documentoPeriodo(req, res) {
+    const { periodo, documentos } = await documentosPeriodo(req.params.periodoId, req.empresasPermitidas)
+    enviarPdf(res, `liquidaciones-${sufijoPeriodo(periodo)}.pdf`, documentos, req.query.con_aportes === "1")
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
     recalcular,
     emitir,
-    emitirPeriodo
+    emitirPeriodo,
+    documento,
+    documentoPeriodo
 }
