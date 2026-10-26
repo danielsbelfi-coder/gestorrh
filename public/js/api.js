@@ -68,3 +68,10 @@ function formatearFecha(texto) {
     const [anio, mes, dia] = texto.split("-")
     return `${dia}-${mes}-${anio}`
 }
+
+function mostrarProblemas(idLista, problemas) {
+    document.getElementById(idLista).innerHTML = problemas.map(function (problema) {
+        const motivos = problema.motivos ?? [problema.motivo]
+        return `<li>Trabajador ${problema.trabajador_id}: ${escaparHtml(motivos.join("; "))}</li>`
+    }).join("")
+}

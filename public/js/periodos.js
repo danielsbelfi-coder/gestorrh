@@ -57,14 +57,17 @@ lista.addEventListener("click", async function (evento) {
     }
 
     document.getElementById("mensajeError").textContent = ""
+    mostrarProblemas("listaProblemas", [])
 
-    
     const resultado = await llamarApi("/api/periodos-remuneracion/" + id + "/cerrar", {
         method: "PATCH"
     })
 
     if (resultado.status !== 200) {
         document.getElementById("mensajeError").textContent = resultado.datos.error
+        if (resultado.datos.problemas) {
+            mostrarProblemas("listaProblemas", resultado.datos.problemas)
+        }
         return
     }
 

@@ -8,17 +8,10 @@ function mostrarInfo(texto) {
     document.getElementById("mensajeInfo").textContent = texto
 }
 
-function mostrarProblemas(problemas) {
-    document.getElementById("listaProblemas").innerHTML = problemas.map(function (problema) {
-        const motivos = problema.motivos ?? [problema.motivo]
-        return `<li>Trabajador ${problema.trabajador_id}: ${escaparHtml(motivos.join("; "))}</li>`
-    }).join("")
-}
-
 function limpiarMensajes() {
     mostrarError("")
     mostrarInfo("")
-    mostrarProblemas([])
+    mostrarProblemas("listaProblemas", [])
 }
 
 function botonesLiquidacion(liquidacion) {
@@ -171,7 +164,7 @@ document.getElementById("btnEmitirTodas").addEventListener("click", async functi
 
     if (resultado.status === 409 && resultado.datos.problemas) {
         mostrarError("No se emitió ninguna liquidación. Resuelva estos pendientes:")
-        mostrarProblemas(resultado.datos.problemas)
+        mostrarProblemas("listaProblemas", resultado.datos.problemas)
         return
     }
 
