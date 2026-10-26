@@ -8,9 +8,17 @@ function mostrarInfo(texto) {
     document.getElementById("mensajeInfo").textContent = texto
 }
 
+function mostrarProblemas(problemas) {
+    document.getElementById("listaProblemas").innerHTML = problemas.map(function (problema) {
+        const motivos = problema.motivos ?? [problema.motivo]
+        return `<li>Trabajador ${problema.trabajador_id}: ${escaparHtml(motivos.join("; "))}</li>`
+    }).join("")
+}
+
 function limpiarMensajes() {
     mostrarError("")
     mostrarInfo("")
+    mostrarProblemas([])
 }
 
 function botonesLiquidacion(liquidacion) {
@@ -150,6 +158,44 @@ document.getElementById("listaLiquidaciones").addEventListener("click", async fu
 
     cargarLiquidaciones()
 })
+
+document.getElementById("btnEmitirTodas").addEventListener("click", async function () {
+    limpiarMensajes()
+
+    if (!confirm("¿Emitir todas las liquidaciones calculadas del periodo? Si alguna tiene pendientes, no se emitirá ninguna.")) {
+        return
+    }
+
+    const periodoId = document.getElementById("periodo").value
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones/emitir`, { method: "POST" })
+
+    if (resultado.status === 409 && resultado.datos.problemas) {
+        mostrarError("No se emitió ninguna liquidación. Resuelva estos pendientes:")
+        mostrarProblemas(resultado.datos.problemas)
+        return
+    }
+
+    if (resultado.status !== 200) {
+        mostrarError(resultado.datos.error)
+        return
+    }
+
+    mostrarInfo(`Se emitieron ${resultado.datos.emitidas} liquidación(es).`)
+    cargarLiquidaciones()
+})
+
+async function descargarTodas(conAportes) {
+    limpiarMensajes()
+    const periodoId = document.getElementById("periodo").value
+    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/liquidaciones/documento${conAportes ? "?con_aportes=1" : ""}`)
+
+    if (resultado.status !== 200) {
+        mostrarError(resultado.datos.error)
+    }
+}
+
+document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
+document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
 
 document.addEventListener("DOMContentLoaded", cargarSelectorPeriodos)
 document.getElementById("periodo").addEventListener("change", cargarLiquidaciones)
