@@ -1,21 +1,22 @@
 const { ResumenAsistencia, Trabajador, PeriodoRemuneracion,
     Asistencia, ContratoTrabajo, VariablePeriodo,
-    ConceptoRemuneracion
+    ConceptoRemuneracion, LicenciaMedica
 } = require("../shared/associations.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo, trabajadoresDelPeriodo } = require("../remuneraciones/periodo_remuneracion.service.js")
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
+const { diasLicenciaEnMes } = require("../remuneraciones/dias_pago.js")
 
 
 
-const CAMPOS_DIAS = ["dias_inasistencia", "dias_licencia_medica", "dias_permiso_sin_goce", "dias_vacaciones"]
+const CAMPOS_MANUALES = ["dias_inasistencia", "dias_permiso_sin_goce", "dias_vacaciones"]
 
-function valoresDelResumen(datos) {
-    const valores = {}
+function valoresDelResumen(datos, diasLicencia) {
+    const valores = { dias_licencia_medica: diasLicencia }
 
-    for (const campo of [...CAMPOS_DIAS, "minutos_atraso"]) {
+    for (const campo of [...CAMPOS_MANUALES, "minutos_atraso"]) {
         const valor = datos[campo] === undefined ? 0 : Number(datos[campo])
 
         if (!Number.isInteger(valor) || valor < 0) {
@@ -25,13 +26,47 @@ function valoresDelResumen(datos) {
         valores[campo] = valor
     }
 
-    const totalDias = CAMPOS_DIAS.reduce((suma, campo) => suma + valores[campo], 0)
+    const totalDias = CAMPOS_MANUALES.reduce((suma, campo) => suma + valores[campo], 0) + diasLicencia
 
-    if (totalDias > 30) {
-        throw new ValidationError("La suma de los días no puede superar 30")
+    if (totalDias > 31) {
+        throw new ValidationError("La suma de los días no puede superar los días del mes")
     }
 
     return valores
+}
+
+async function diasLicenciaDelPeriodo(trabajadorId, periodo, transaction) {
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+
+    const licencias = await LicenciaMedica.findAll({
+        where: {
+            trabajador_id: trabajadorId,
+            fecha_inicio: { [Op.lte]: ultimoDia },
+            fecha_termino: { [Op.gte]: primerDia }
+        },
+        transaction
+    })
+
+    return diasLicenciaEnMes(licencias, periodo.anio, periodo.mes)
+}
+
+async function sincronizarLicenciasResumen(trabajadorId, periodo, transaction) {
+    const resumen = await ResumenAsistencia.findOne({
+        where: { periodo_id: periodo.id, trabajador_id: trabajadorId },
+        transaction
+    })
+
+    if (resumen === null) {
+        return
+    }
+
+    const cambios = { dias_licencia_medica: await diasLicenciaDelPeriodo(trabajadorId, periodo, transaction) }
+
+    if (resumen.estado === "aprobado") {
+        Object.assign(cambios, { estado: "pendiente", aprobado_por_id: null, fecha_aprobacion: null })
+    }
+
+    await resumen.update(cambios, { transaction })
 }
 
 async function guardarResumen(datos, empresasPermitidas, usuarioId) {
@@ -49,7 +84,7 @@ async function guardarResumen(datos, empresasPermitidas, usuarioId) {
         throw new NotFoundError("Trabajador no encontrado")
     }
 
-    const valores = valoresDelResumen(datos)
+    const valores = valoresDelResumen(datos, await diasLicenciaDelPeriodo(trabajador.id, periodo))
 
     const existente = await ResumenAsistencia.findOne({
         where: { periodo_id: periodo.id, trabajador_id: trabajador.id }
@@ -142,7 +177,7 @@ async function generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, 
 
     const dias = {
         dias_inasistencia: contar("inasistencia"),
-        dias_licencia_medica: contar("licencia_medica"),
+        dias_licencia_medica: await diasLicenciaDelPeriodo(trabajador.id, periodo, transaction),
         dias_permiso_sin_goce: contar("permiso_sin_goce"),
         dias_vacaciones: contar("vacaciones")
     }
@@ -240,7 +275,7 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
     }
 
     const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
-    
+
     const trabajadores = await trabajadoresDelPeriodo(periodo)
 
     const conceptoHoras = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "HORAS_EXTRA_50" } })
@@ -261,5 +296,6 @@ module.exports = {
     listarResumenes,
     aprobarResumen,
     devolverResumen,
-    generarDesdeAsistencia
+    generarDesdeAsistencia,
+    sincronizarLicenciasResumen
 }

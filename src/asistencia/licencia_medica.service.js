@@ -1,10 +1,12 @@
 const { LicenciaMedica, Trabajador, PeriodoRemuneracion } = require("../shared/associations.js")
+const { sequelize } = require("../shared/database.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { esFechaValida, fechaChilena, diasEntre } = require("../shared/fechas.js")
 const { buscarPagador } = require("./pagadores_subsidio.js")
 const { rangoDelPeriodo } = require("../remuneraciones/periodo_remuneracion.service.js")
+const { sincronizarLicenciasResumen } = require("./resumen_asistencia.service.js")
 
 const TIPOS_LICENCIA = ["comun", "maternal", "accidente_trabajo"]
 
@@ -37,6 +39,21 @@ async function advertenciasMesesCerrados(trabajador, inicio, termino) {
     }
 
     return advertencias
+}
+
+async function sincronizarMesesAbiertos(trabajador, inicio, termino, transaction) {
+    const abiertos = await PeriodoRemuneracion.findAll({
+        where: { empresa_id: trabajador.empresa_id, estado: "abierto" },
+        transaction
+    })
+
+    for (const periodo of abiertos) {
+        const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+
+        if (inicio <= ultimoDia && termino >= primerDia) {
+            await sincronizarLicenciasResumen(trabajador.id, periodo, transaction)
+        }
+    }
 }
 
 async function crearLicencia(datos, empresasPermitidas, usuarioId) {
@@ -73,19 +90,22 @@ async function crearLicencia(datos, empresasPermitidas, usuarioId) {
 
     const advertencias = await advertenciasMesesCerrados(trabajador, datos.fecha_inicio, datos.fecha_termino)
 
-    const licencia = await LicenciaMedica.create({
-        trabajador_id: trabajador.id,
-        fecha_inicio: datos.fecha_inicio,
-        fecha_termino: datos.fecha_termino,
-        folio: datos.folio || null,
-        tipo: datos.tipo,
-        pagador_rut: pagador.rut,
-        pagador_dv: pagador.dv,
-        usuario_registro_id: usuarioId
+    return await sequelize.transaction(async (transaction) => {
+        const licencia = await LicenciaMedica.create({
+            trabajador_id: trabajador.id,
+            fecha_inicio: datos.fecha_inicio,
+            fecha_termino: datos.fecha_termino,
+            folio: datos.folio || null,
+            tipo: datos.tipo,
+            pagador_rut: pagador.rut,
+            pagador_dv: pagador.dv,
+            usuario_registro_id: usuarioId
+        }, { transaction })
+
+        await sincronizarMesesAbiertos(trabajador, datos.fecha_inicio, datos.fecha_termino, transaction)
+
+        return { licencia, advertencias }
     })
-
-
-    return { licencia, advertencias }
 }
 
 async function listarLicencias(trabajadorId, empresasPermitidas) {
@@ -108,7 +128,10 @@ async function eliminarLicencia(id, empresasPermitidas, usuarioId) {
 
     await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.REGISTRAR_ASISTENCIA)
 
-    await licencia.destroy()
+    await sequelize.transaction(async (transaction) => {
+        await licencia.destroy({ transaction })
+        await sincronizarMesesAbiertos(trabajador, licencia.fecha_inicio, licencia.fecha_termino, transaction)
+    })
 }
 
 module.exports = {
