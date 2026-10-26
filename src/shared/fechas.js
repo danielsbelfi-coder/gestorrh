@@ -22,8 +22,15 @@ function fechaChilena(texto) {
     return `${dia}-${mes}-${anio}`
 }
 
+function diasEntre(desde, hasta) {
+    const inicio = Date.parse(`${desde}T00:00:00Z`)
+    const fin = Date.parse(`${hasta}T00:00:00Z`)
+    return Math.round((fin - inicio) / 86400000) + 1
+}
+
 module.exports = {
     esFechaValida,
     sumarDias,
-    fechaChilena
+    fechaChilena,
+    diasEntre
 }

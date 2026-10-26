@@ -1,9 +1,10 @@
-const { LicenciaMedica, Trabajador } = require("../shared/associations.js")
+const { LicenciaMedica, Trabajador, PeriodoRemuneracion } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
-const { esFechaValida, fechaChilena } = require("../shared/fechas.js")
+const { esFechaValida, fechaChilena, diasEntre } = require("../shared/fechas.js")
 const { buscarPagador } = require("./pagadores_subsidio.js")
+const { rangoDelPeriodo } = require("../remuneraciones/periodo_remuneracion.service.js")
 
 const TIPOS_LICENCIA = ["comun", "maternal", "accidente_trabajo"]
 
@@ -15,6 +16,27 @@ async function obtenerTrabajadorPermitido(trabajadorId, empresasPermitidas) {
     }
 
     return trabajador
+}
+
+async function advertenciasMesesCerrados(trabajador, inicio, termino) {
+    const cerrados = await PeriodoRemuneracion.findAll({
+        where: { empresa_id: trabajador.empresa_id, estado: "cerrado" },
+        order: [["anio", "ASC"], ["mes", "ASC"]]
+    })
+
+    const advertencias = []
+
+    for (const periodo of cerrados) {
+        const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+        const desde = inicio > primerDia ? inicio : primerDia
+        const hasta = termino < ultimoDia ? termino : ultimoDia
+
+        if (desde <= hasta) {
+            advertencias.push(`La licencia toca el periodo ${periodo.mes}/${periodo.anio}, que ya está cerrado (${diasEntre(desde, hasta)} día(s)). Revise si corresponde descontar un pago en exceso en el mes siguiente y rectificar Previred.`)
+        }
+    }
+
+    return advertencias
 }
 
 async function crearLicencia(datos, empresasPermitidas, usuarioId) {
@@ -49,7 +71,9 @@ async function crearLicencia(datos, empresasPermitidas, usuarioId) {
         throw new ConflictError(`Se cruza con la licencia del ${fechaChilena(cruce.fecha_inicio)} al ${fechaChilena(cruce.fecha_termino)}`)
     }
 
-    return await LicenciaMedica.create({
+    const advertencias = await advertenciasMesesCerrados(trabajador, datos.fecha_inicio, datos.fecha_termino)
+
+    const licencia = await LicenciaMedica.create({
         trabajador_id: trabajador.id,
         fecha_inicio: datos.fecha_inicio,
         fecha_termino: datos.fecha_termino,
@@ -59,6 +83,9 @@ async function crearLicencia(datos, empresasPermitidas, usuarioId) {
         pagador_dv: pagador.dv,
         usuario_registro_id: usuarioId
     })
+
+
+    return { licencia, advertencias }
 }
 
 async function listarLicencias(trabajadorId, empresasPermitidas) {
