@@ -90,6 +90,10 @@ const Persona = sequelize.define("Persona", {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
+    nacionalidad: {
+        type: DataTypes.ENUM("chilena", "extranjera"),
+        allowNull: false
+    },
 }, {
     tableName: "personas",
     indexes: [
