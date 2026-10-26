@@ -187,6 +187,27 @@ async function descargarTodas(conAportes) {
     }
 }
 
+async function descargarPrevired() {
+    limpiarMensajes()
+    const periodoId = document.getElementById("periodo").value
+    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/previred`)
+
+    if (resultado.status === 409 && resultado.datos.problemas) {
+        mostrarError(resultado.datos.error)
+        mostrarProblemas("listaProblemas", resultado.datos.problemas)
+        return
+    }
+
+    if (resultado.status !== 200) {
+        mostrarError(resultado.datos.error)
+        return
+    }
+
+    mostrarInfo(["Archivo Previred generado. Pensionados, cargas familiares, CCAF y APV todavía no se informan.", ...resultado.advertencias].join(" "))
+}
+
+document.getElementById("btnPrevired").addEventListener("click", descargarPrevired)
+
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
 

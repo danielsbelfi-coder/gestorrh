@@ -61,7 +61,9 @@ async function descargarArchivo(ruta) {
 
     setTimeout(() => URL.revokeObjectURL(url), 1000)
 
-    return { status: respuesta.status }
+    const advertencias = respuesta.headers.get("X-Advertencias")
+
+    return { status: respuesta.status, advertencias: advertencias ? JSON.parse(decodeURIComponent(advertencias)) : [] }
 }
 
 function formatearFecha(texto) {
