@@ -1,6 +1,6 @@
 const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Trabajador, TramoImpuesto,
     Persona, Afp, ConceptoRemuneracion,
-    ResumenAsistencia, VariablePeriodo, LiquidacionLinea } = require("../shared/associations.js")
+    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
@@ -9,7 +9,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { sequelize } = require("../shared/database.js")
 const { calcularDiasPago, DIAS_MES_COMERCIAL } = require("./dias_pago.js")
 const { calcularLiquidacionPorLineas } = require("./calculo_lineas.js")
-
+const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -22,17 +22,27 @@ function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     const mesYDia = trabajador.fecha_ingreso.slice(4)
     const fechaLimite = `${anioLimite}${mesYDia}`
 
-    if (tipoContrato === "indefinido" && fechaIngreso > FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
+    if (tipoContrato === "indefinido" && fechaIngreso >= FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
         return true
     }
 
     return false
 }
 
+function tasaCesantiaEmpleador(contrato, trabajador, parametros) {
+    if (contrato.tipo_contrato !== "indefinido") {
+        return parametros.cesantiaEmpleadorPlazoFijo
+    }
+
+    return trabajador.fecha_ingreso >= FECHA_VIGENCIA_SEGURO_CESANTIA ? parametros.cesantiaEmpleadorIndefinido : 0
+}
+
 const CODIGOS_SISTEMA = [
     "SUELDO_BASE", "GRATIFICACION", "DESCUENTO_ATRASOS", "AFP", "SALUD",
     "SALUD_ADICIONAL_ISAPRE", "CESANTIA", "IMPUESTO_UNICO",
-    "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO"
+    "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
+    "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
+    "APORTE_SEGURO_SOCIAL", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA"
 ]
 
 async function obtenerConceptosSistema() {
@@ -106,7 +116,14 @@ const CODIGOS_PARAMETROS = {
     tasaSalud: "TASA_SALUD_MINIMA",
     tasaCesantia: "TASA_CESANTIA_TRABAJADOR",
     topeCesantiaUF: "TOPE_CESANTIA_UF",
-    ingresoMinimoMensual: "INGRESO_MINIMO_MENSUAL"
+    ingresoMinimoMensual: "INGRESO_MINIMO_MENSUAL",
+    mutualBasica: "MUTUAL_TASA_BASICA",
+    sanna: "LEY_SANNA",
+    cesantiaEmpleadorIndefinido: "CESANTIA_EMPLEADOR_INDEFINIDO",
+    cesantiaEmpleadorPlazoFijo: "CESANTIA_EMPLEADOR_PLAZO_FIJO",
+    seguroSocial: "SEGURO_SOCIAL_PREVISIONAL",
+    cuentaIndividual: "REFORMA_CUENTA_INDIVIDUAL",
+    rentabilidadProtegida: "REFORMA_RENTABILIDAD_PROTEGIDA"
 }
 
 async function obtenerParametrosDelMes(fecha) {
@@ -217,6 +234,17 @@ async function prepararCalculo(periodo, trabajador) {
     const parametros = await obtenerParametrosDelMes(primerDia)
     const tramos = await obtenerTramos(primerDia)
 
+    const empresa = await Empresa.findByPk(periodo.empresa_id)
+
+    const tasasAportes = {
+        cesantia: tasaCesantiaEmpleador(contrato, trabajador, parametros),
+        mutual: parametros.mutualBasica + Number(empresa.tasa_adicional_mutual),
+        sanna: parametros.sanna,
+        seguroSocial: parametros.seguroSocial,
+        cuentaIndividual: parametros.cuentaIndividual,
+        rentabilidadProtegida: parametros.rentabilidadProtegida
+    }
+
     const datos = {
         sueldoBase: Number(contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
@@ -244,6 +272,13 @@ async function prepararCalculo(periodo, trabajador) {
         throw new ConflictError(error.message)
     }
 
+    const { aportes, totalAportes } = calcularAportesEmpleador({
+        baseCotizaciones: resultado.baseCotizaciones,
+        baseCesantia: resultado.baseCesantia,
+        tasas: tasasAportes,
+        conceptos
+    })
+
     const montoDe = (codigo) => resultado.lineas
         .filter((l) => l.concepto.codigo === codigo)
         .reduce((suma, l) => suma + l.monto, 0)
@@ -252,7 +287,8 @@ async function prepararCalculo(periodo, trabajador) {
 
     const lineasOrdenadas = [
         ...resultado.lineas.filter((l) => l.concepto.tipo === "haber"),
-        ...resultado.lineas.filter((l) => l.concepto.tipo === "descuento")
+        ...resultado.lineas.filter((l) => l.concepto.tipo === "descuento"),
+        ...aportes
     ]
 
     const detalleCalculo = {
@@ -273,7 +309,8 @@ async function prepararCalculo(periodo, trabajador) {
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         saldoAnterior: saldoPendiente,
-        variablesPendientes: pendientes
+        variablesPendientes: pendientes,
+        aportes: { tasas: tasasAportes, total: totalAportes }
     }
 
     const campos = {
@@ -299,6 +336,7 @@ async function prepararCalculo(periodo, trabajador) {
         monto_impuesto_unico: montoDe("IMPUESTO_UNICO"),
         total_descuentos: resultado.totalDescuentos,
         liquido_a_pagar: resultado.liquidoAPagar,
+        total_aportes_empleador: totalAportes,
         saldo_pago_exceso: resultado.nuevoSaldoPendiente,
         detalle_calculo: detalleCalculo,
         fecha_calculo: new Date().toISOString().slice(0, 10)
