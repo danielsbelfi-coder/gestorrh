@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { calcularDiasPago, diasLicenciaEnMes, rimaDelMes } = require("../src/remuneraciones/dias_pago.js")
+const { calcularDiasPago, diasLicenciaEnMes, rimaDelMes, diasPorTramo } = require("../src/remuneraciones/dias_pago.js")
 
 const SIN_AUSENCIAS = { dias_inasistencia: 0, dias_licencia_medica: 0, dias_permiso_sin_goce: 0 }
 
@@ -95,4 +95,32 @@ test("RIMA: licencia de todo julio (31 días) → RIMA completa, no 31/30", () =
 test("RIMA: dos licencias con RIMAs distintas en el mismo mes se suman", () => {
     const licencias = [conRima("2027-07-15", "2027-07-16", 600000), conRima("2027-07-25", "2027-07-31", 900000)]
     assert.strictEqual(rimaDelMes(licencias, 2027, 7), 250000)
+})
+
+const aumento15 = [{ desdeDia: 1, sueldo: 600000 }, { desdeDia: 15, sueldo: 700000 }]
+const marzo = { tramos: aumento15, anio: 2027, mes: 3, fechaIngreso: "2020-01-01", fechaTermino: null, fechasAusencia: [] }
+
+test("tramos: un solo tramo recibe el total, sin necesitar fechas", () => {
+    const resultado = diasPorTramo({ ...marzo, tramos: [{ desdeDia: 1, sueldo: 600000 }], diasPagados: 27, fechasAusencia: [] })
+    assert.deepStrictEqual(resultado, [{ desdeDia: 1, sueldo: 600000, dias: 27 }])
+})
+
+test("tramos: aumento desde el 15 de marzo, mes completo → 14 y 16", () => {
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 30 }).map((t) => t.dias), [14, 16])
+})
+
+test("tramos: la inasistencia del 20 y la del 31 se descuentan del tramo nuevo", () => {
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 29, fechasAusencia: ["2027-03-20"] }).map((t) => t.dias), [14, 15])
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 29, fechasAusencia: ["2027-03-31"] }).map((t) => t.dias), [14, 15])
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 29, fechasAusencia: ["2027-03-05"] }).map((t) => t.dias), [13, 16])
+})
+
+test("tramos: ingreso el 10 resta del primer tramo; febrero también suma 30", () => {
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 21, fechaIngreso: "2027-03-10" }).map((t) => t.dias), [5, 16])
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, mes: 2, diasPagados: 30 }).map((t) => t.dias), [14, 16])
+})
+
+test("tramos: ausente del 1 al 30 de marzo y trabaja el 31 → el día mínimo va al tramo nuevo", () => {
+    const fechas = Array.from({ length: 30 }, (_, i) => `2027-03-${String(i + 1).padStart(2, "0")}`)
+    assert.deepStrictEqual(diasPorTramo({ ...marzo, diasPagados: 1, fechasAusencia: fechas }).map((t) => t.dias), [0, 1])
 })

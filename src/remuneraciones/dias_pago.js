@@ -84,10 +84,67 @@ function rimaDelMes(licencias, anio, mes) {
     return Math.round(total)
 }
 
+function tramoDelDia(tramos, dia) {
+    let indice = 0
+    tramos.forEach((tramo, i) => {
+        if (tramo.desdeDia <= dia) {
+            indice = i
+        }
+    })
+    return indice
+}
+
+function diasPorTramo({ tramos, anio, mes, diasPagados, fechaIngreso, fechaTermino, fechasAusencia }) {
+    if (tramos.length === 1) {
+        return [{ ...tramos[0], dias: diasPagados }]
+    }
+
+    const ultimoDiaMes = new Date(anio, mes, 0).getDate()
+    const dias = tramos.map((tramo, i) => {
+        const fin = i < tramos.length - 1 ? tramos[i + 1].desdeDia - 1 : DIAS_MES_COMERCIAL
+        return fin - tramo.desdeDia + 1
+    })
+
+    const restar = (dia) => {
+        dias[tramoDelDia(tramos, Math.min(dia, DIAS_MES_COMERCIAL))] -= 1
+    }
+
+    if (estaEnElMes(fechaIngreso, anio, mes)) {
+        for (let dia = 1; dia < Number(fechaIngreso.slice(8, 10)); dia++) {
+            restar(dia)
+        }
+    }
+    if (estaEnElMes(fechaTermino, anio, mes)) {
+        const termino = Number(fechaTermino.slice(8, 10))
+        if (termino < ultimoDiaMes) {
+            for (let dia = termino + 1; dia <= DIAS_MES_COMERCIAL; dia++) {
+                restar(dia)
+            }
+        }
+    }
+    for (const fecha of fechasAusencia) {
+        restar(Number(fecha.slice(8, 10)))
+    }
+
+    for (let i = 0; i < dias.length; i++) {
+        dias[i] = Math.max(0, dias[i])
+    }
+
+    let diferencia = diasPagados - dias.reduce((suma, d) => suma + d, 0)
+    for (let i = dias.length - 1; i >= 0 && diferencia !== 0; i--) {
+        const ajuste = Math.max(-dias[i], diferencia)
+        dias[i] += ajuste
+        diferencia -= ajuste
+    }
+
+    return tramos.map((tramo, i) => ({ ...tramo, dias: dias[i] }))
+}
+
 module.exports = {
     calcularDiasPago,
     DIAS_MES_COMERCIAL,
     diasLicenciaEnMes,
     rimaDelMes,
-    estaEnElMes
+    estaEnElMes,
+    diasPorTramo
 }
