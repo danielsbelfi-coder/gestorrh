@@ -1,3 +1,52 @@
+const TOTAL_CAMPOS = 105
+
+const CAMPOS_TEXTO = [2, 3, 4, 5, 6, 11, 14, 16, 17, 18, 25, 35, 36, 37, 41, 46, 51, 52, 53, 54, 56, 57, 76, 105]
+
+const RELLENOS = { 32: "00,00", 34: "00", 38: "00,00", 40: "000", 45: "000", 62: "0000", 63: "00,00", 67: "0000", 68: "00,00" }
+
+function lineaVacia() {
+    const campos = Array(TOTAL_CAMPOS).fill(0)
+
+    for (const numero of CAMPOS_TEXTO) {
+        campos[numero - 1] = ""
+    }
+    for (const [numero, valor] of Object.entries(RELLENOS)) {
+        campos[Number(numero) - 1] = valor
+    }
+
+    return campos
+}
+
+function asignar(campos, valores) {
+    for (const [numero, valor] of Object.entries(valores)) {
+        campos[Number(numero) - 1] = valor
+    }
+    return campos
+}
+
+function textoPrevired(texto, largo) {
+    return String(texto ?? "").replace(/;/g, " ").trim().slice(0, largo)
+}
+
+function camposTrabajador(datos) {
+    return {
+        1: Number(datos.rut),
+        2: datos.dv.toUpperCase(),
+        3: textoPrevired(datos.apellidoPaterno, 30),
+        4: textoPrevired(datos.apellidoMaterno, 30),
+        5: textoPrevired(datos.nombres, 30),
+        6: datos.sexo === "femenino" ? "F" : "M",
+        7: datos.nacionalidad === "chilena" ? 0 : 1,
+        8: "01",
+        9: `${String(datos.mes).padStart(2, "0")}${datos.anio}`,
+        11: "AFP",
+        12: 0,
+        13: datos.diasTrabajados,
+        18: datos.tramo,
+        25: "N"
+    }
+}
+
 function tramoAsignacionFamiliar(renta, limites) {
     if (renta <= limites.a) {
         return "A"
@@ -11,4 +60,9 @@ function tramoAsignacionFamiliar(renta, limites) {
     return "D"
 }
 
-module.exports = { tramoAsignacionFamiliar }
+module.exports = {
+    tramoAsignacionFamiliar,
+    lineaVacia,
+    asignar,
+    camposTrabajador
+}
