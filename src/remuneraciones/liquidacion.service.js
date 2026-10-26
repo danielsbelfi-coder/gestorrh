@@ -42,7 +42,7 @@ const CODIGOS_SISTEMA = [
     "SALUD_ADICIONAL_ISAPRE", "CESANTIA", "IMPUESTO_UNICO",
     "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
-    "APORTE_SEGURO_SOCIAL", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA"
+    "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA"
 ]
 
 async function obtenerConceptosSistema() {
@@ -121,7 +121,8 @@ const CODIGOS_PARAMETROS = {
     sanna: "LEY_SANNA",
     cesantiaEmpleadorIndefinido: "CESANTIA_EMPLEADOR_INDEFINIDO",
     cesantiaEmpleadorPlazoFijo: "CESANTIA_EMPLEADOR_PLAZO_FIJO",
-    seguroSocial: "SEGURO_SOCIAL_PREVISIONAL",
+    sis: "TASA_SIS",
+    expectativaVida: "TASA_EXPECTATIVA_VIDA",
     cuentaIndividual: "REFORMA_CUENTA_INDIVIDUAL",
     rentabilidadProtegida: "REFORMA_RENTABILIDAD_PROTEGIDA"
 }
@@ -240,7 +241,8 @@ async function prepararCalculo(periodo, trabajador) {
         cesantia: tasaCesantiaEmpleador(contrato, trabajador, parametros),
         mutual: parametros.mutualBasica + Number(empresa.tasa_adicional_mutual),
         sanna: parametros.sanna,
-        seguroSocial: parametros.seguroSocial,
+        sis: parametros.sis,
+        expectativaVida: parametros.expectativaVida,
         cuentaIndividual: parametros.cuentaIndividual,
         rentabilidadProtegida: parametros.rentabilidadProtegida
     }
