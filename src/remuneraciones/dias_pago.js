@@ -88,5 +88,6 @@ module.exports = {
     calcularDiasPago,
     DIAS_MES_COMERCIAL,
     diasLicenciaEnMes,
-    rimaDelMes
+    rimaDelMes,
+    estaEnElMes
 }
