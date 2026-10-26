@@ -11,10 +11,10 @@ function calcularDv(rut) {
 
     for (const digito of digitos) {
         suma = suma + Number(digito) * multiplicador
-        multiplicador = multiplicador === 7 ? 2 : multiplicador +1
+        multiplicador = multiplicador === 7 ? 2 : multiplicador + 1
     }
 
-    const resultado =11 - (suma % 11)
+    const resultado = 11 - (suma % 11)
 
     if (resultado === 11) {
         return "0"
@@ -32,8 +32,14 @@ function rutEsValido(rut, dv) {
     return formatoCorrecto && dvCorrecto
 }
 
+function formatearRut(rut, dv) {
+    const conPuntos = String(rut).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+    return `${conPuntos}-${String(dv).toUpperCase()}`
+}
+
 module.exports = {
     limpiarRut,
     calcularDv,
-    rutEsValido
+    rutEsValido,
+    formatearRut
 }

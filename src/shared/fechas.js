@@ -14,7 +14,16 @@ function sumarDias(texto, dias) {
     return fecha.toISOString().slice(0, 10)
 }
 
+function fechaChilena(texto) {
+    if (!texto) {
+        return ""
+    }
+    const [anio, mes, dia] = String(texto).slice(0, 10).split("-")
+    return `${dia}-${mes}-${anio}`
+}
+
 module.exports = {
     esFechaValida,
-    sumarDias
+    sumarDias,
+    fechaChilena
 }
