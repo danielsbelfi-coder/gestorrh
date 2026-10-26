@@ -4,7 +4,7 @@ const {
     Empresa, Cargo, Persona, Trabajador, ContratoTrabajo, ContratoAnexo,
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
-    ResumenAsistencia, LiquidacionLinea
+    ResumenAsistencia, LiquidacionLinea, LicenciaMedica
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
 
@@ -20,6 +20,7 @@ const TABLAS = [
     { archivo: "anexos.csv", modelo: ContratoAnexo, filtro: `contrato_id IN (SELECT id FROM contratos_trabajo WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { archivo: "asistencias.csv", modelo: Asistencia, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "correcciones_asistencia.csv", modelo: AsistenciaCorreccion, filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
+    { archivo: "licencias_medicas.csv", modelo: LicenciaMedica, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "periodos_remuneracion.csv", modelo: PeriodoRemuneracion, filtro: "empresa_id = :empresaId" },
     { archivo: "variables_periodo.csv", modelo: VariablePeriodo, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "resumenes_asistencia.csv", modelo: ResumenAsistencia, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },

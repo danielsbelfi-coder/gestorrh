@@ -7,6 +7,7 @@ const TRABAJADORES_DE_EMPRESA = "SELECT id FROM trabajadores WHERE empresa_id = 
 const PASOS_EMPRESA = [
     { tabla: "variables_periodo", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "resumenes_asistencia", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
+    { tabla: "licencias_medicas", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "asistencia_correcciones", filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "asistencias", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "liquidacion_lineas", filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
