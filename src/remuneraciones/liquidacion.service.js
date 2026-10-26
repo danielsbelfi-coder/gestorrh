@@ -492,6 +492,51 @@ async function emitirLiquidacion(periodo_id, liquidacion_id, empresasPermitidas,
     })
 }
 
+async function emitirLiquidacionesPeriodo(periodo_id, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.EMITIR_LIQUIDACION)
+
+    if (periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+
+    const calculadas = await Liquidacion.findAll({
+        where: { periodo_id: periodo.id, vigente: true, estado: "calculada" }
+    })
+
+    if (calculadas.length === 0) {
+        throw new ConflictError("No hay liquidaciones calculadas para emitir en este periodo")
+    }
+
+    const problemas = []
+
+    for (const liquidacion of calculadas) {
+        try {
+            await validarEmision(periodo, liquidacion)
+        } catch (error) {
+            if (!(error instanceof ConflictError)) {
+                throw error
+            }
+            problemas.push({ id: liquidacion.id, trabajador_id: liquidacion.trabajador_id, motivo: error.message })
+        }
+    }
+
+    if (problemas.length > 0) {
+        return { emitidas: 0, problemas }
+    }
+
+    const fechaEmision = new Date()
+
+    await sequelize.transaction(async (transaction) => {
+        for (const liquidacion of calculadas) {
+            await liquidacion.update({ estado: "emitida", fecha_emision: fechaEmision, emitido_por_id: usuarioId }, { transaction })
+        }
+    })
+
+    return { emitidas: calculadas.length, problemas: [] }
+}
+
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     return await Liquidacion.findAll({
         where: { periodo_id: periodo_id, vigente: true },
@@ -529,5 +574,6 @@ module.exports = {
     listarLiquidaciones,
     obtenerLiquidacionPorId,
     recalcularLiquidacion,
-    emitirLiquidacion
+    emitirLiquidacion,
+    emitirLiquidacionesPeriodo
 }

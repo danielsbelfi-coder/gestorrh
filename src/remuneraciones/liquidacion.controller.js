@@ -1,4 +1,4 @@
-const { crearLiquidacion, listarLiquidaciones, obtenerLiquidacionPorId, recalcularLiquidacion, emitirLiquidacion } = require("./liquidacion.service");
+const { crearLiquidacion, listarLiquidaciones, obtenerLiquidacionPorId, recalcularLiquidacion, emitirLiquidacion, emitirLiquidacionesPeriodo } = require("./liquidacion.service");
 
 async function crear(req, res) {
     const resultado = await crearLiquidacion(
@@ -41,10 +41,20 @@ async function emitir(req, res) {
     res.status(200).json(liquidacion)
 }
 
+async function emitirPeriodo(req, res) {
+    const resultado = await emitirLiquidacionesPeriodo(
+        req.params.periodoId,
+        req.empresasPermitidas,
+        req.usuario.id
+    )
+    res.status(resultado.problemas.length > 0 ? 409 : 200).json(resultado)
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
     recalcular,
-    emitir
+    emitir,
+    emitirPeriodo
 }
