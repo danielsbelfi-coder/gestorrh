@@ -442,6 +442,56 @@ async function recalcularLiquidacion(periodo_id, liquidacion_id, motivo, empresa
     return { liquidacion, advertencias: advertenciasDe(pendientes) }
 }
 
+async function validarEmision(periodo, liquidacion) {
+    if (periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+    if (!liquidacion.vigente) {
+        throw new ConflictError("Solo se puede emitir la versión vigente de la liquidación")
+    }
+    if (liquidacion.estado !== "calculada") {
+        throw new ConflictError("La liquidación ya fue emitida")
+    }
+
+    const filtro = { periodo_id: periodo.id, trabajador_id: liquidacion.trabajador_id }
+
+    const pendientes = await VariablePeriodo.count({ where: { ...filtro, estado: "pendiente" } })
+
+    if (pendientes > 0) {
+        throw new ConflictError(`El trabajador tiene ${pendientes} variable(s) pendiente(s) de aprobación`)
+    }
+
+    const despues = { updatedAt: { [Op.gt]: liquidacion.updatedAt } }
+    const cambiosVariables = await VariablePeriodo.count({ where: { ...filtro, ...despues } })
+    const cambiosResumen = await ResumenAsistencia.count({ where: { ...filtro, ...despues } })
+
+    if (cambiosVariables + cambiosResumen > 0) {
+        throw new ConflictError("Hubo cambios en las variables o en la asistencia después del cálculo; recalcule antes de emitir")
+    }
+}
+
+async function emitirLiquidacion(periodo_id, liquidacion_id, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.EMITIR_LIQUIDACION)
+
+    const liquidacion = await Liquidacion.findOne({
+        where: { id: liquidacion_id, periodo_id: periodo.id }
+    })
+
+    if (liquidacion === null) {
+        throw new NotFoundError("Liquidación no encontrada")
+    }
+
+    await validarEmision(periodo, liquidacion)
+
+    return await liquidacion.update({
+        estado: "emitida",
+        fecha_emision: new Date(),
+        emitido_por_id: usuarioId
+    })
+}
+
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     return await Liquidacion.findAll({
         where: { periodo_id: periodo_id, vigente: true },
@@ -478,5 +528,6 @@ module.exports = {
     crearLiquidacion,
     listarLiquidaciones,
     obtenerLiquidacionPorId,
-    recalcularLiquidacion
+    recalcularLiquidacion,
+    emitirLiquidacion
 }
