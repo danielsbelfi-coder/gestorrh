@@ -1,3 +1,5 @@
+const { fechaChilena } = require("../shared/fechas.js")
+
 const TOTAL_CAMPOS = 105
 
 const CAMPOS_TEXTO = [2, 3, 4, 5, 6, 11, 14, 16, 17, 18, 25, 35, 36, 37, 41, 46, 51, 52, 53, 54, 56, 57, 76, 104, 105]
@@ -109,6 +111,44 @@ function camposEmpleador(datos) {
     return campos
 }
 
+function camposMovimiento(movimiento, tipoLinea) {
+    return {
+        14: tipoLinea,
+        15: movimiento.codigo,
+        16: fechaChilena(movimiento.desde),
+        17: fechaChilena(movimiento.hasta)
+    }
+}
+
+function lineasTrabajador(datos) {
+    const trabajador = camposTrabajador(datos.trabajador)
+    const prevision = camposPrevision(datos.prevision)
+    const empleador = camposEmpleador(datos.empleador)
+    const [primero, ...resto] = datos.movimientos
+
+    const principal = asignar(lineaVacia(), {
+        ...trabajador,
+        ...prevision,
+        ...empleador,
+        ...camposMovimiento(primero, "00")
+    })
+
+    const identificacion = Object.fromEntries(
+        Object.entries(trabajador).filter(([numero]) => Number(numero) <= 12)
+    )
+
+    const adicionales = resto.map((movimiento) => asignar(lineaVacia(), {
+        ...identificacion,
+        26: prevision[26],
+        75: datos.prevision.salud.sistema === "Isapre" ? prevision[75] : 0,
+        93: empleador[93],
+        96: empleador[96],
+        ...camposMovimiento(movimiento, "01")
+    }))
+
+    return [principal, ...adicionales].map((campos) => campos.join(";"))
+}
+
 function tramoAsignacionFamiliar(renta, limites) {
     if (renta <= limites.a) {
         return "A"
@@ -122,11 +162,14 @@ function tramoAsignacionFamiliar(renta, limites) {
     return "D"
 }
 
+
+
 module.exports = {
     tramoAsignacionFamiliar,
     lineaVacia,
     asignar,
     camposTrabajador,
     camposPrevision,
-    camposEmpleador
+    camposEmpleador,
+    lineasTrabajador
 }

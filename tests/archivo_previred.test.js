@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador, camposPrevision, camposEmpleador } = require("../src/remuneraciones/archivo_previred.js")
+const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador, camposPrevision, camposEmpleador, lineasTrabajador } = require("../src/remuneraciones/archivo_previred.js")
 
 const limites = { a: 649039, b: 947990, c: 1478539 }
 
@@ -108,4 +108,33 @@ test("sin seguro de cesantía: los campos 100 a 102 quedan en cero", () => {
     const campos = asignar(lineaVacia(), camposEmpleador({ ...empleador, cesantia: { base: 1072299, trabajador: 0, empleador: 0 } }))
 
     assert.deepStrictEqual(campos.slice(99, 102), [0, 0, 0])
+})
+
+test("una línea 00 con el primer movimiento y una 01 por cada movimiento siguiente", () => {
+    const lineas = lineasTrabajador({
+        trabajador: ana,
+        prevision,
+        empleador,
+        movimientos: [
+            { codigo: 11, desde: "2027-07-02", hasta: "2027-07-02" },
+            { codigo: 3, desde: "2027-07-15", hasta: "2027-07-16" }
+        ]
+    })
+
+    assert.strictEqual(lineas.length, 2)
+
+    const principal = lineas[0].split(";")
+    const adicional = lineas[1].split(";")
+
+    assert.strictEqual(principal.length, 105)
+    assert.strictEqual(adicional.length, 105)
+
+    assert.deepStrictEqual(principal.slice(12, 17), ["27", "00", "11", "02-07-2027", "02-07-2027"])
+    assert.strictEqual(principal[26], "1072299")
+
+    assert.deepStrictEqual(adicional.slice(0, 3), ["88888888", "8", "Soto"])
+    assert.deepStrictEqual(adicional.slice(12, 18), ["0", "01", "3", "15-07-2027", "16-07-2027", ""])
+    assert.deepStrictEqual(adicional.slice(25, 29), ["08", "0", "0", "0"])
+    assert.deepStrictEqual([adicional[74], adicional[92], adicional[93], adicional[95]], ["0", "1", "0", "01"])
+    assert.strictEqual(adicional[102], "0")
 })
