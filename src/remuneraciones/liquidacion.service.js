@@ -575,5 +575,6 @@ module.exports = {
     obtenerLiquidacionPorId,
     recalcularLiquidacion,
     emitirLiquidacion,
-    emitirLiquidacionesPeriodo
+    emitirLiquidacionesPeriodo,
+    CODIGOS_PARAMETROS
 }

@@ -1,6 +1,7 @@
 const { Op } = require("sequelize")
 const { sequelize } = require("../src/shared/database.js")
 const { ParametroLegal, TramoImpuesto } = require("../src/shared/associations.js")
+const { CODIGOS_PARAMETROS } = require("../src/remuneraciones/liquidacion.service.js")
 
 function leerMes(texto) {
     if (!/^\d{4}-\d{2}$/.test(texto ?? "")) {
@@ -75,6 +76,17 @@ async function main() {
     console.log(`  Ya existen: ${[...codigosExistentes].join(", ") || "ninguno"}`)
     console.log(`  Se copian: ${aCopiar.map((p) => `${p.codigo}=${p.valor}`).join(", ") || "ninguno"}`)
     console.log(`  Tramos: ${copiarTramos ? `se copian ${tramos.length}` : "ya existen, no se copian"}`)
+
+    const requeridos = Object.values(CODIGOS_PARAMETROS)
+    const disponibles = new Set([...aCopiar.map((p) => p.codigo), ...codigosExistentes])
+    const faltantes = requeridos.filter((codigo) => !disponibles.has(codigo))
+
+    if (faltantes.length > 0) {
+        console.log(`  ATENCIÓN: después de esta apertura faltarán estos parámetros, y hay que cargarlos a mano: ${faltantes.join(", ")}`)
+    }
+    if (tramos.length === 0 && tramosExistentes.length === 0) {
+        console.log("  ATENCIÓN: no hay tramos de impuesto ni en el origen ni en el destino")
+    }
 
     const vigencia = { vigencia_desde: primerDia, vigencia_hasta: ultimoDia }
     const transaction = await sequelize.transaction()
