@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador } = require("../src/remuneraciones/archivo_previred.js")
+const { tramoAsignacionFamiliar, lineaVacia, asignar, camposTrabajador, camposPrevision } = require("../src/remuneraciones/archivo_previred.js")
 
 const limites = { a: 649039, b: 947990, c: 1478539 }
 
@@ -45,4 +45,31 @@ test("texto: sin punto y coma, sin espacios en los bordes y cortado a 30", () =>
     assert.strictEqual(campos[5].length, 30)
     assert.strictEqual(campos[6], "M")
     assert.strictEqual(campos[7], 1)
+})
+
+const prevision = {
+    codigoAfp: "08", rentaImponible: 1072299, afp: 123850, cuentaIndividual: 1072, sis: 19087,
+    salud: { sistema: "Fonasa", legal: 75061 }
+}
+
+test("AFP y Fonasa: la cuenta individual va sumada en el 28 y la renta va en el 64", () => {
+    const campos = asignar(lineaVacia(), camposPrevision(prevision))
+
+    assert.deepStrictEqual(campos.slice(25, 29), ["08", 1072299, 124922, 19087])
+    assert.strictEqual(campos[63], 1072299)
+    assert.strictEqual(campos[69], 75061)
+    assert.strictEqual(campos[74], "07")
+    assert.strictEqual(campos[76], 0)
+    assert.strictEqual(campos[77], 1)
+})
+
+test("isapre: renta en el 77, plan en UF con coma, legal y adicional; nada en Fonasa", () => {
+    const campos = asignar(lineaVacia(), camposPrevision({
+        ...prevision,
+        salud: { sistema: "Isapre", codigoIsapre: "01", planUF: 4.5, legal: 75061, adicional: 109000 }
+    }))
+
+    assert.strictEqual(campos[63], 0)
+    assert.strictEqual(campos[69], 0)
+    assert.deepStrictEqual(campos.slice(74, 81), ["01", "", 1072299, 2, "4,5", 75061, 109000])
 })

@@ -1,6 +1,6 @@
 const TOTAL_CAMPOS = 105
 
-const CAMPOS_TEXTO = [2, 3, 4, 5, 6, 11, 14, 16, 17, 18, 25, 35, 36, 37, 41, 46, 51, 52, 53, 54, 56, 57, 76, 105]
+const CAMPOS_TEXTO = [2, 3, 4, 5, 6, 11, 14, 16, 17, 18, 25, 35, 36, 37, 41, 46, 51, 52, 53, 54, 56, 57, 76, 104, 105]
 
 const RELLENOS = { 32: "00,00", 34: "00", 38: "00,00", 40: "000", 45: "000", 62: "0000", 63: "00,00", 67: "0000", 68: "00,00" }
 
@@ -47,6 +47,31 @@ function camposTrabajador(datos) {
     }
 }
 
+function camposPrevision(datos) {
+    const renta = datos.rentaImponible
+
+    const campos = {
+        26: datos.codigoAfp,
+        27: renta,
+        28: datos.afp + datos.cuentaIndividual,
+        29: datos.sis
+    }
+
+    if (datos.salud.sistema === "Fonasa") {
+        return { ...campos, 64: renta, 70: datos.salud.legal, 75: "07", 78: 1 }
+    }
+
+    return {
+        ...campos,
+        75: datos.salud.codigoIsapre,
+        77: renta,
+        78: 2,
+        79: String(datos.salud.planUF).replace(".", ","),
+        80: datos.salud.legal,
+        81: datos.salud.adicional
+    }
+}
+
 function tramoAsignacionFamiliar(renta, limites) {
     if (renta <= limites.a) {
         return "A"
@@ -64,5 +89,6 @@ module.exports = {
     tramoAsignacionFamiliar,
     lineaVacia,
     asignar,
-    camposTrabajador
+    camposTrabajador,
+    camposPrevision
 }
