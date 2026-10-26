@@ -19,6 +19,10 @@ const Afp = sequelize.define("Afp", {
     comision: {
         type: DataTypes.DECIMAL(5, 2),
         allowNull: true
+    },
+    codigo_previred: {
+        type: DataTypes.STRING(2),
+        allowNull: true
     }
 }, {
     tableName: "afps"

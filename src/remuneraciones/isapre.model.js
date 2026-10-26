@@ -15,6 +15,10 @@ const Isapre = sequelize.define("Isapre", {
         type: DataTypes.ENUM("activo", "inactivo"),
         allowNull: false,
         defaultValue: "activo"
+    },
+    codigo_previred: {
+        type: DataTypes.STRING(2),
+        allowNull: true
     }
 }, {
     tableName: "isapres"

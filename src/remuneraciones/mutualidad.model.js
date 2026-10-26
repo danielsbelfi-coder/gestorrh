@@ -15,6 +15,10 @@ const Mutualidad = sequelize.define("Mutualidad", {
         type: DataTypes.ENUM("activo", "inactivo"),
         allowNull: false,
         defaultValue: "activo"
+    },
+    codigo_previred: {
+        type: DataTypes.STRING(2),
+        allowNull: true
     }
 }, {
     tableName: "mutualidades"
