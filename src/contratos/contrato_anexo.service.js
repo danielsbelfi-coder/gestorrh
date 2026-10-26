@@ -73,14 +73,8 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     }
 
     await sequelize.transaction(async (t) => {
-        await contrato.update({
-            [anexo.campo_modificado]: anexo.valor_nuevo
-        },
-            {
-                transaction: t
-            },
-        )
         await anexo.update({
+            valor_anterior: contrato[anexo.campo_modificado],
             estado_firma: "firmado",
             fecha_firma: new Date(),
             usuario_firmo_id: usuarioId
@@ -89,6 +83,14 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
                 transaction: t
             }
         )
+        await contrato.update({
+            [anexo.campo_modificado]: anexo.valor_nuevo
+        },
+            {
+                transaction: t
+            },
+        )
+
     })
     return anexo
 }
