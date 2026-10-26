@@ -268,6 +268,14 @@ Empresa.belongsTo(Mutualidad, {
 Mutualidad.hasMany(Empresa, {
     foreignKey: "mutualidad_id"
 })
+Liquidacion.belongsTo(Usuario, {
+    foreignKey: "emitido_por_id",
+    as: "emisor"
+})
+Usuario.hasMany(Liquidacion, {
+    foreignKey: "emitido_por_id",
+    as: "liquidacionesEmitidas"
+})
 
 module.exports = {
     Empresa,

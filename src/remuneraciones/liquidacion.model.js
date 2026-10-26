@@ -115,6 +115,14 @@ const Liquidacion = sequelize.define("Liquidacion", {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
+    },
+    fecha_emision: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    emitido_por_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 }, {
     tableName: "liquidaciones",
