@@ -4,7 +4,7 @@ const { ResumenAsistencia, Trabajador, PeriodoRemuneracion,
 } = require("../shared/associations.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
-const { obtenerPeriodoPorId } = require("../remuneraciones/periodo_remuneracion.service.js")
+const { obtenerPeriodoPorId, rangoDelPeriodo, trabajadoresDelPeriodo } = require("../remuneraciones/periodo_remuneracion.service.js")
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 
@@ -239,21 +239,11 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
         throw new ConflictError("El periodo de remuneraciones está cerrado")
     }
 
-    const mm = String(periodo.mes).padStart(2, "0")
-    const primerDia = `${periodo.anio}-${mm}-01`
-    const ultimoDia = `${periodo.anio}-${mm}-${String(new Date(periodo.anio, periodo.mes, 0).getDate()).padStart(2, "0")}`
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    
+    const trabajadores = await trabajadoresDelPeriodo(periodo)
 
     const conceptoHoras = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "HORAS_EXTRA_50" } })
-
-    const trabajadores = await Trabajador.findAll({
-        where: {
-            empresa_id: periodo.empresa_id,
-            estado: { [Op.ne]: "postulante" },
-            fecha_ingreso: { [Op.lte]: ultimoDia },
-            [Op.or]: [{ fecha_termino: null }, { fecha_termino: { [Op.gte]: primerDia } }]
-        },
-        order: [["id", "ASC"]]
-    })
 
     return await sequelize.transaction(async (transaction) => {
         const resultados = []

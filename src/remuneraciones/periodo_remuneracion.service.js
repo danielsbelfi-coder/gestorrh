@@ -1,4 +1,4 @@
-const { PeriodoRemuneracion, Empresa } = require("../shared/associations");
+const { PeriodoRemuneracion, Empresa, Trabajador } = require("../shared/associations");
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js");
 const { PERMISOS, exigirRol } = require("../shared/permisos.js");
@@ -62,10 +62,33 @@ async function obtenerPeriodoPorId(id, empresasPermitidas) {
 
 }
 
+function rangoDelPeriodo(periodo) {
+    const mm = String(periodo.mes).padStart(2, "0")
+    const ultimo = new Date(Date.UTC(periodo.anio, periodo.mes, 0)).getUTCDate()
+
+    return { primerDia: `${periodo.anio}-${mm}-01`, ultimoDia: `${periodo.anio}-${mm}-${String(ultimo).padStart(2, "0")}` }
+}
+
+async function trabajadoresDelPeriodo(periodo) {
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+
+    return await Trabajador.findAll({
+        where: {
+            empresa_id: periodo.empresa_id,
+            estado: { [Op.ne]: "postulante" },
+            fecha_ingreso: { [Op.lte]: ultimoDia },
+            [Op.or]: [{ fecha_termino: null }, { fecha_termino: { [Op.gte]: primerDia } }]
+        },
+        order: [["id", "ASC"]]
+    })
+}
+
 module.exports = {
     abrirPeriodo,
     cerrarPeriodo,
     listarPeriodos,
-    obtenerPeriodoPorId
+    obtenerPeriodoPorId,
+    rangoDelPeriodo,
+    trabajadoresDelPeriodo
 }
 
