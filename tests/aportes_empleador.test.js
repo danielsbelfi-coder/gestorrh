@@ -50,3 +50,16 @@ test("una tasa en 0 no genera línea", () => {
     assert.strictEqual(r.aportes.some((a) => a.concepto.codigo === "APORTE_CESANTIA"), false)
     assert.strictEqual(r.totalAportes, 83426 - 25735)
 })
+
+test("mes con licencia: el SIS y la expectativa de vida suman la RIMA; los demás no", () => {
+    const r = calcularAportesEmpleador({
+        baseCotizaciones: 600000, baseCesantia: 600000, baseSeguroSocial: 810000,
+        tasas: TASAS, conceptos: CONCEPTOS
+    })
+
+    assert.strictEqual(monto(r, "APORTE_SIS"), 14418)
+    assert.strictEqual(monto(r, "APORTE_EXPECTATIVA_VIDA"), 5832)
+    assert.strictEqual(monto(r, "APORTE_CUENTA_INDIVIDUAL"), 600)
+    assert.strictEqual(monto(r, "APORTE_RENTABILIDAD_PROTEGIDA"), 5400)
+    assert.strictEqual(monto(r, "APORTE_MUTUAL"), 11100)
+})
