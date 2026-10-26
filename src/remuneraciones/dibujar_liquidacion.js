@@ -13,6 +13,10 @@ function encabezado(doc, d) {
     doc.moveDown(1)
     doc.font("Helvetica-Bold").fontSize(13).text("LIQUIDACIÓN DE REMUNERACIONES", { align: "center" })
     doc.font("Helvetica").fontSize(10).text(d.periodo.toUpperCase(), { align: "center" })
+    if (d.version >= 2) {
+        doc.font("Helvetica").fontSize(8)
+            .text(`Versión ${d.version} — reemplaza a la versión ${d.version - 1}`, { align: "center" })
+    }
     doc.moveDown(1)
 }
 
