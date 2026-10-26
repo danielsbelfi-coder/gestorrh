@@ -1,5 +1,7 @@
 const DIAS_MES_COMERCIAL = 30
 
+const { diasEntre } = require("../shared/fechas.js")
+
 function estaEnElMes(fecha, anio, mes) {
     return fecha !== null && fecha.slice(0, 7) === `${anio}-${String(mes).padStart(2, "0")}`
 }
@@ -26,13 +28,41 @@ function calcularDiasPago({ anio, mes, fechaIngreso, fechaTermino, resumen }) {
         + resumen.dias_licencia_medica
         + resumen.dias_permiso_sin_goce
 
-    return {
-        diasNoContratado,
-        diasPagados: Math.max(0, DIAS_MES_COMERCIAL - diasNoPagados)
-    }
+    const diasNoTrabajadosCalendario = (estaEnElMes(fechaIngreso, anio, mes) ? Number(fechaIngreso.slice(8, 10)) - 1 : 0)
+        + (estaEnElMes(fechaTermino, anio, mes) ? ultimoDiaMes - Number(fechaTermino.slice(8, 10)) : 0)
+        + resumen.dias_inasistencia
+        + resumen.dias_licencia_medica
+        + resumen.dias_permiso_sin_goce
+
+    const diasPagados = diasNoTrabajadosCalendario >= ultimoDiaMes
+        ? 0
+        : Math.max(1, DIAS_MES_COMERCIAL - diasNoPagados)
+
+    return { diasNoContratado, diasPagados }
+}
+
+function diasLicenciaEnMes(licencias, anio, mes) {
+    const mm = String(mes).padStart(2, "0")
+    const primerDia = `${anio}-${mm}-01`
+    const ultimoDia = `${anio}-${mm}-${String(new Date(Date.UTC(anio, mes, 0)).getUTCDate()).padStart(2, "0")}`
+
+    const total = licencias.reduce((suma, licencia) => {
+        const desde = licencia.fecha_inicio > primerDia ? licencia.fecha_inicio : primerDia
+        const hasta = licencia.fecha_termino < ultimoDia ? licencia.fecha_termino : ultimoDia
+
+        if (desde > hasta) {
+            return suma
+        }
+
+        return suma + diasEntre(desde, hasta)
+
+    }, 0)
+
+    return total
 }
 
 module.exports = {
     calcularDiasPago,
-    DIAS_MES_COMERCIAL
+    DIAS_MES_COMERCIAL,
+    diasLicenciaEnMes
 }
