@@ -1,5 +1,29 @@
 requiereLogin()
 
+function mostrarError(texto) {
+    document.getElementById("mensajeError").textContent = texto
+}
+
+function mostrarInfo(texto) {
+    document.getElementById("mensajeInfo").textContent = texto
+}
+
+function limpiarMensajes() {
+    mostrarError("")
+    mostrarInfo("")
+}
+
+function botonesLiquidacion(liquidacion) {
+    const id = liquidacion.id
+    const principal = liquidacion.estado === "calculada"
+        ? `<button data-accion="emitir" data-id="${id}">Emitir</button>`
+        : `<button data-accion="recalcular" data-id="${id}">Recalcular</button>`
+
+    return `${principal}
+        <button data-accion="pdf" data-id="${id}">PDF</button>
+        <button data-accion="pdf-aportes" data-id="${id}">PDF con aportes</button>`
+}
+
 function formatearPesos(valor) {
     return "$" + Math.round(Number(valor)).toLocaleString("es-CL")
 }
@@ -35,7 +59,7 @@ async function cargarLiquidaciones() {
     lista.innerHTML = resultado.datos.map(function (liquidacion) {
         return `<li>
                     <details>
-                        <summary>Trabajador ${liquidacion.trabajador_id} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)} - ${liquidacion.estado}</summary>
+                        <summary>Trabajador ${liquidacion.trabajador_id} - versión ${liquidacion.version} - ${liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
                         <p>Sueldo proporcional: ${formatearPesos(liquidacion.sueldo_base_proporcional)}</p>
                         <p>Monto horas extras: ${formatearPesos(liquidacion.monto_horas_extra)}</p>
                         <p>Monto gratificación: ${formatearPesos(liquidacion.monto_gratificacion)}</p>
@@ -46,6 +70,7 @@ async function cargarLiquidaciones() {
                         <p>Monto impuesto unico: ${formatearPesos(liquidacion.monto_impuesto_unico)}</p>
                         <p>Liquido a pagar: ${formatearPesos(liquidacion.liquido_a_pagar)}</p>
                     </details>
+                    ${botonesLiquidacion(liquidacion)}
                 </li>`
     }).join("")
 }
@@ -53,6 +78,7 @@ async function cargarLiquidaciones() {
 document.getElementById("formCalcular").addEventListener("submit", async function (evento) {
     evento.preventDefault()
     document.getElementById("mensajeError").textContent = ""
+    document.getElementById("mensajeInfo").textContent = ""
 
     const periodoId = document.getElementById("periodo").value
     const trabajadorId = document.getElementById("trabajadorId").value
@@ -65,12 +91,63 @@ document.getElementById("formCalcular").addEventListener("submit", async functio
         }
     )
 
-    if (resultado.status !== 201) {
+    if (resultado.status !== 200 && resultado.status !== 201) {
         document.getElementById("mensajeError").textContent = resultado.datos.error
         return
     }
 
+    const advertencias = resultado.datos.advertencias
+    const mensaje = resultado.status === 201 ? "Liquidación calculada." : "Borrador recalculado."
+    document.getElementById("mensajeInfo").textContent = [mensaje, ...advertencias].join(" ")
+
     document.getElementById("formCalcular").reset()
+    cargarLiquidaciones()
+})
+
+document.getElementById("listaLiquidaciones").addEventListener("click", async function (evento) {
+    const { accion, id } = evento.target.dataset
+
+    if (!accion) {
+        return
+    }
+
+    limpiarMensajes()
+    const periodoId = document.getElementById("periodo").value
+    const base = `/api/periodos-remuneracion/${periodoId}/liquidaciones/${id}`
+
+    if (accion === "pdf" || accion === "pdf-aportes") {
+        const resultado = await descargarArchivo(`${base}/documento${accion === "pdf-aportes" ? "?con_aportes=1" : ""}`)
+        if (resultado.status !== 200) {
+            mostrarError(resultado.datos.error)
+        }
+        return
+    }
+
+    if (accion === "emitir") {
+        if (!confirm("¿Emitir esta liquidación? Después solo se podrá modificar con un recálculo.")) {
+            return
+        }
+        const resultado = await llamarApi(`${base}/emitir`, { method: "POST" })
+        if (resultado.status !== 200) {
+            mostrarError(resultado.datos.error)
+            return
+        }
+        mostrarInfo("Liquidación emitida.")
+    }
+
+    if (accion === "recalcular") {
+        const motivo = prompt("Motivo del recálculo:")
+        if (motivo === null) {
+            return
+        }
+        const resultado = await llamarApi(`${base}/recalcular`, { method: "POST", body: JSON.stringify({ motivo }) })
+        if (resultado.status !== 201) {
+            mostrarError(resultado.datos.error)
+            return
+        }
+        mostrarInfo(["Nueva versión creada en borrador.", ...resultado.datos.advertencias].join(" "))
+    }
+
     cargarLiquidaciones()
 })
 
