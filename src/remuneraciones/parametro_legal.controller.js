@@ -1,9 +1,9 @@
 const { ValidationError, NotFoundError } = require("../shared/errors");
-const { crearVersionParametro, obtenerParametroVigente, listarVersionesPorCodigo } = require("./parametro_legal.service");
+const { corregirValorParametro, obtenerParametroVigente, listarVersionesPorCodigo } = require("./parametro_legal.service");
 
-async function crear(req, res) {
-    const nuevoParametro = await crearVersionParametro(req.body)
-    res.status(201).json(nuevoParametro)
+async function corregir(req, res) {
+    const parametro = await corregirValorParametro(req.params.id, req.body)
+    res.status(200).json(parametro)
 }
 
 async function obtenerVigente(req, res) {
@@ -26,7 +26,7 @@ async function listarPorCodigo(req, res) {
 }
 
 module.exports = {
-    crear,
+    corregir,
     obtenerVigente,
     listarPorCodigo
 }
