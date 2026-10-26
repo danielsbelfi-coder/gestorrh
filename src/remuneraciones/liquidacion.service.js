@@ -14,13 +14,16 @@ const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
 
+function fechaOnceAnios(trabajador) {
+    const anioIngreso = Number(trabajador.fecha_ingreso.slice(0, 4))
+    const mesYDia = trabajador.fecha_ingreso.slice(4)
+    return `${anioIngreso + ANIOS_MAXIMO_COTIZACION_CESANTIA}${mesYDia}`
+}
+
 function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     const tipoContrato = contrato.tipo_contrato
     const fechaIngreso = trabajador.fecha_ingreso
-    const anioIngreso = Number(trabajador.fecha_ingreso.slice(0, 4))
-    const anioLimite = anioIngreso + ANIOS_MAXIMO_COTIZACION_CESANTIA
-    const mesYDia = trabajador.fecha_ingreso.slice(4)
-    const fechaLimite = `${anioLimite}${mesYDia}`
+    const fechaLimite = fechaOnceAnios(trabajador)
 
     if (tipoContrato === "indefinido" && fechaIngreso > FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
         return true
@@ -29,12 +32,15 @@ function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     return false
 }
 
-function tasaCesantiaEmpleador(contrato, trabajador, parametros) {
+function tasaCesantiaEmpleador(contrato, trabajador, parametros, primerDia) {
     if (contrato.tipo_contrato !== "indefinido") {
         return parametros.cesantiaEmpleadorPlazoFijo
     }
+    if (trabajador.fecha_ingreso <= FECHA_VIGENCIA_SEGURO_CESANTIA) {
+        return 0
+    }
 
-    return trabajador.fecha_ingreso > FECHA_VIGENCIA_SEGURO_CESANTIA ? parametros.cesantiaEmpleadorIndefinido : 0
+    return primerDia < fechaOnceAnios(trabajador) ? parametros.cesantiaEmpleadorIndefinido : parametros.cesantiaEmpleador11Anios
 }
 
 const CODIGOS_SISTEMA = [
@@ -124,7 +130,8 @@ const CODIGOS_PARAMETROS = {
     sis: "TASA_SIS",
     expectativaVida: "TASA_EXPECTATIVA_VIDA",
     cuentaIndividual: "REFORMA_CUENTA_INDIVIDUAL",
-    rentabilidadProtegida: "REFORMA_RENTABILIDAD_PROTEGIDA"
+    rentabilidadProtegida: "REFORMA_RENTABILIDAD_PROTEGIDA",
+    cesantiaEmpleador11Anios: "CESANTIA_EMPLEADOR_11_ANIOS",
 }
 
 async function obtenerParametrosDelMes(fecha) {
@@ -238,7 +245,7 @@ async function prepararCalculo(periodo, trabajador) {
     const empresa = await Empresa.findByPk(periodo.empresa_id)
 
     const tasasAportes = {
-        cesantia: tasaCesantiaEmpleador(contrato, trabajador, parametros),
+        cesantia: tasaCesantiaEmpleador(contrato, trabajador, parametros, primerDia),
         mutual: parametros.mutualBasica + Number(empresa.tasa_adicional_mutual),
         sanna: parametros.sanna,
         sis: parametros.sis,
