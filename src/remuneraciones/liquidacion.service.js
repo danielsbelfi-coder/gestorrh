@@ -1,13 +1,13 @@
 const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Trabajador, TramoImpuesto,
     Persona, Afp, ConceptoRemuneracion,
-    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa } = require("../shared/associations.js")
+    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa, LicenciaMedica } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
-const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
+const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { sequelize } = require("../shared/database.js")
-const { calcularDiasPago, DIAS_MES_COMERCIAL } = require("./dias_pago.js")
+const { calcularDiasPago, DIAS_MES_COMERCIAL, rimaDelMes } = require("./dias_pago.js")
 const { calcularLiquidacionPorLineas } = require("./calculo_lineas.js")
 const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 
@@ -112,6 +112,56 @@ async function obtenerSaldoAnterior(periodo, trabajadorId) {
     })
 
     return liquidacionAnterior === null ? 0 : liquidacionAnterior.saldo_pago_exceso
+}
+
+async function rimaDeLicencia(licencia, empresaId) {
+    const anio = Number(licencia.fecha_inicio.slice(0, 4))
+    const mes = Number(licencia.fecha_inicio.slice(5, 7))
+
+    const anteriores = await Liquidacion.findAll({
+        where: { trabajador_id: licencia.trabajador_id, vigente: true },
+        include: [{
+            model: PeriodoRemuneracion,
+            required: true,
+            where: {
+                empresa_id: empresaId,
+                [Op.or]: [{ anio: { [Op.lt]: anio } }, { anio, mes: { [Op.lt]: mes } }]
+            }
+        }],
+        order: [[PeriodoRemuneracion, "anio", "DESC"], [PeriodoRemuneracion, "mes", "DESC"]]
+    })
+
+    const conRenta = anteriores.find((l) => Number(l.detalle_calculo?.cotizaciones?.rentaImponible ?? 0) > 0)
+
+    return conRenta ? Number(conRenta.detalle_calculo.cotizaciones.rentaImponible) : 0
+}
+
+async function licenciasConRima(trabajadorId, periodo) {
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+
+    const licencias = await LicenciaMedica.findAll({
+        where: {
+            trabajador_id: trabajadorId,
+            fecha_inicio: { [Op.lte]: ultimoDia },
+            fecha_termino: { [Op.gte]: primerDia }
+        },
+        order: [["fecha_inicio", "ASC"]]
+    })
+
+    const resultado = []
+    for (const licencia of licencias) {
+        resultado.push({
+            id: licencia.id,
+            fecha_inicio: licencia.fecha_inicio,
+            fecha_termino: licencia.fecha_termino,
+            tipo: licencia.tipo,
+            pagador_rut: licencia.pagador_rut,
+            pagador_dv: licencia.pagador_dv,
+            rima: await rimaDeLicencia(licencia, periodo.empresa_id)
+        })
+    }
+
+    return resultado
 }
 
 const CODIGOS_PARAMETROS = {
@@ -281,9 +331,14 @@ async function prepararCalculo(periodo, trabajador) {
         throw new ConflictError(error.message)
     }
 
+    const licenciasDelMes = await licenciasConRima(trabajador.id, periodo)
+    const rimaMes = rimaDelMes(licenciasDelMes, periodo.anio, periodo.mes)
+    const baseSeguroSocial = Math.min(resultado.baseCotizaciones + rimaMes, resultado.topeImponible)
+
     const { aportes, totalAportes } = calcularAportesEmpleador({
         baseCotizaciones: resultado.baseCotizaciones,
         baseCesantia: resultado.baseCesantia,
+        baseSeguroSocial,
         tasas: tasasAportes,
         conceptos
     })
@@ -319,7 +374,8 @@ async function prepararCalculo(periodo, trabajador) {
         impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         saldoAnterior: saldoPendiente,
         variablesPendientes: pendientes,
-        aportes: { tasas: tasasAportes, total: totalAportes }
+        aportes: { tasas: tasasAportes, total: totalAportes, rimaMes, baseSeguroSocial },
+        licencias: licenciasDelMes
     }
 
     const campos = {
