@@ -22,7 +22,7 @@ function trabajadorCotizaCesantia(contrato, trabajador, primerDia) {
     const mesYDia = trabajador.fecha_ingreso.slice(4)
     const fechaLimite = `${anioLimite}${mesYDia}`
 
-    if (tipoContrato === "indefinido" && fechaIngreso >= FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
+    if (tipoContrato === "indefinido" && fechaIngreso > FECHA_VIGENCIA_SEGURO_CESANTIA && primerDia < fechaLimite) {
         return true
     }
 
@@ -34,7 +34,7 @@ function tasaCesantiaEmpleador(contrato, trabajador, parametros) {
         return parametros.cesantiaEmpleadorPlazoFijo
     }
 
-    return trabajador.fecha_ingreso >= FECHA_VIGENCIA_SEGURO_CESANTIA ? parametros.cesantiaEmpleadorIndefinido : 0
+    return trabajador.fecha_ingreso > FECHA_VIGENCIA_SEGURO_CESANTIA ? parametros.cesantiaEmpleadorIndefinido : 0
 }
 
 const CODIGOS_SISTEMA = [
