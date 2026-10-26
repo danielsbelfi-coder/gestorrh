@@ -61,8 +61,32 @@ function diasLicenciaEnMes(licencias, anio, mes) {
     return total
 }
 
+function rimaDelMes(licencias, anio, mes) {
+    const mm = String(mes).padStart(2, "0")
+    const diasDelMes = new Date(Date.UTC(anio, mes, 0)).getUTCDate()
+    const primerDia = `${anio}-${mm}-01`
+    const ultimoDia = `${anio}-${mm}-${String(diasDelMes).padStart(2, "0")}`
+
+    const total = licencias.reduce((suma, licencia) => {
+        const desde = licencia.fecha_inicio > primerDia ? licencia.fecha_inicio : primerDia
+        const hasta = licencia.fecha_termino < ultimoDia ? licencia.fecha_termino : ultimoDia
+
+        if (desde > hasta) {
+            return suma
+        }
+
+        const dias = diasEntre(desde, hasta)
+        const diasProporcion = dias >= diasDelMes ? DIAS_MES_COMERCIAL : Math.min(dias, DIAS_MES_COMERCIAL)
+
+        return suma + licencia.rima * diasProporcion / DIAS_MES_COMERCIAL
+    }, 0)
+
+    return Math.round(total)
+}
+
 module.exports = {
     calcularDiasPago,
     DIAS_MES_COMERCIAL,
-    diasLicenciaEnMes
+    diasLicenciaEnMes,
+    rimaDelMes
 }

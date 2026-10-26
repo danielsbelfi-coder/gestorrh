@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { calcularDiasPago, diasLicenciaEnMes } = require("../src/remuneraciones/dias_pago.js")
+const { calcularDiasPago, diasLicenciaEnMes, rimaDelMes } = require("../src/remuneraciones/dias_pago.js")
 
 const SIN_AUSENCIAS = { dias_inasistencia: 0, dias_licencia_medica: 0, dias_permiso_sin_goce: 0 }
 
@@ -76,4 +76,23 @@ test("licencia que cruza de julio a agosto: 7 días en julio y 10 en agosto", ()
     const cruzada = [licencia("2027-07-25", "2027-08-10")]
     assert.strictEqual(diasLicenciaEnMes(cruzada, 2027, 7), 7)
     assert.strictEqual(diasLicenciaEnMes(cruzada, 2027, 8), 10)
+})
+
+const conRima = (inicio, termino, rima) => ({ fecha_inicio: inicio, fecha_termino: termino, rima })
+
+test("RIMA: 900.000 con 7 días de licencia en julio → 210.000", () => {
+    assert.strictEqual(rimaDelMes([conRima("2027-07-25", "2027-07-31", 900000)], 2027, 7), 210000)
+})
+
+test("RIMA: licencia de todo febrero → RIMA completa", () => {
+    assert.strictEqual(rimaDelMes([conRima("2027-02-01", "2027-02-28", 900000)], 2027, 2), 900000)
+})
+
+test("RIMA: licencia de todo julio (31 días) → RIMA completa, no 31/30", () => {
+    assert.strictEqual(rimaDelMes([conRima("2027-07-01", "2027-07-31", 900000)], 2027, 7), 900000)
+})
+
+test("RIMA: dos licencias con RIMAs distintas en el mismo mes se suman", () => {
+    const licencias = [conRima("2027-07-15", "2027-07-16", 600000), conRima("2027-07-25", "2027-07-31", 900000)]
+    assert.strictEqual(rimaDelMes(licencias, 2027, 7), 250000)
 })
