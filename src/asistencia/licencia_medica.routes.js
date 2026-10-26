@@ -1,8 +1,10 @@
 const express = require("express")
-const { crear } = require("./licencia_medica.controller.js")
+const { crear, listar, eliminar } = require("./licencia_medica.controller.js")
 
 const router = express.Router()
 
+router.get("/", listar)
 router.post("/", crear)
+router.delete("/:id", eliminar)
 
 module.exports = router

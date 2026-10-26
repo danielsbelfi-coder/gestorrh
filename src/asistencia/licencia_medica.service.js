@@ -61,6 +61,31 @@ async function crearLicencia(datos, empresasPermitidas, usuarioId) {
     })
 }
 
+async function listarLicencias(trabajadorId, empresasPermitidas) {
+    const trabajador = await obtenerTrabajadorPermitido(trabajadorId, empresasPermitidas)
+
+    return await LicenciaMedica.findAll({
+        where: { trabajador_id: trabajador.id },
+        order: [["fecha_inicio", "DESC"]]
+    })
+}
+
+async function eliminarLicencia(id, empresasPermitidas, usuarioId) {
+    const licencia = await LicenciaMedica.findByPk(id)
+
+    if (licencia === null) {
+        throw new NotFoundError("Licencia no encontrada")
+    }
+
+    const trabajador = await obtenerTrabajadorPermitido(licencia.trabajador_id, empresasPermitidas)
+
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.REGISTRAR_ASISTENCIA)
+
+    await licencia.destroy()
+}
+
 module.exports = {
-    crearLicencia
+    crearLicencia,
+    listarLicencias,
+    eliminarLicencia
 }
