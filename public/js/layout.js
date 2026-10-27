@@ -74,7 +74,9 @@ function iniciales(nombre) {
 }
 
 function armarLateral(usuario) {
-    const paginaActual = location.pathname.split("/").pop() || "index.html"
+    // Una pantalla de detalle (por ejemplo persona.html) puede marcar en el menú a su lista con data-menu.
+    const paginaActual = document.querySelector("main.contenido")?.dataset.menu
+        || location.pathname.split("/").pop() || "index.html"
 
     const grupos = gruposDelMenu(usuario).map((grupo) => {
         const enlaces = grupo.enlaces.map(([href, texto, nombreIcono]) => {

@@ -2,7 +2,7 @@ requiereLogin()
 
 const CODIGOS_DESCUENTO = [
     [3171, "3171 · Cuota sindical"],
-    [3183, "3183"],
+    [3183, "3183 · Otros descuentos autorizados y solicitados por el trabajador"],
     [3185, "3185 · Seguro de cesantía"],
     [3186, "3186 · Retención judicial (pensión de alimentos)"],
     [3188, "3188 · Anticipo o pago en exceso"]
@@ -297,8 +297,7 @@ document.getElementById("tablaFiniquitos").addEventListener("click", async funct
         resultado = await llamarApi(`/api/finiquitos/${fila.finiquito.id}/emitir`, { method: "PATCH" })
     }
     if (boton.dataset.accion === "pagar") {
-        const hoy = new Date().toISOString().slice(0, 10)
-        const fecha = prompt(`Fecha de pago del finiquito de ${nombre} (AAAA-MM-DD):`, hoy)
+        const fecha = prompt(`Fecha de pago del finiquito de ${nombre} (AAAA-MM-DD):`, hoyIso())
         if (fecha === null) {
             return
         }

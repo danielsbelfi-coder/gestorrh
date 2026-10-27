@@ -1,6 +1,6 @@
 const { ContratoTrabajo, Trabajador, Cargo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 

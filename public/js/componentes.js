@@ -113,6 +113,7 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar‚
     const raiz = typeof contenedor === "string" ? document.getElementById(contenedor) : contenedor
     let datos = []
     let orden = { indice: null, sentido: 1 }
+    let visibles = []
 
     raiz.classList.add("tabla-datos")
     raiz.innerHTML = `
@@ -161,6 +162,7 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar‚
             })
         }
 
+        visibles = filas
         raiz.querySelector("tbody").innerHTML = filas.length === 0
             ? `<tr><td colspan="${columnas.length}" class="tabla-vacia">${escaparHtml(datos.length === 0 ? vacio : "Ning√∫n registro coincide con la b√∫squeda.")}</td></tr>`
             : filas.map((registro) => `<tr>${columnas.map((columna) =>
@@ -193,6 +195,10 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar‚
         mostrar(nuevos) {
             datos = nuevos
             dibujar()
+        },
+        // Registros que se ven ahora (con b√∫squeda, filtros y orden aplicados).
+        visibles() {
+            return visibles
         }
     }
 }
@@ -361,4 +367,31 @@ async function llenarSelectorPeriodos(select) {
         }
     }
     return periodos
+}
+
+// ---------- Descarga CSV para Excel ----------
+// Separador punto y coma y BOM UTF-8: Excel en espa√±ol lo abre con columnas y tildes correctas.
+// columnas: [[titulo, valor(registro)]]
+
+function descargarCsv(nombreArchivo, columnas, registros) {
+    const celda = (valor) => {
+        const texto = String(valor ?? "")
+        return /[";\r\n]/.test(texto) ? `"${texto.replaceAll('"', '""')}"` : texto
+    }
+    const lineas = [
+        columnas.map(([titulo]) => celda(titulo)).join(";"),
+        ...registros.map((registro) => columnas.map(([, valor]) => celda(valor(registro))).join(";"))
+    ]
+    const blob = new Blob(["\uFEFF" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const enlace = document.createElement("a")
+    enlace.href = url
+    enlace.download = nombreArchivo
+    enlace.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function hoyIso() {
+    const hoy = new Date()
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`
 }

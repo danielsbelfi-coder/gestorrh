@@ -4,6 +4,7 @@ const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { PERMISOS, exigirRol } = require("../shared/permisos.js")
 
+
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
         "sueldo_base",
@@ -101,7 +102,21 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     return anexo
 }
 
+
+async function listarAnexo(empresasPermitidas) {
+    return await Contratoanexo.findAll({
+        include: [{
+            model: Trabajador,
+            where: {
+                empresa_id: { [Op.in]: empresasPermitidas }
+            },
+            required: true
+        }]
+    })
+}
+
 module.exports = {
     crearAnexo,
-    firmarAnexo
+    firmarAnexo,
+    listarAnexo
 }

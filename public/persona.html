@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Ficha de persona</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-menu="personas.html" data-titulo="Ficha de persona">
+        <a class="volver-lista" href="personas.html">← Volver a Personas</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1 id="titulo">Nueva persona</h1>
+                <p id="subtitulo">Completa los datos. Los marcados con * son obligatorios.</p>
+            </div>
+            <div id="situacionActual"></div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <form id="formPersona" class="ficha">
+            <section class="tarjeta">
+                <h2>Identificación</h2>
+                <div class="campos">
+                    <label>RUT (sin DV) *<input type="text" id="rut" inputmode="numeric" required></label>
+                    <label>DV *<input type="text" id="dv" maxlength="1" class="campo-corto" required></label>
+                    <label>Nombres *<input type="text" id="nombres" required></label>
+                    <label>Apellido paterno *<input type="text" id="apellido_paterno" required></label>
+                    <label>Apellido materno<input type="text" id="apellido_materno"></label>
+                    <label>Nacionalidad *
+                        <select id="nacionalidad" required>
+                            <option value="chilena">Chilena</option>
+                            <option value="extranjera">Extranjera</option>
+                        </select>
+                    </label>
+                    <label>Fecha de nacimiento *<input type="date" id="fecha_nacimiento" required></label>
+                    <label>Sexo
+                        <select id="sexo_genero">
+                            <option value="">Sin informar</option>
+                            <option value="masculino">Masculino</option>
+                            <option value="femenino">Femenino</option>
+                        </select>
+                    </label>
+                    <label>Estado civil
+                        <select id="estado_civil">
+                            <option value="">Sin informar</option>
+                            <option value="soltero">Soltero(a)</option>
+                            <option value="casado">Casado(a)</option>
+                            <option value="conviviente civil">Conviviente civil</option>
+                            <option value="divorciado">Divorciado(a)</option>
+                            <option value="viudo">Viudo(a)</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="tarjeta">
+                <h2>Contacto</h2>
+                <div class="campos">
+                    <label class="campo-ancho">Dirección *<input type="text" id="direccion" required></label>
+                    <label>Teléfono<input type="tel" id="telefono"></label>
+                    <label>Correo<input type="email" id="email"></label>
+                </div>
+            </section>
+
+            <section class="tarjeta">
+                <h2>Previsión y salud</h2>
+                <div class="campos">
+                    <label>AFP<select id="afp_id"></select></label>
+                    <label>Afiliado al seguro de cesantía
+                        <select id="afiliado_afc">
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                        </select>
+                    </label>
+                    <label>Sistema de salud
+                        <select id="sistema_salud">
+                            <option value="">Sin informar</option>
+                            <option value="Fonasa">Fonasa</option>
+                            <option value="Isapre">Isapre</option>
+                        </select>
+                    </label>
+                    <label class="solo-isapre">Isapre<select id="isapre_id"></select></label>
+                    <label class="solo-isapre">Código del plan<input type="text" id="plan_isapre_codigo"></label>
+                    <label class="solo-isapre">Valor del plan (UF)<input type="number" id="plan_isapre_uf" min="0" step="0.0001"></label>
+                </div>
+            </section>
+
+            <section class="tarjeta">
+                <h2>Datos para el pago</h2>
+                <div class="campos">
+                    <label>Banco<input type="text" id="banco"></label>
+                    <label>Tipo de cuenta
+                        <select id="tipo_cuenta">
+                            <option value="">Sin informar</option>
+                            <option value="cuenta corriente">Cuenta corriente</option>
+                            <option value="cuenta Rut">Cuenta RUT</option>
+                            <option value="cuenta de ahorro">Cuenta de ahorro</option>
+                            <option value="cuenta vista">Cuenta vista</option>
+                        </select>
+                    </label>
+                    <label>Número de cuenta<input type="text" id="numero_cuenta"></label>
+                </div>
+            </section>
+
+            <div class="barra-guardar">
+                <button type="submit" id="botonGuardar">Crear persona</button>
+                <a class="boton secundario" href="personas.html">Cancelar</a>
+            </div>
+        </form>
+
+        <section class="tarjeta" id="seccionRelaciones" hidden>
+            <h2>Relaciones con la empresa</h2>
+            <div id="relaciones"></div>
+        </section>
+
+        <section class="tarjeta" id="seccionSituacion" hidden>
+            <h2>Situación previsional</h2>
+            <p class="texto-suave">Historial por mes: pensionado, si sigue cotizando en la AFP y tipo de pensión. Cada registro rige desde su mes hasta el siguiente registro.</p>
+            <div id="situaciones"></div>
+            <form id="formSituacion">
+                <label>Desde (mes)<input type="month" id="sitDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
+                <label>¿Pensionado?
+                    <select id="sitPensionado">
+                        <option value="false">No</option>
+                        <option value="true">Sí</option>
+                    </select>
+                </label>
+                <label>¿Cotiza en la AFP?
+                    <select id="sitCotiza">
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <label>Tipo de pensión
+                    <select id="sitTipo" disabled>
+                        <option value="">—</option>
+                        <option value="vejez">Vejez</option>
+                        <option value="invalidez_total">Invalidez total</option>
+                        <option value="invalidez_parcial">Invalidez parcial</option>
+                        <option value="sobrevivencia">Sobrevivencia</option>
+                    </select>
+                </label>
+                <button type="submit">Agregar</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/persona.js"></script>
+</body>
+
+</html>

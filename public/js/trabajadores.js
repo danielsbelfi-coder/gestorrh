@@ -6,7 +6,10 @@ const tabla = crearTabla({
     vacio: "Esta empresa todavía no tiene trabajadores ni postulantes.",
     columnas: [
         { titulo: "ID", valor: (t) => t.id, numero: true },
-        { titulo: "Nombre", valor: (t) => nombreCompleto(t.persona) },
+        {
+            titulo: "Nombre", valor: (t) => nombreCompleto(t.persona),
+            html: (t) => t.persona ? `<a href="persona.html?id=${t.persona.id}">${escaparHtml(nombreCompleto(t.persona))}</a>` : ""
+        },
         { titulo: "RUT", valor: (t) => formatearRut(t.persona?.rut, t.persona?.dv) },
         { titulo: "Cargo", valor: (t) => t.cargo ?? "" },
         { titulo: "Ingreso", valor: (t) => t.fecha_ingreso ?? "", html: (t) => escaparHtml(fechaCorta(t.fecha_ingreso)) },
@@ -66,6 +69,18 @@ formulario.addEventListener("submit", async function (evento) {
         cerrarPanelCrear(formulario)
         cargarTrabajadores()
     }
+})
+
+document.getElementById("btnNomina").addEventListener("click", function () {
+    descargarCsv(`nomina-trabajadores-${hoyIso()}.csv`, [
+        ["ID", (t) => t.id],
+        ["RUT", (t) => formatearRut(t.persona?.rut, t.persona?.dv)],
+        ["Nombre", (t) => nombreCompleto(t.persona)],
+        ["Cargo", (t) => t.cargo ?? ""],
+        ["Ingreso", (t) => fechaCorta(t.fecha_ingreso)],
+        ["Término", (t) => fechaCorta(t.fecha_termino)],
+        ["Estado", (t) => textoEstado("trabajador", t.estado)]
+    ], tabla.visibles())
 })
 
 document.addEventListener("empresa-lista", cargarTrabajadores)

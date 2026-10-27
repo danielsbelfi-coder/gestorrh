@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Personas</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/app.css">
 </head>
 
@@ -15,29 +16,13 @@
                 <h1>Personas</h1>
                 <p>Base de datos de personas de la empresa, sean postulantes, trabajadores o extrabajadores.</p>
             </div>
+            <div class="acciones-grupo">
+                <button type="button" class="secundario" id="btnNomina">Descargar nómina (Excel)</button>
+                <a class="boton" href="persona.html">＋ Nueva persona</a>
+            </div>
         </div>
         <p id="mensajeError" role="alert"></p>
         <p id="mensajeInfo" role="status"></p>
-        <ul id="listaProblemas"></ul>
-
-        <details class="tarjeta plegable" id="panelCrear">
-            <summary>＋ Nueva persona</summary>
-            <form id="formCrearPersona">
-                <label>RUT (sin DV)<input type="text" id="rut" inputmode="numeric" required></label>
-                <label>DV<input type="text" id="dv" maxlength="1" class="campo-corto" required></label>
-                <label>Nombres<input type="text" id="nombres" required></label>
-                <label>Apellido paterno<input type="text" id="apellidoPaterno" required></label>
-                <label>Nacionalidad
-                    <select id="nacionalidad" required>
-                        <option value="chilena">Chilena</option>
-                        <option value="extranjera">Extranjera</option>
-                    </select>
-                </label>
-                <label>Fecha de nacimiento<input type="date" id="fechaNacimiento" required></label>
-                <label>Dirección<input type="text" id="direccion" required></label>
-                <button type="submit">Crear persona</button>
-            </form>
-        </details>
 
         <div id="tablaPersonas"></div>
     </main>
