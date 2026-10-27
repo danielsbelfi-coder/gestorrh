@@ -51,11 +51,19 @@ function edadAl(fechaNacimiento, fecha) {
     return fecha.slice(5) < fechaNacimiento.slice(5) ? anios - 1 : anios
 }
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+function fechaEnTexto(fecha) {
+    return `${Number(fecha.slice(8, 10))} de ${MESES[Number(fecha.slice(5, 7)) - 1]} de ${fecha.slice(0, 4)}`
+}
+
 module.exports = {
     esFechaValida,
     sumarDias,
     fechaChilena,
     diasEntre,
     tramosContinuos,
-    edadAl
+    edadAl,
+    fechaEnTexto
 }
