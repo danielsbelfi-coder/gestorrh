@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Conceptos de remuneración</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Conceptos de remuneración">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Conceptos de remuneración</h1>
+                <p>Haberes y descuentos que se usan en las variables y en la liquidación. Los comunes los administra la plataforma; los de la empresa los creas tú. Todo concepto debe tener su código LRE para el Libro de Remuneraciones.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Nuevo concepto de la empresa</summary>
+            <form id="formConcepto">
+                <label>Código<input type="text" id="codigo" placeholder="BONO_PRODUCCION" pattern="[A-Za-z0-9_]+" required></label>
+                <label class="campo-ancho">Nombre<input type="text" id="nombre" required></label>
+                <label>Tipo
+                    <select id="tipo">
+                        <option value="haber">Haber</option>
+                        <option value="descuento">Descuento</option>
+                    </select>
+                </label>
+                <label>Código LRE<input type="number" id="codigoLre" min="2000" max="3999" step="1" placeholder="2113"></label>
+                <label class="casilla solo-haber"><input type="checkbox" id="imponible"> Imponible</label>
+                <label class="casilla solo-haber"><input type="checkbox" id="tributable"> Tributable</label>
+                <label class="casilla solo-haber"><input type="checkbox" id="baseGratificacion"> Base de gratificación</label>
+                <button type="submit">Crear concepto</button>
+            </form>
+            <p class="texto-suave">Haberes: código LRE 2xxx (por ejemplo 2113 bonos variables). Descuentos: 3xxx.</p>
+        </details>
+
+        <div id="tablaConceptos"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/conceptos.js"></script>
+</body>
+
+</html>

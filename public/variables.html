@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Variables del mes</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Variables del mes">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Variables del mes</h1>
+                <p>Bonos, horas extra y descuentos del periodo. Solo las aprobadas entran a la liquidación; el periodo no se cierra con variables pendientes.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Nueva variable</summary>
+            <form id="formVariable">
+                <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <label class="campo-ancho">Concepto<select id="concepto" required></select></label>
+                <label id="etiquetaValor">Monto ($)<input type="number" id="valor" min="0" step="1" required></label>
+                <label class="campo-ancho">Glosa (opcional)<input type="text" id="glosa" maxlength="255"></label>
+                <button type="submit" id="botonGuardar">Agregar</button>
+                <button type="button" class="secundario" id="cancelarEdicion" hidden>Cancelar edición</button>
+            </form>
+        </details>
+
+        <div class="acciones-grupo acciones-derecha">
+            <button type="button" id="btnAprobarTodas">Aprobar todas las pendientes</button>
+        </div>
+
+        <div id="tablaVariables"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/variables.js"></script>
+</body>
+
+</html>

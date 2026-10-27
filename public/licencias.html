@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Licencias médicas</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Licencias médicas">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Licencias médicas</h1>
+                <p>Licencias de los trabajadores. Los días se cargan solos en el resumen de asistencia de los meses abiertos y se informan en Previred.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Registrar licencia</summary>
+            <form id="formLicencia">
+                <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Desde<input type="date" id="fechaInicio" required></label>
+                <label>Hasta<input type="date" id="fechaTermino" required></label>
+                <label>Tipo
+                    <select id="tipo" required>
+                        <option value="comun">Común</option>
+                        <option value="maternal">Maternal</option>
+                        <option value="accidente_trabajo">Accidente del trabajo</option>
+                    </select>
+                </label>
+                <label class="campo-ancho">Entidad pagadora del subsidio<select id="pagador" required></select></label>
+                <label>Folio (opcional)<input type="text" id="folio"></label>
+                <button type="submit">Registrar</button>
+            </form>
+        </details>
+
+        <div id="tablaLicencias"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/licencias.js"></script>
+</body>
+
+</html>

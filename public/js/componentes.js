@@ -440,3 +440,44 @@ function valorContrato(campo, valor) {
     }
     return String(valor)
 }
+
+// ---------- Ciclo mensual ----------
+
+ESTADOS.resumen = { sin_resumen: ["Sin resumen", "peligro"], pendiente: ["Pendiente", "advertencia"], aprobado: ["Aprobado", "exito"] }
+ESTADOS.variable = { pendiente: ["Pendiente", "advertencia"], aprobada: ["Aprobada", "exito"] }
+TEXTOS.fuenteRegistro = { manual: "Manual", asistencia: "Desde asistencia", importacion: "Importación" }
+
+// Carga trabajadores y personas de la empresa de trabajo y arma los textos para mostrar y buscar.
+async function trabajadoresDeLaEmpresa() {
+    const listas = await cargarListas(["/api/trabajadores", "/api/personas"])
+    if (!listas) {
+        return null
+    }
+    const personaPorId = porId(listas[1])
+    const trabajadores = deEmpresaActual(listas[0]).map((t) => {
+        const persona = personaPorId.get(t.persona_id)
+        return {
+            ...t,
+            persona,
+            nombre: nombreCompleto(persona) || `Trabajador ${t.id}`,
+            rut: persona ? formatearRut(persona.rut, persona.dv) : "",
+            textoBuscador: `${persona ? textoPersona(persona) : "Trabajador " + t.id} · #${t.id}`
+        }
+    })
+    return { trabajadores, porId: porId(trabajadores) }
+}
+
+// Ejecuta una acción para varios registros, de a uno, y devuelve los errores con nombre.
+async function enLote(registros, accion, nombreDe) {
+    const errores = []
+    let hechos = 0
+    for (const registro of registros) {
+        const resultado = await accion(registro)
+        if (resultado.status === 200) {
+            hechos++
+        } else {
+            errores.push({ nombre: nombreDe(registro), motivos: [resultado.datos?.error ?? "Error"] })
+        }
+    }
+    return { hechos, errores }
+}

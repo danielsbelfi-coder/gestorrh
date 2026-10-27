@@ -1361,3 +1361,18 @@ input.campo-corto {
 .rejilla + #tablaUsuarios {
     margin-top: 20px;
 }
+
+.casilla {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.sin-margen {
+    margin: 0;
+}
+
+.barra-acciones > p {
+    flex: 1 1 380px;
+}

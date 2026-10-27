@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Resumen de asistencia</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Resumen de asistencia">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Resumen de asistencia</h1>
+                <p>Días no trabajados y atrasos de cada trabajador en el mes. La liquidación usa el resumen aprobado; el periodo no se cierra si falta alguno.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
+
+        <section class="tarjeta barra-acciones">
+            <p class="texto-suave sin-margen">"Generar" cuenta las marcas aprobadas del mes, conserva los atrasos ingresados y propone las horas extra como variables pendientes. Los resúmenes aprobados no se tocan.</p>
+            <div class="acciones-grupo">
+                <button type="button" class="secundario" id="btnGenerar">Generar desde la asistencia</button>
+                <button type="button" id="btnAprobarTodos">Aprobar todos los pendientes</button>
+            </div>
+        </section>
+
+        <div id="tablaResumenes"></div>
+
+        <section class="tarjeta" id="panelEditar" hidden>
+            <div class="encabezado-seccion">
+                <h2 id="tituloEditar">Editar resumen</h2>
+                <button type="button" class="secundario chico" id="cancelarEditar">Cancelar</button>
+            </div>
+            <form id="formResumen">
+                <label>Días de inasistencia<input type="number" id="diasInasistencia" min="0" max="31" step="1" required></label>
+                <label>Días de permiso sin goce<input type="number" id="diasPermiso" min="0" max="31" step="1" required></label>
+                <label>Días de vacaciones<input type="number" id="diasVacaciones" min="0" max="31" step="1" required></label>
+                <label>Minutos de atraso<input type="number" id="minutosAtraso" min="0" step="1" required></label>
+                <button type="submit">Guardar</button>
+            </form>
+            <p class="texto-suave">Los días de licencia médica se calculan solos desde las licencias registradas.</p>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/resumenes.js"></script>
+</body>
+
+</html>
