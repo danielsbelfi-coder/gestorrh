@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Empresa</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-menu="empresas.html" data-titulo="Empresa">
+        <a class="volver-lista" href="empresas.html">← Volver a Empresas</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1 id="titulo">Empresa</h1>
+                <p id="subtitulo"></p>
+            </div>
+            <div id="estadoActual"></div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <form id="formEmpresa" class="ficha" hidden>
+            <section class="tarjeta">
+                <h2>Datos de la empresa</h2>
+                <div class="campos">
+                    <label class="campo-ancho">Razón social *<input type="text" id="razon_social" required></label>
+                    <label class="campo-ancho">Nombre de fantasía<input type="text" id="nombre_fantasia"></label>
+                    <label class="campo-ancho">Dirección *<input type="text" id="direccion" required></label>
+                </div>
+            </section>
+            <section class="tarjeta">
+                <h2>Representante legal</h2>
+                <div class="campos">
+                    <label class="campo-ancho">Nombre *<input type="text" id="representante_legal_nombre" required></label>
+                    <label>RUT *<input type="text" id="representante_legal_rut" required></label>
+                </div>
+            </section>
+            <section class="tarjeta">
+                <h2>Seguro de accidentes del trabajo</h2>
+                <div class="campos">
+                    <label>Mutualidad (ID)<input type="number" id="mutualidad_id" min="1" step="1" placeholder="Vacío = ISL"></label>
+                    <label>Tasa adicional (%)<input type="number" id="tasa_adicional_mutual" min="0" step="0.01"></label>
+                </div>
+                <p class="texto-suave">Por ahora la mutualidad se indica por su ID; cuando el backend entregue la lista de mutualidades, aquí aparecerá un selector.</p>
+            </section>
+            <div class="barra-guardar">
+                <button type="submit">Guardar cambios</button>
+                <a class="boton secundario" href="empresas.html">Cancelar</a>
+            </div>
+        </form>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/empresa.js"></script>
+</body>
+
+</html>

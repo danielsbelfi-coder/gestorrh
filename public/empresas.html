@@ -11,29 +11,34 @@
 
 <body>
     <main class="contenido" data-titulo="Empresas">
-        <h1>Empresas</h1>
-        <p id="mensajeError"></p>
-
-        <ul id="listaEmpresas"></ul>
-
-        <div id="seccionCrearEmpresa">
-            <h2>Crear empresas</h2>
-            <form id="formCrearEmpresa">
-                <input type="text" id="rut" placeholder="RUT (sin DV)" required>
-                <input type="text" id="dv" placeholder="DV" maxlength="1" required>
-                <input type="text" id="razonSocial" placeholder="Razón social" required>
-                <input type="text" id="representanteLegalNombre" placeholder="Representante Legal" required>
-                <input type="text" id="representanteLegalRut" placeholder="RUT representante" required>
-                <input type="text" id="direccion" placeholder="Dirección" required>
-                <button type="submit">Crear</button>
-            </form>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Empresas</h1>
+                <p>Empresas de la cuenta. Desde aquí ves y editas sus datos, y el administrador de la cuenta puede desactivarlas o exportar sus datos.</p>
+            </div>
         </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
 
+        <details class="tarjeta plegable" id="panelCrear" hidden>
+            <summary>＋ Nueva empresa</summary>
+            <form id="formCrearEmpresa">
+                <label>RUT (sin DV)<input type="text" id="rut" inputmode="numeric" required></label>
+                <label>DV<input type="text" id="dv" maxlength="1" class="campo-corto" required></label>
+                <label class="campo-ancho">Razón social<input type="text" id="razonSocial" required></label>
+                <label class="campo-ancho">Representante legal<input type="text" id="representanteLegalNombre" required></label>
+                <label>RUT del representante<input type="text" id="representanteLegalRut" required></label>
+                <label class="campo-ancho">Dirección<input type="text" id="direccion" required></label>
+                <button type="submit">Crear empresa</button>
+            </form>
+        </details>
+
+        <div id="tablaEmpresas"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/empresas.js"></script>
 </body>
 

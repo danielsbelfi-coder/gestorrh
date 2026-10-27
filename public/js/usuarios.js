@@ -1,188 +1,158 @@
 requiereLogin()
 
-const mensaje = document.getElementById("mensaje")
+ESTADOS.usuario = { activo: ["Activo", "exito"], inactivo: ["Inactivo", ""] }
 
-function textoRoles(vinculos) {
-    const activos = vinculos.filter((v) => v.estado === "activo")
-
-    if (activos.length === 0) {
-        return "Sin roles"
-    }
-
-    return activos
-        .map((v) => `${escaparHtml(v.Empresa.razon_social)}: ${escaparHtml(v.Rol.codigo)}`)
-        .join("<br>")
+function rolesActivos(usuario) {
+    return (usuario.UsuarioEmpresaRols ?? []).filter((v) => v.estado === "activo")
 }
 
-async function cargarUsuarios() {
-    const resultado = await llamarApi("/api/cuenta/usuarios")
+const tabla = crearTabla({
+    contenedor: "tablaUsuarios",
+    textoBuscar: "Buscar por nombre, correo, empresa o rol…",
+    vacio: "La cuenta todavía no tiene usuarios.",
+    columnas: [
+        { titulo: "Nombre", valor: (u) => u.nombre },
+        { titulo: "Correo", valor: (u) => u.email },
+        { titulo: "Estado", valor: (u) => textoEstado("usuario", u.estado), html: (u) => insignia("usuario", u.estado) },
+        { titulo: "Admin de cuenta", valor: (u) => (u.es_admin_cuenta ? "Sí" : "No") },
+        {
+            titulo: "Roles por empresa",
+            valor: (u) => rolesActivos(u).map((v) => `${v.Empresa.razon_social} ${v.Rol.codigo}`).join(" "),
+            html: (u) => rolesActivos(u).length === 0
+                ? `<span class="texto-suave">Sin roles</span>`
+                : rolesActivos(u).map((v) => `<div>${escaparHtml(v.Empresa.razon_social)}: <strong>${escaparHtml(v.Rol.codigo)}</strong></div>`).join("")
+        },
+        {
+            titulo: "", orden: false, valor: () => "",
+            html: (u) => [
+                u.estado === "activo"
+                    ? `<button type="button" class="chico secundario" data-accion="desactivar" data-id="${u.id}">Desactivar</button>`
+                    : `<button type="button" class="chico" data-accion="reactivar" data-id="${u.id}">Reactivar</button>`,
+                `<button type="button" class="chico secundario" data-accion="restablecer" data-id="${u.id}">Restablecer contraseña</button>`,
+                u.es_admin_cuenta
+                    ? `<button type="button" class="chico secundario" data-accion="quitar-admin" data-id="${u.id}">Quitar admin</button>`
+                    : `<button type="button" class="chico secundario" data-accion="dar-admin" data-id="${u.id}">Dar admin</button>`
+            ].join(" ")
+        }
+    ],
+    filtros: [
+        { titulo: "Estado", valor: (u) => u.estado, opciones: opcionesDe("usuario"), inicial: "activo" },
+        { titulo: "Admin", valor: (u) => String(u.es_admin_cuenta), opciones: [["true", "Admin de cuenta"], ["false", "No admin"]] }
+    ]
+})
 
-    if (resultado.status !== 200) {
-        mensaje.textContent = resultado.datos.error
+async function cargarUsuarios() {
+    const listas = await cargarListas(["/api/cuenta/usuarios"])
+    if (!listas) {
         return
     }
+    const usuarios = [...listas[0]].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+    tabla.mostrar(usuarios)
 
-
-
-    document.getElementById("cuerpoUsuarios").innerHTML = resultado.datos.map(function (usuario) {
-        const botonEstado = usuario.estado === "activo"
-            ? `<button data-accion="desactivar" data-id="${usuario.id}">Desactivar</button>`
-            : `<button data-accion="reactivar" data-id="${usuario.id}">Reactivar</button>`
-
-        const botonAdmin = usuario.es_admin_cuenta
-            ? `<button data-accion="quitar-admin" data-id="${usuario.id}">Quitar admin</button>`
-            : `<button data-accion="dar-admin" data-id="${usuario.id}">Dar admin</button>`
-
-        const botonRestablecer = `<button data-accion="restablecer" data-id="${usuario.id}">Restablecer contraseña</button>`
-
-        return `<tr>
-            <td>${escaparHtml(usuario.nombre)}</td>
-            <td>${escaparHtml(usuario.email)}</td>
-            <td>${escaparHtml(usuario.estado)}</td>
-            <td>${usuario.es_admin_cuenta ? "Sí" : "No"}</td>
-            <td>${textoRoles(usuario.UsuarioEmpresaRols)}</td>
-            <td>${botonEstado} ${botonRestablecer} ${botonAdmin}</td>
-        </tr>`
-    }).join("")
-
-    const selectUsuario = document.getElementById("rolUsuario")
-    const seleccionado = selectUsuario.value
-
-    selectUsuario.innerHTML = resultado.datos.map((usuario) =>
-        `<option value="${usuario.id}">${escaparHtml(usuario.nombre)} (${escaparHtml(usuario.email)})</option>`
-    ).join("")
-
-    if (seleccionado) {
-        selectUsuario.value = seleccionado
+    const select = document.getElementById("rolUsuario")
+    const elegido = select.value
+    llenarSelect(select, usuarios.filter((u) => u.estado === "activo").map((u) => ({ id: u.id, texto: `${u.nombre} (${u.email})` })))
+    if (elegido) {
+        select.value = elegido
     }
 }
 
 async function cargarEmpresas() {
-    const resultado = await llamarApi("/api/cuenta/empresas")
-
-    if (resultado.status !== 200) {
-        mensaje.textContent = resultado.datos.error
+    const listas = await cargarListas(["/api/cuenta/empresas"])
+    if (!listas) {
         return
     }
-
-    document.getElementById("rolEmpresa").innerHTML = resultado.datos.map((empresa) =>
-        `<option value="${empresa.id}">${escaparHtml(empresa.razon_social)} (${escaparHtml(empresa.rut)}-${escaparHtml(empresa.dv)})${empresa.estado === "inactiva" ? " — inactiva" : ""}</option>`
-    ).join("")
+    llenarSelect(document.getElementById("rolEmpresa"), listas[0].map((e) => ({
+        id: e.id,
+        texto: `${e.razon_social} (${formatearRut(e.rut, e.dv)})${e.estado === "inactiva" ? " — inactiva" : ""}`
+    })))
 }
 
 function mostrarPasswordInicial(datos) {
-    mensaje.textContent = `Contraseña inicial de ${datos.usuario.email}: ${datos.passwordInicial}. Entrégala a la persona: no se volverá a mostrar y deberá cambiarla al entrar.`
+    mensaje("info", `Contraseña inicial de ${datos.usuario.email}: ${datos.passwordInicial}. Entrégala a la persona: no se volverá a mostrar y deberá cambiarla al entrar.`)
 }
 
-const formulario = document.getElementById("formCrearUsuario")
-
-formulario.addEventListener("submit", async function (evento) {
+document.getElementById("formCrearUsuario").addEventListener("submit", async function (evento) {
     evento.preventDefault()
-    mensaje.textContent = ""
-
-    const datos = {
-        nombre: document.getElementById("nombre").value,
-        email: document.getElementById("email").value
+    const creado = await crearRegistro("/api/cuenta/usuarios", {
+        nombre: document.getElementById("nombre").value.trim(),
+        email: document.getElementById("email").value.trim()
+    }, "")
+    if (creado) {
+        mostrarPasswordInicial(creado)
+        cerrarPanelCrear(this)
+        cargarUsuarios()
     }
-
-    const resultado = await llamarApi("/api/cuenta/usuarios", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-    if (resultado.status !== 201) {
-        mensaje.textContent = resultado.datos.error
-        return
-    }
-
-    mostrarPasswordInicial(resultado.datos)
-    formulario.reset()
-    cargarUsuarios()
 })
 
-document.getElementById("cuerpoUsuarios").addEventListener("click", async function (evento) {
-    const accion = evento.target.dataset.accion
-    const id = evento.target.dataset.id
-
-    if (!accion) {
+document.getElementById("tablaUsuarios").addEventListener("click", async function (evento) {
+    const boton = evento.target.closest("[data-accion]")
+    if (!boton) {
         return
     }
+    const { accion, id } = boton.dataset
 
     if (accion === "desactivar" && !confirm("¿Desactivar este usuario? Perderá el acceso de inmediato.")) {
         return
     }
-
     if (accion === "restablecer" && !confirm("¿Restablecer la contraseña de este usuario?")) {
         return
     }
 
-    mensaje.textContent = ""
-    let resultado
-
-    if (accion === "desactivar") {
-        resultado = await llamarApi(`/api/cuenta/usuarios/${id}/desactivar`, { method: "PATCH" })
-    } else if (accion === "reactivar") {
-        resultado = await llamarApi(`/api/cuenta/usuarios/${id}/reactivar`, { method: "PATCH" })
-    } else if (accion === "restablecer") {
-        resultado = await llamarApi(`/api/cuenta/usuarios/${id}/restablecer-password`, { method: "PATCH" })
-    } else if (accion === "dar-admin") {
-        resultado = await llamarApi(`/api/cuenta/usuarios/${id}/admin-cuenta`, { method: "PATCH", body: JSON.stringify({ es_admin_cuenta: true }) })
-    } else if (accion === "quitar-admin") {
-        resultado = await llamarApi(`/api/cuenta/usuarios/${id}/admin-cuenta`, { method: "PATCH", body: JSON.stringify({ es_admin_cuenta: false }) })
+    limpiarMensajes()
+    const rutas = {
+        desactivar: [`/api/cuenta/usuarios/${id}/desactivar`],
+        reactivar: [`/api/cuenta/usuarios/${id}/reactivar`],
+        restablecer: [`/api/cuenta/usuarios/${id}/restablecer-password`],
+        "dar-admin": [`/api/cuenta/usuarios/${id}/admin-cuenta`, { es_admin_cuenta: true }],
+        "quitar-admin": [`/api/cuenta/usuarios/${id}/admin-cuenta`, { es_admin_cuenta: false }]
     }
+    const [ruta, cuerpo] = rutas[accion]
+    const resultado = await llamarApi(ruta, { method: "PATCH", ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}) })
 
     if (resultado.status !== 200) {
-        mensaje.textContent = resultado.datos.error
+        mensaje("error", resultado.datos?.error ?? "No se pudo completar la acción")
         return
     }
-
     if (accion === "restablecer") {
         mostrarPasswordInicial(resultado.datos)
+    } else {
+        mensaje("info", "Listo.")
     }
-
     cargarUsuarios()
 })
 
 document.getElementById("formRol").addEventListener("submit", async function (evento) {
     evento.preventDefault()
-    mensaje.textContent = ""
-
+    limpiarMensajes()
     const usuarioId = document.getElementById("rolUsuario").value
     const empresaId = document.getElementById("rolEmpresa").value
-    const rol = document.getElementById("rolCodigo").value
 
     const resultado = await llamarApi(`/api/cuenta/usuarios/${usuarioId}/empresas/${empresaId}/rol`, {
         method: "PUT",
-        body: JSON.stringify({ rol })
+        body: JSON.stringify({ rol: document.getElementById("rolCodigo").value })
     })
-
     if (resultado.status !== 200) {
-        mensaje.textContent = resultado.datos.error
+        mensaje("error", resultado.datos?.error ?? "No se pudo asignar el rol")
         return
     }
-
-    mensaje.textContent = "Rol asignado"
+    mensaje("info", "Rol asignado.")
     cargarUsuarios()
 })
 
 document.getElementById("botonQuitarRol").addEventListener("click", async function () {
-    mensaje.textContent = ""
-
+    limpiarMensajes()
     const usuarioId = document.getElementById("rolUsuario").value
     const empresaId = document.getElementById("rolEmpresa").value
 
-    const resultado = await llamarApi(`/api/cuenta/usuarios/${usuarioId}/empresas/${empresaId}/quitar`, {
-        method: "PATCH"
-    })
-
+    const resultado = await llamarApi(`/api/cuenta/usuarios/${usuarioId}/empresas/${empresaId}/quitar`, { method: "PATCH" })
     if (resultado.status !== 200) {
-        mensaje.textContent = resultado.datos.error
+        mensaje("error", resultado.datos?.error ?? "No se pudo quitar el rol")
         return
     }
-
-    mensaje.textContent = "Rol quitado"
+    mensaje("info", "Rol quitado.")
     cargarUsuarios()
 })
 
-document.addEventListener("DOMContentLoaded", cargarUsuarios)
-document.addEventListener("DOMContentLoaded", cargarEmpresas)
+cargarUsuarios()
+cargarEmpresas()

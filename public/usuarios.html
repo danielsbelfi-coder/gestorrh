@@ -11,50 +11,51 @@
 
 <body>
     <main class="contenido" data-titulo="Usuarios">
-        <h1>Usuarios de la cuenta</h1>
-        <p id="mensaje"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Usuarios de la cuenta</h1>
+                <p>Quién entra al sistema y con qué rol en cada empresa.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Estado</th>
-                    <th>Admin de cuenta</th>
-                    <th>Roles por empresa</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="cuerpoUsuarios"></tbody>
-        </table>
+        <div class="rejilla rejilla-ancha">
+            <details class="tarjeta plegable" id="panelCrear">
+                <summary>＋ Nuevo usuario</summary>
+                <form id="formCrearUsuario">
+                    <label class="campo-ancho">Nombre<input type="text" id="nombre" required></label>
+                    <label class="campo-ancho">Correo<input type="email" id="email" required></label>
+                    <button type="submit">Crear usuario</button>
+                </form>
+            </details>
 
-        <h2>Crear usuario</h2>
-        <form id="formCrearUsuario">
-            <input type="text" id="nombre" placeholder="Nombre" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <button type="submit">Crear</button>
-        </form>
+            <details class="tarjeta plegable" id="panelRol">
+                <summary>Asignar o quitar rol por empresa</summary>
+                <form id="formRol">
+                    <label class="campo-ancho">Usuario<select id="rolUsuario" required></select></label>
+                    <label class="campo-ancho">Empresa<select id="rolEmpresa" required></select></label>
+                    <label>Rol
+                        <select id="rolCodigo">
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="JEFE_RRHH">JEFE_RRHH</option>
+                            <option value="RRHH">RRHH</option>
+                            <option value="SUPERVISOR">SUPERVISOR</option>
+                            <option value="LECTURA">LECTURA</option>
+                        </select>
+                    </label>
+                    <button type="submit">Asignar rol</button>
+                    <button type="button" class="secundario" id="botonQuitarRol">Quitar rol</button>
+                </form>
+            </details>
+        </div>
 
-        <h2>Roles por empresa</h2>
-        <form id="formRol">
-            <select id="rolUsuario" required></select>
-            <select id="rolEmpresa" required></select>
-            <select id="rolCodigo">
-                <option value="ADMIN">ADMIN</option>
-                <option value="JEFE_RRHH">JEFE_RRHH</option>
-                <option value="RRHH">RRHH</option>
-                <option value="SUPERVISOR">SUPERVISOR</option>
-                <option value="LECTURA">LECTURA</option>
-            </select>
-            <button type="submit">Asignar rol</button>
-            <button type="button" id="botonQuitarRol">Quitar rol</button>
-        </form>
-
+        <div id="tablaUsuarios"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/usuarios.js"></script>
 </body>
 

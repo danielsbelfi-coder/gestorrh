@@ -1341,3 +1341,23 @@ input.campo-corto {
     box-shadow: none;
     padding: 0;
 }
+
+.nota {
+    font-size: 0.78rem;
+    color: var(--texto-suave);
+    white-space: normal;
+    margin-top: 2px;
+}
+
+.nota.peligro {
+    color: var(--peligro);
+}
+
+.rejilla > .plegable {
+    margin-bottom: 0;
+    align-self: start;
+}
+
+.rejilla + #tablaUsuarios {
+    margin-top: 20px;
+}
