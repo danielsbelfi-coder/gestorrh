@@ -1,4 +1,4 @@
-const { crearAnexo, firmarAnexo, listarAnexo } = require("./contrato_anexo.service");
+const { crearAnexo, firmarAnexo, listarAnexos } = require("./contrato_anexo.service");
 
 async function crear(req, res) {
     const nuevoAnexo = await crearAnexo({
@@ -19,8 +19,8 @@ async function firmar(req, res) {
 
 
 async function listar(req, res) {
-    const listaAnexo = await listarAnexo(req.empresasPermitidas)
-    res.status(200).json(listaAnexo)
+    const anexos = await listarAnexos(req.params.contratoId, req.empresasPermitidas)
+    res.status(200).json(anexos)
 }
 
 module.exports = {

@@ -3,6 +3,7 @@ const { COMUNAS } = require("../shared/comunas_lre.js")
 const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { PERMISOS, exigirRol } = require("../shared/permisos.js")
+const { Op } = require("sequelize")
 
 
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
@@ -102,21 +103,23 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     return anexo
 }
 
+async function listarAnexos(contratoId, empresasPermitidas) {
+    const contrato = await ContratoTrabajo.findByPk(contratoId, {
+        include: [Trabajador]
+    })
 
-async function listarAnexo(empresasPermitidas) {
-    return await Contratoanexo.findAll({
-        include: [{
-            model: Trabajador,
-            where: {
-                empresa_id: { [Op.in]: empresasPermitidas }
-            },
-            required: true
-        }]
+    if (contrato === null || !empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
+        throw new NotFoundError("Contrato no encontrado")
+    }
+
+    return await ContratoAnexo.findAll({
+        where: { contrato_id: contrato.id },
+        order: [["fecha_vigencia", "ASC"], ["id", "ASC"]]
     })
 }
 
 module.exports = {
     crearAnexo,
     firmarAnexo,
-    listarAnexo
+    listarAnexos
 }
