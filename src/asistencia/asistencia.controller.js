@@ -1,4 +1,4 @@
-const { crearAsistencia, listarAsistencias, obtenerAsistenciaPorId } = require("./asistencia.service");
+const { crearAsistencia, listarAsistencias, obtenerAsistenciaPorId, cambiarAprobacionAsistencia } = require("./asistencia.service");
 
 
 async function crear(req, res) {
@@ -24,8 +24,14 @@ async function obtenerPorId(req, res) {
     res.status(200).json(obtenerIdAsistencia)
 }
 
+async function aprobacion(req, res) {
+    const asistencia = await cambiarAprobacionAsistencia(req.params.id, req.body?.estado, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(asistencia)
+}
+
 module.exports = {
     crear,
     listar,
-    obtenerPorId
+    obtenerPorId,
+    aprobacion
 }

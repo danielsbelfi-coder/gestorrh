@@ -1,6 +1,6 @@
-const { Asistencia, Trabajador } = require("../shared/associations.js")
+const { Asistencia, Trabajador, PeriodoRemuneracion } = require("../shared/associations.js")
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 async function crearAsistencia(datos, empresasPermitidas, usuarioId) {
@@ -60,8 +60,42 @@ async function obtenerAsistenciaPorId(id, empresasPermitidas) {
     return asistencia
 }
 
+const ESTADOS_APROBACION = ["pendiente", "aprobada", "rechazada"]
+
+async function cambiarAprobacionAsistencia(id, estado, empresasPermitidas, usuarioId) {
+    const asistencia = await obtenerAsistenciaPorId(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.APROBAR_ASISTENCIA)
+
+    if (!ESTADOS_APROBACION.includes(estado)) {
+        throw new ValidationError("El estado debe ser pendiente, aprobada o rechazada")
+    }
+    if (asistencia.estado_aprobacion === estado) {
+        throw new ConflictError(`La marca ya está ${estado}`)
+    }
+
+    // Una marca de un mes ya cerrado no se toca: ese mes ya se liquidó.
+    const periodo = await PeriodoRemuneracion.findOne({
+        where: {
+            empresa_id: asistencia.Trabajador.empresa_id,
+            anio: Number(asistencia.fecha.slice(0, 4)),
+            mes: Number(asistencia.fecha.slice(5, 7))
+        }
+    })
+    if (periodo !== null && periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de esa fecha está cerrado")
+    }
+
+    return await asistencia.update({
+        estado_aprobacion: estado,
+        aprobado_por_id: estado === "pendiente" ? null : usuarioId,
+        fecha_aprobacion: estado === "pendiente" ? null : new Date()
+    })
+}
+
 module.exports = {
     crearAsistencia,
     listarAsistencias,
-    obtenerAsistenciaPorId
+    obtenerAsistenciaPorId,
+    cambiarAprobacionAsistencia
 }

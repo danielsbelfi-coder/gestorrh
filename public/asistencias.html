@@ -14,7 +14,7 @@
         <div class="encabezado-pagina">
             <div>
                 <h1>Asistencia</h1>
-                <p>Marcas y movimientos de asistencia de los trabajadores.</p>
+                <p>Marcas y movimientos de asistencia de los trabajadores. Solo las marcas aprobadas cuentan al generar el resumen de asistencia del mes.</p>
             </div>
         </div>
         <p id="mensajeError" role="alert"></p>
@@ -51,6 +51,10 @@
                 <button type="submit">Registrar</button>
             </form>
         </details>
+
+        <div class="acciones-grupo acciones-derecha">
+            <button type="button" id="btnAprobarTodas">Aprobar las pendientes de la lista</button>
+        </div>
 
         <div id="tablaAsistencias"></div>
     </main>
