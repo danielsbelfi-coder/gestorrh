@@ -16,6 +16,7 @@ const PERMISOS = {
     REGISTRAR_VARIABLES: ["ADMIN", "JEFE_RRHH", "RRHH"],
     APROBAR_VARIABLES: ["ADMIN", "JEFE_RRHH"],
     GENERAR_PREVIRED: ["ADMIN", "JEFE_RRHH"],
+    GENERAR_LRE: ["ADMIN", "JEFE_RRHH"],
 }
 
 async function exigirRol(usuarioId, empresaId, rolesPermitidos) {

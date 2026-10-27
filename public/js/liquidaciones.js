@@ -206,6 +206,27 @@ async function descargarPrevired() {
     mostrarInfo(["Archivo Previred generado. Pensionados, cargas familiares, CCAF y APV todavía no se informan.", ...resultado.advertencias].join(" "))
 }
 
+async function descargarLre() {
+    limpiarMensajes()
+    const periodoId = document.getElementById("periodo").value
+    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/lre`)
+
+    if (resultado.status === 409 && resultado.datos.problemas) {
+        mostrarError(resultado.datos.error)
+        mostrarProblemas("listaProblemas", resultado.datos.problemas)
+        return
+    }
+
+    if (resultado.status !== 200) {
+        mostrarError(resultado.datos.error)
+        return
+    }
+
+    mostrarInfo(["Archivo LRE generado. Los aportes de la reforma previsional no se informan hasta que la Dirección del Trabajo publique sus códigos.", ...resultado.advertencias].join(" "))
+}
+
+document.getElementById("btnLre").addEventListener("click", descargarLre)
+
 document.getElementById("btnPrevired").addEventListener("click", descargarPrevired)
 
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))

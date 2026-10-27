@@ -19,6 +19,17 @@ async function listarConceptos(empresaId, empresasPermitidas) {
     })
 }
 
+function validarCodigoLre(valor, tipo) {
+    const codigoLre = valor === undefined || valor === null ? null : Number(valor)
+    const primerDigito = tipo === "haber" ? 2 : 3
+
+    if (codigoLre !== null && (!Number.isInteger(codigoLre) || Math.floor(codigoLre / 1000) !== primerDigito)) {
+        throw new ValidationError(`El código LRE de un ${tipo} debe ser un código ${primerDigito}xxx del manual de la Dirección del Trabajo`)
+    }
+
+    return codigoLre
+}
+
 async function crearConcepto(datos, empresasPermitidas, usuarioId) {
     const empresaId = Number(datos.empresa_id)
 
@@ -56,12 +67,7 @@ async function crearConcepto(datos, empresasPermitidas, usuarioId) {
     }
 
     try {
-        const codigoLre = datos.codigo_lre === undefined || datos.codigo_lre === null ? null : Number(datos.codigo_lre)
-        const primerDigito = esHaber ? 2 : 3
-
-        if (codigoLre !== null && (!Number.isInteger(codigoLre) || Math.floor(codigoLre / 1000) !== primerDigito)) {
-            throw new ValidationError(`El código LRE de un ${datos.tipo} debe ser un código ${primerDigito}xxx del manual de la Dirección del Trabajo`)
-        }
+        const codigoLre = validarCodigoLre(datos.codigo_lre, datos.tipo)
 
         return await ConceptoRemuneracion.create({
             empresa_id: empresaId,
@@ -126,9 +132,18 @@ async function reactivarConcepto(id, empresasPermitidas, usuarioId) {
     return await concepto.update({ activo: true })
 }
 
+async function asignarCodigoLre(id, codigoLre, empresasPermitidas, usuarioId) {
+    const concepto = await obtenerConceptoPropio(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, concepto.empresa_id, PERMISOS.CONFIGURAR_CONCEPTOS)
+
+    return await concepto.update({ codigo_lre: validarCodigoLre(codigoLre, concepto.tipo) })
+}
+
 module.exports = {
     listarConceptos,
     crearConcepto,
     desactivarConcepto,
     reactivarConcepto,
+    asignarCodigoLre
 }

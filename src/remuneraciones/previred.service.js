@@ -103,5 +103,6 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
 
 module.exports = {
     generarPrevired,
-    CODIGOS_TRAMOS
+    CODIGOS_TRAMOS,
+    obtenerLimitesTramo
 }
