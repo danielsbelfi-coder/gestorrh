@@ -137,6 +137,8 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar�
         </div>`
 
     const buscador = raiz.querySelector(".tabla-buscar")
+    // Se puede llegar con la búsqueda hecha: pagina.html?buscar=texto
+    buscador.value = new URLSearchParams(location.search).get("buscar") ?? ""
     const selects = [...raiz.querySelectorAll(".tabla-filtro")]
     filtros.forEach((filtro, i) => {
         if (filtro.inicial !== undefined) {
@@ -394,4 +396,47 @@ function descargarCsv(nombreArchivo, columnas, registros) {
 function hoyIso() {
     const hoy = new Date()
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`
+}
+
+// ---------- Contratos ----------
+
+const TEXTOS_CONTRATO = {
+    tipoJornada: { completa: "Completa", parcial: "Parcial", excluido_limitacion: "Excluido de limitación" },
+    sistemaRemuneracion: { mensual: "Mensual", diario: "Diario", semanal: "Semanal", hora: "Por hora" },
+    periodicidadPago: { mensual: "Mensual", quincenal: "Quincenal", semanal: "Semanal" }
+}
+
+// Campos que un anexo puede modificar (CAMPOS_MODIFICABLES de contrato_anexo.service.js).
+const CAMPOS_ANEXO = {
+    sueldo_base: { texto: "Sueldo base", tipo: "numero" },
+    horas_semanales: { texto: "Horas semanales", tipo: "numero" },
+    tipo_jornada: { texto: "Tipo de jornada", tipo: "lista", opciones: TEXTOS_CONTRATO.tipoJornada },
+    dias_trabajados: { texto: "Días trabajados por semana", tipo: "numero" },
+    funciones: { texto: "Funciones", tipo: "texto" },
+    lugar_prestacion_servicios: { texto: "Lugar de prestación de servicios", tipo: "texto" },
+    sistema_remuneracion: { texto: "Sistema de remuneración", tipo: "lista", opciones: TEXTOS_CONTRATO.sistemaRemuneracion },
+    periodicidad_pago: { texto: "Periodicidad de pago", tipo: "lista", opciones: TEXTOS_CONTRATO.periodicidadPago },
+    fecha_termino: { texto: "Fecha de término", tipo: "fecha" },
+    comuna_prestacion: { texto: "Comuna de prestación", tipo: "comuna" }
+}
+
+// Muestra un valor de contrato o anexo en palabras (montos con $, fechas dd-mm-aaaa, comunas con nombre).
+function valorContrato(campo, valor) {
+    if (valor === null || valor === undefined || valor === "") {
+        return "—"
+    }
+    const definicion = CAMPOS_ANEXO[campo]
+    if (campo === "sueldo_base") {
+        return pesos(valor)
+    }
+    if (definicion?.tipo === "fecha") {
+        return fechaCorta(valor)
+    }
+    if (definicion?.tipo === "lista") {
+        return definicion.opciones[valor] ?? valor
+    }
+    if (definicion?.tipo === "comuna") {
+        return typeof COMUNAS !== "undefined" && COMUNAS[valor] ? `${COMUNAS[valor]} (${valor})` : String(valor)
+    }
+    return String(valor)
 }

@@ -8,7 +8,7 @@ const tabla = crearTabla({
         { titulo: "ID", valor: (t) => t.id, numero: true },
         {
             titulo: "Nombre", valor: (t) => nombreCompleto(t.persona),
-            html: (t) => t.persona ? `<a href="persona.html?id=${t.persona.id}">${escaparHtml(nombreCompleto(t.persona))}</a>` : ""
+            html: (t) => `<a href="trabajador.html?id=${t.id}">${escaparHtml(nombreCompleto(t.persona) || "Trabajador " + t.id)}</a>`
         },
         { titulo: "RUT", valor: (t) => formatearRut(t.persona?.rut, t.persona?.dv) },
         { titulo: "Cargo", valor: (t) => t.cargo ?? "" },

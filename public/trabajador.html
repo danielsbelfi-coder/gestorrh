@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Ficha del trabajador</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-menu="trabajadores.html" data-titulo="Ficha del trabajador">
+        <a class="volver-lista" href="trabajadores.html">← Volver a Trabajadores</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1 id="titulo">Trabajador</h1>
+                <p id="subtitulo"></p>
+            </div>
+            <div id="estadoActual"></div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <nav class="enlaces-ficha" id="enlaces"></nav>
+
+        <section class="tarjeta">
+            <h2>Relación laboral</h2>
+            <dl class="datos" id="relacion"></dl>
+        </section>
+
+        <section class="tarjeta">
+            <div class="encabezado-seccion">
+                <h2>Contratos</h2>
+                <a class="boton chico" id="nuevoContrato" hidden>＋ Nuevo contrato</a>
+            </div>
+            <div id="contratos"></div>
+        </section>
+
+        <section class="tarjeta" id="panelAnexo" hidden>
+            <div class="encabezado-seccion">
+                <h2 id="tituloAnexo">Nuevo anexo</h2>
+                <button type="button" class="secundario chico" id="cancelarAnexo">Cancelar</button>
+            </div>
+            <form id="formAnexo">
+                <label>Campo a modificar<select id="campoAnexo" required></select></label>
+                <label class="campo-ancho" id="contenedorValor">Nuevo valor<input type="text" id="valorAnexo" required></label>
+                <label>Rige desde<input type="date" id="vigenciaAnexo" required></label>
+                <label class="campo-ancho">Motivo<input type="text" id="motivoAnexo" required></label>
+                <button type="submit">Crear anexo</button>
+            </form>
+            <p class="texto-suave">El anexo queda pendiente; el cambio se aplica al contrato cuando se firma.</p>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/comunas.js"></script>
+    <script src="js/trabajador.js"></script>
+</body>
+
+</html>

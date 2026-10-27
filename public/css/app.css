@@ -1267,3 +1267,77 @@ input.campo-corto {
 #seccionRelaciones table {
     box-shadow: none;
 }
+
+/* ---------- Ficha del trabajador ---------- */
+
+.enlaces-ficha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.encabezado-seccion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.encabezado-seccion h2 {
+    margin: 0;
+}
+
+.datos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px 20px;
+    margin: 0;
+}
+
+.datos dt {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.datos dd {
+    margin: 2px 0 0;
+}
+
+.contrato {
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+}
+
+.contrato-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.contrato-estados {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.tabla-anexos {
+    margin-top: 14px;
+    box-shadow: none;
+}
+
+#panelAnexo form {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+}
