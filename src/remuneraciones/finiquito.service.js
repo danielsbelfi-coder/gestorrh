@@ -93,6 +93,8 @@ async function exigirPeriodoAbierto(trabajador) {
     if (periodo === null || periodo.estado !== "abierto") {
         throw new ConflictError(`El periodo ${mes}/${anio} del término no existe o está cerrado; el finiquito ya no se puede calcular ni emitir`)
     }
+
+    return periodo
 }
 
 async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
@@ -214,7 +216,15 @@ async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
         throw new ConflictError("El finiquito ya fue emitido")
     }
 
-    await exigirPeriodoAbierto(finiquito.Trabajador)
+    const periodo = await exigirPeriodoAbierto(finiquito.Trabajador)
+
+    const liquidacion = await Liquidacion.findOne({
+        where: { periodo_id: periodo.id, trabajador_id: finiquito.trabajador_id, vigente: true }
+    })
+
+    if (liquidacion === null || liquidacion.estado === "calculada") {
+        throw new ConflictError("La liquidación del mes del término debe estar emitida antes de emitir el finiquito")
+    }
 
     const detalle = finiquito.detalle_calculo
     if (detalle.fechaTermino !== finiquito.Trabajador.fecha_termino || detalle.causal !== finiquito.Trabajador.causal_termino) {
