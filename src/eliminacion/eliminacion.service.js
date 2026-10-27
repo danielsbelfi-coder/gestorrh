@@ -16,6 +16,7 @@ const PASOS_EMPRESA = [
     { tabla: "contratos_trabajo", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "periodos_remuneracion", filtro: "empresa_id = :empresaId" },
     { tabla: "trabajadores", filtro: "empresa_id = :empresaId" },
+    { tabla: "situaciones_previsionales", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "personas", filtro: "empresa_id = :empresaId" },
     { tabla: "cargos", filtro: "empresa_id = :empresaId" },
     { tabla: "conceptos_remuneracion", filtro: "empresa_id = :empresaId" },
