@@ -1,48 +1,71 @@
 requiereLogin()
 
-async function cargarTrabajadores() {
-    const resultado = await llamarApi("/api/trabajadores")
+const tabla = crearTabla({
+    contenedor: "tablaTrabajadores",
+    textoBuscar: "Buscar por nombre, RUT o cargo…",
+    vacio: "Esta empresa todavía no tiene trabajadores ni postulantes.",
+    columnas: [
+        { titulo: "ID", valor: (t) => t.id, numero: true },
+        { titulo: "Nombre", valor: (t) => nombreCompleto(t.persona) },
+        { titulo: "RUT", valor: (t) => formatearRut(t.persona?.rut, t.persona?.dv) },
+        { titulo: "Cargo", valor: (t) => t.cargo ?? "" },
+        { titulo: "Ingreso", valor: (t) => t.fecha_ingreso ?? "", html: (t) => escaparHtml(fechaCorta(t.fecha_ingreso)) },
+        { titulo: "Término", valor: (t) => t.fecha_termino ?? "", html: (t) => escaparHtml(fechaCorta(t.fecha_termino)) },
+        { titulo: "Estado", valor: (t) => textoEstado("trabajador", t.estado), html: (t) => insignia("trabajador", t.estado) }
+    ],
+    filtros: [{ titulo: "Estado", valor: (t) => t.estado, opciones: opcionesDe("trabajador") }]
+})
 
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error   
+async function cargarTrabajadores() {
+    const listas = await cargarListas(["/api/trabajadores", "/api/personas", "/api/contratos", "/api/cargos"])
+    if (!listas) {
         return
     }
+    const [trabajadores, personas, contratos, cargos] = listas
+    const personaPorId = porId(personas)
+    const cargoPorId = porId(cargos)
 
-    const lista = document.getElementById("listaTrabajadores")
-    lista.innerHTML = deEmpresaActual(resultado.datos).map(function(trabajador) {
-        return `<li>${trabajador.persona_id} (${trabajador.empresa_id}) - ${trabajador.estado} </li>`
-    }).join("")
+    tabla.mostrar(deEmpresaActual(trabajadores).map((trabajador) => {
+        const vigente = contratos
+            .filter((c) => c.trabajador_id === trabajador.id && c.estado === "vigente")
+            .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))[0]
+        return {
+            ...trabajador,
+            persona: personaPorId.get(trabajador.persona_id),
+            cargo: vigente ? cargoPorId.get(vigente.cargo_id)?.nombre : null
+        }
+    }))
+
+    llenarBuscador(document.getElementById("persona"),
+        deEmpresaActual(personas).map((persona) => ({ id: persona.id, texto: textoPersona(persona) })))
 }
 
 const formulario = document.getElementById("formCrearTrabajador")
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
-
-    document.getElementById("mensajeError").textContent = ""
+    limpiarMensajes()
 
     if (exigirEmpresaActual() === null) {
         return
     }
 
-    const datos = {
-        persona_id: document.getElementById("personaId").value,
-        empresa_id: empresaActual(),
-        fecha_ingreso: document.getElementById("fechaIngreso").value
-    }
-
-    const resultado = await llamarApi("/api/trabajadores", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-    if (resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+    const personaId = valorBuscador(document.getElementById("persona"))
+    if (personaId === null) {
+        mensaje("error", "Elige una persona de la lista de sugerencias")
         return
     }
 
-    formulario.reset()
-    cargarTrabajadores()
+    const creado = await crearRegistro("/api/trabajadores", {
+        persona_id: personaId,
+        empresa_id: empresaActual(),
+        fecha_ingreso: document.getElementById("fechaIngreso").value
+    }, "Postulante creado.")
+
+    if (creado) {
+        cerrarPanelCrear(formulario)
+        cargarTrabajadores()
+    }
 })
 
 document.addEventListener("empresa-lista", cargarTrabajadores)

@@ -1,56 +1,55 @@
 requiereLogin()
 
-async function cargarCargos() {
-    const resultado = await llamarApi("/api/cargos")
+const tabla = crearTabla({
+    contenedor: "tablaCargos",
+    textoBuscar: "Buscar cargo…",
+    vacio: "Esta empresa todavía no tiene cargos.",
+    columnas: [
+        { titulo: "ID", valor: (c) => c.id, numero: true },
+        { titulo: "Nombre", valor: (c) => c.nombre },
+        { titulo: "Descripción", valor: (c) => c.descripcion ?? "" },
+        { titulo: "Trabajadores", valor: (c) => c.trabajadores, numero: true }
+    ]
+})
 
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+async function cargarCargos() {
+    const listas = await cargarListas(["/api/cargos", "/api/contratos"])
+    if (!listas) {
         return
     }
+    const [cargos, contratos] = listas
+    const vigentes = deEmpresaActual(contratos, (c) => c.Trabajador?.empresa_id).filter((c) => c.estado === "vigente")
 
-    const lista = document.getElementById("listaCargos")
-    lista.innerHTML = deEmpresaActual(resultado.datos).map(function (cargo) {
-        return `<li>${escaparHtml(cargo.nombre)} (${cargo.empresa_id}) </li>`
-    }).join("")
+    tabla.mostrar(deEmpresaActual(cargos).map((cargo) => ({
+        ...cargo,
+        trabajadores: new Set(vigentes.filter((c) => c.cargo_id === cargo.id).map((c) => c.trabajador_id)).size
+    })))
 }
 
 const formulario = document.getElementById("formCrearCargo")
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
-
-    document.getElementById("mensajeError").textContent = ""
+    limpiarMensajes()
 
     if (exigirEmpresaActual() === null) {
         return
     }
 
-    const datos = {
+    const departamento = document.getElementById("departamentoId").value.trim()
+    const descripcion = document.getElementById("descripcion").value.trim()
+
+    const creado = await crearRegistro("/api/cargos", {
         empresa_id: empresaActual(),
-        nombre: document.getElementById("nombre").value,
-        departamento_id: document.getElementById("departamentoId").value,
-        descripcion: document.getElementById("descripcion").value
-    }
+        nombre: document.getElementById("nombre").value.trim(),
+        departamento_id: departamento === "" ? null : departamento,
+        descripcion: descripcion === "" ? null : descripcion
+    }, "Cargo creado.")
 
-    if (datos.departamento_id === "") {
-        datos.departamento_id = null
+    if (creado) {
+        cerrarPanelCrear(formulario)
+        cargarCargos()
     }
-    if (datos.descripcion === "") {
-        datos.descripcion = null
-    }
-
-    const resultado = await llamarApi("/api/cargos", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-    if (resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        return
-    }
-
-    formulario.reset()
-    cargarCargos()
 })
 
 document.addEventListener("empresa-lista", cargarCargos)

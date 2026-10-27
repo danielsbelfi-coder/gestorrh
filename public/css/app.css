@@ -972,3 +972,131 @@ a.paso:hover {
         max-width: 55vw;
     }
 }
+
+/* ---------- Tablas de datos (filtro, orden, total) ---------- */
+
+.tabla-herramientas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.tabla-buscar {
+    flex: 1 1 260px;
+    max-width: 420px;
+}
+
+.tabla-filtro {
+    min-width: 0;
+}
+
+.tabla-total {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--texto-suave);
+}
+
+.tabla-marco {
+    overflow-x: auto;
+    border-radius: var(--radio);
+    box-shadow: var(--sombra);
+}
+
+.tabla-marco table {
+    box-shadow: none;
+}
+
+.tabla-orden {
+    background: none;
+    border: 0;
+    padding: 0;
+    min-height: 0;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+}
+
+.tabla-orden:hover {
+    background: none;
+    color: var(--texto);
+}
+
+th.numero .tabla-orden {
+    margin-left: auto;
+}
+
+.tabla-vacia {
+    text-align: center;
+    color: var(--texto-suave);
+    padding: 28px 14px;
+}
+
+.tabla-datos td {
+    white-space: nowrap;
+}
+
+.tabla-datos td .chico + .chico,
+.tabla-datos td .boton + button {
+    margin-left: 6px;
+}
+
+/* Botones chicos dentro de tablas */
+button.chico,
+.boton.chico {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 0.82rem;
+}
+
+/* Panel plegable para crear registros */
+.plegable {
+    padding: 0;
+}
+
+.plegable > summary {
+    list-style: none;
+    padding: 14px 20px;
+    color: var(--primario-oscuro);
+    font-weight: 650;
+}
+
+.plegable > summary::-webkit-details-marker {
+    display: none;
+}
+
+.plegable[open] > summary {
+    border-bottom: 1px solid var(--borde);
+}
+
+.plegable > form {
+    padding: 18px 20px 20px;
+}
+
+.campo-ancho {
+    flex: 1 1 320px;
+}
+
+.campo-ancho input {
+    width: 100%;
+}
+
+input.campo-corto {
+    min-width: 0;
+    width: 90px;
+}
+
+@media (max-width: 860px) {
+    .tabla-marco table {
+        display: table;
+        white-space: normal;
+    }
+
+    .tabla-total {
+        margin-left: 0;
+        width: 100%;
+    }
+}

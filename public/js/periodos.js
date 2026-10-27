@@ -1,82 +1,85 @@
 requiereLogin()
 
-async function cargarPeriodos() {
-    const resultado = await llamarApi("/api/periodos-remuneracion")
+const tabla = crearTabla({
+    contenedor: "tablaPeriodos",
+    textoBuscar: "Buscar periodo (ej. agosto 2027)…",
+    vacio: "Esta empresa todavía no tiene periodos.",
+    columnas: [
+        { titulo: "Periodo", valor: (p) => nombrePeriodo(p) },
+        { titulo: "Apertura", valor: (p) => p.fecha_apertura ?? "", html: (p) => escaparHtml(fechaCorta(p.fecha_apertura)) },
+        { titulo: "Cierre", valor: (p) => p.fecha_cierre ?? "", html: (p) => escaparHtml(fechaCorta(p.fecha_cierre)) },
+        { titulo: "Estado", valor: (p) => textoEstado("periodo", p.estado), html: (p) => insignia("periodo", p.estado) },
+        {
+            titulo: "", orden: false, valor: () => "",
+            html: (p) => p.estado === "abierto"
+                ? `<a class="boton secundario chico" href="liquidaciones.html?periodo=${p.id}">Liquidaciones</a>
+                   <button type="button" class="chico" data-cerrar="${p.id}">Cerrar periodo</button>`
+                : ""
+        }
+    ],
+    filtros: [{ titulo: "Estado", valor: (p) => p.estado, opciones: opcionesDe("periodo"), inicial: "abierto" }]
+})
 
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+async function cargarPeriodos() {
+    const listas = await cargarListas(["/api/periodos-remuneracion"])
+    if (!listas) {
         return
     }
-
-    const lista = document.getElementById("listaPeriodos")
-    lista.innerHTML = deEmpresaActual(resultado.datos).map(function (periodo) {
-        return `<li>${periodo.mes} (${periodo.anio}) - (${periodo.estado}) ${periodo.estado === "abierto" ? `<button data-id="${periodo.id}">Cerrar</button>` : ""}</li>`
-    }).join("")
+    // Del más reciente al más antiguo.
+    tabla.mostrar(deEmpresaActual(listas[0]).sort((a, b) => b.anio - a.anio || b.mes - a.mes))
 }
+
+llenarSelect(document.getElementById("mes"), NOMBRES_MES.map((nombre, i) => ({ id: i + 1, texto: nombre })))
+const hoy = new Date()
+document.getElementById("mes").value = hoy.getMonth() + 1
+document.getElementById("anio").value = hoy.getFullYear()
 
 const formulario = document.getElementById("formCrearPeriodos")
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
-
-    document.getElementById("mensajeError").textContent = ""
+    limpiarMensajes()
 
     if (exigirEmpresaActual() === null) {
         return
     }
 
-    const datos = {
+    const creado = await crearRegistro("/api/periodos-remuneracion", {
         empresa_id: empresaActual(),
-        mes: document.getElementById("mes").value,
-        anio: document.getElementById("anio").value,
+        mes: Number(document.getElementById("mes").value),
+        anio: Number(document.getElementById("anio").value),
         fecha_apertura: document.getElementById("fechaApertura").value
+    }, "Periodo abierto.")
+
+    if (creado) {
+        document.getElementById("panelCrear").removeAttribute("open")
+        cargarPeriodos()
     }
-
-    const resultado = await llamarApi("/api/periodos-remuneracion", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-
-    if (resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        return
-    }
-
-    formulario.reset()
-    cargarPeriodos()
 })
 
-const lista = document.getElementById("listaPeriodos")
-
-lista.addEventListener("click", async function (evento) {
-    const id = evento.target.dataset.id
-
+document.getElementById("tablaPeriodos").addEventListener("click", async function (evento) {
+    const id = evento.target.closest("[data-cerrar]")?.dataset.cerrar
     if (!id) {
         return
     }
 
-    if (!confirm("¿Cerrar este período? Esta acción no se puede deshacer.")) {
+    if (!confirm("¿Cerrar este periodo? Esta acción no se puede deshacer.")) {
         return
     }
 
-    document.getElementById("mensajeError").textContent = ""
-    mostrarProblemas("listaProblemas", [])
-
-    const resultado = await llamarApi("/api/periodos-remuneracion/" + id + "/cerrar", {
-        method: "PATCH"
-    })
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${id}/cerrar`, { method: "PATCH" })
 
     if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        if (resultado.datos.problemas) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo cerrar el periodo")
+        if (resultado.datos?.problemas) {
             mostrarProblemas("listaProblemas", resultado.datos.problemas)
         }
         return
     }
 
+    mensaje("info", "Periodo cerrado.")
     cargarPeriodos()
-
 })
 
 document.addEventListener("empresa-lista", cargarPeriodos)

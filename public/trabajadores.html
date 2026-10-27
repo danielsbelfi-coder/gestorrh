@@ -10,23 +10,31 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Trabajadores">
-        <h1>Trabajadores</h1>
-        <p id="mensajeError"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Trabajadores</h1>
+                <p>Relaciones laborales de la empresa: postulantes, activos y extrabajadores.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
 
-        <ul id="listaTrabajadores"></ul>
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Nuevo postulante</summary>
+            <form id="formCrearTrabajador">
+                <label class="campo-ancho">Persona<input type="search" id="persona" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Fecha de ingreso<input type="date" id="fechaIngreso" required></label>
+                <button type="submit">Crear</button>
+            </form>
+        </details>
 
-        <h2>Crear trabajadores</h2>
-        <form id="formCrearTrabajador">
-            <input type="text" id="personaId" placeholder="Persona id" required>
-            <input type="date" id="fechaIngreso" required>
-            <button type="submit">Crear</button>
-        </form>
-
+        <div id="tablaTrabajadores"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/trabajadores.js"></script>
 </body>
 

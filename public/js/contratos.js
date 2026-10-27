@@ -1,53 +1,83 @@
 requiereLogin()
 
+const tabla = crearTabla({
+    contenedor: "tablaContratos",
+    textoBuscar: "Buscar por trabajador, RUT o cargo…",
+    vacio: "Esta empresa todavía no tiene contratos.",
+    columnas: [
+        { titulo: "ID", valor: (c) => c.id, numero: true },
+        { titulo: "Trabajador", valor: (c) => nombreCompleto(c.persona) },
+        { titulo: "RUT", valor: (c) => formatearRut(c.persona?.rut, c.persona?.dv) },
+        { titulo: "Tipo", valor: (c) => TEXTOS.tipoContrato[c.tipo_contrato] ?? c.tipo_contrato },
+        { titulo: "Cargo", valor: (c) => c.cargo ?? "" },
+        { titulo: "Inicio", valor: (c) => c.fecha_inicio ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_inicio)) },
+        { titulo: "Término", valor: (c) => c.fecha_termino ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_termino)) },
+        { titulo: "Sueldo base", valor: (c) => Number(c.sueldo_base), html: (c) => escaparHtml(pesos(c.sueldo_base)), numero: true },
+        { titulo: "Firma", valor: (c) => textoEstado("firma", c.estado_firma), html: (c) => insignia("firma", c.estado_firma) },
+        { titulo: "Estado", valor: (c) => textoEstado("contrato", c.estado), html: (c) => insignia("contrato", c.estado) }
+    ],
+    filtros: [
+        { titulo: "Estado", valor: (c) => c.estado, opciones: opcionesDe("contrato") },
+        { titulo: "Firma", valor: (c) => c.estado_firma, opciones: opcionesDe("firma") }
+    ]
+})
+
 async function cargarContratos() {
-    const resultado = await llamarApi("/api/contratos")
-    
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error   
+    const listas = await cargarListas(["/api/contratos", "/api/trabajadores", "/api/personas", "/api/cargos"])
+    if (!listas) {
         return
     }
+    const [contratos, trabajadores, personas, cargos] = listas
+    const personaPorId = porId(personas)
+    const cargoPorId = porId(cargos)
+    const trabajadoresEmpresa = deEmpresaActual(trabajadores)
 
-    const lista = document.getElementById("listaContratos")
-    lista.innerHTML = deEmpresaActual(resultado.datos, (contrato) => contrato.Trabajador?.empresa_id).map(function(contrato) {
-        return `<li>${contrato.trabajador_id} (${contrato.estado}) </li>`
-    }).join("")
+    tabla.mostrar(deEmpresaActual(contratos, (c) => c.Trabajador?.empresa_id).map((contrato) => ({
+        ...contrato,
+        persona: personaPorId.get(contrato.Trabajador?.persona_id),
+        cargo: cargoPorId.get(contrato.cargo_id)?.nombre
+    })))
+
+    llenarBuscador(document.getElementById("trabajador"), trabajadoresEmpresa.map((trabajador) => {
+        const persona = personaPorId.get(trabajador.persona_id)
+        return { id: trabajador.id, texto: `${persona ? textoPersona(persona) : "Persona " + trabajador.persona_id} · ${textoEstado("trabajador", trabajador.estado)} · #${trabajador.id}` }
+    }))
+
+    llenarSelect(document.getElementById("cargoId"),
+        deEmpresaActual(cargos).map((cargo) => ({ id: cargo.id, texto: cargo.nombre })), "Elige un cargo")
 }
 
 const formulario = document.getElementById("formCrearContratos")
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
+    limpiarMensajes()
 
-    document.getElementById("mensajeError").textContent = ""
+    const trabajadorId = valorBuscador(document.getElementById("trabajador"))
+    if (trabajadorId === null) {
+        mensaje("error", "Elige un trabajador de la lista de sugerencias")
+        return
+    }
 
-    const datos = {
-        trabajador_id: document.getElementById("trabajadorId").value,
+    const creado = await crearRegistro("/api/contratos", {
+        trabajador_id: trabajadorId,
         tipo_contrato: document.getElementById("tipoContrato").value,
         fecha_inicio: document.getElementById("fechaInicio").value,
-        cargo_id: document.getElementById("cargoId").value,
-        funciones: document.getElementById("funciones").value,
-        lugar_prestacion_servicios: document.getElementById("lugarPrestacionServicios").value,
+        cargo_id: Number(document.getElementById("cargoId").value),
+        funciones: document.getElementById("funciones").value.trim(),
+        lugar_prestacion_servicios: document.getElementById("lugarPrestacionServicios").value.trim(),
         tipo_jornada: document.getElementById("tipoJornada").value,
         horas_semanales: document.getElementById("horasSemanales").value,
         dias_trabajados: document.getElementById("diasTrabajados").value,
         sistema_remuneracion: document.getElementById("sistemaRemuneracion").value,
         sueldo_base: document.getElementById("sueldoBase").value,
         periodicidad_pago: document.getElementById("periodicidadPago").value
+    }, "Contrato creado.")
+
+    if (creado) {
+        cerrarPanelCrear(formulario)
+        cargarContratos()
     }
-
-    const resultado = await llamarApi("/api/contratos", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-    if (resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        return
-    }
-
-    formulario.reset()
-    cargarContratos()
 })
 
 document.addEventListener("empresa-lista", cargarContratos)

@@ -10,31 +10,41 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Personas">
-        <h1>Personas</h1>
-        <p id="mensajeError"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Personas</h1>
+                <p>Base de datos de personas de la empresa, sean postulantes, trabajadores o extrabajadores.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
 
-        <ul id="listaPersonas"></ul>
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Nueva persona</summary>
+            <form id="formCrearPersona">
+                <label>RUT (sin DV)<input type="text" id="rut" inputmode="numeric" required></label>
+                <label>DV<input type="text" id="dv" maxlength="1" class="campo-corto" required></label>
+                <label>Nombres<input type="text" id="nombres" required></label>
+                <label>Apellido paterno<input type="text" id="apellidoPaterno" required></label>
+                <label>Nacionalidad
+                    <select id="nacionalidad" required>
+                        <option value="chilena">Chilena</option>
+                        <option value="extranjera">Extranjera</option>
+                    </select>
+                </label>
+                <label>Fecha de nacimiento<input type="date" id="fechaNacimiento" required></label>
+                <label>Dirección<input type="text" id="direccion" required></label>
+                <button type="submit">Crear persona</button>
+            </form>
+        </details>
 
-        <h2>Crear personas</h2>
-        <form id="formCrearPersona">
-            <input type="text" id="rut" placeholder="Rut" required>
-            <input type="text" id="dv" placeholder="Dv" required>
-            <input type="text" id="nombres" placeholder="Nombres" required>
-            <input type="text" id="apellidoPaterno" placeholder="apellido paterno" required>
-            <select id="nacionalidad" required>
-                <option value="chilena">Chilena</option>
-                <option value="extranjera">Extranjera</option>
-            </select>
-            <input type="date" id="fechaNacimiento" required>
-            <input type="text" id="direccion" placeholder="Dirección" required>
-            <button type="submit">Crear</button>
-        </form>
-
+        <div id="tablaPersonas"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/personas.js"></script>
 </body>
 

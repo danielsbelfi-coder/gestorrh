@@ -10,25 +10,32 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Periodos de remuneración">
-        <h1>Periodos Remuneración</h1>
-        <p id="mensajeError"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Periodos de remuneración</h1>
+                <p>Meses de remuneraciones de la empresa. Por defecto se muestran los abiertos.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
         <ul id="listaProblemas"></ul>
 
-        <ul id="listaPeriodos"></ul>
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Abrir periodo</summary>
+            <form id="formCrearPeriodos">
+                <label>Mes<select id="mes" required></select></label>
+                <label>Año<input type="number" id="anio" min="2000" max="2100" class="campo-corto" required></label>
+                <label>Fecha de apertura<input type="date" id="fechaApertura" required></label>
+                <button type="submit">Abrir periodo</button>
+            </form>
+        </details>
 
-        <h2>Crear periodos de remuneración</h2>
-        <form id="formCrearPeriodos">
-            <input type="number" id="mes" placeholder="mes" min="1" max="12" required>
-            <input type="number" id="anio" placeholder="año" required>
-            <input type="date" id="fechaApertura" placeholder="Fecha apertura" required>
-            <button type="submit">Crear</button>
-        </form>
-
+        <div id="tablaPeriodos"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/periodos.js"></script>
 </body>
 

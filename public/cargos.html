@@ -10,24 +10,32 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Cargos">
-        <h1>Cargos</h1>
-        <p id="mensajeError"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Cargos</h1>
+                <p>Cargos de la empresa y cuántos trabajadores tienen un contrato vigente en cada uno.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
 
-        <ul id="listaCargos"></ul>
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Nuevo cargo</summary>
+            <form id="formCrearCargo">
+                <label>Nombre<input type="text" id="nombre" required></label>
+                <label>Departamento (id, opcional)<input type="text" id="departamentoId"></label>
+                <label class="campo-ancho">Descripción (opcional)<input type="text" id="descripcion"></label>
+                <button type="submit">Crear cargo</button>
+            </form>
+        </details>
 
-        <h2>Crear cargos</h2>
-        <form id="formCrearCargo">
-            <input type="text" id="nombre" placeholder="Nombre" required>
-            <input type="text" id="departamentoId" placeholder="Departamento Id">
-            <input type="text" id="descripcion" placeholder="Descripcion">
-            <button type="submit">Crear</button>
-        </form>
-
+        <div id="tablaCargos"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/cargos.js"></script>
 </body>
 

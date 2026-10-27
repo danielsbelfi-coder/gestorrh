@@ -1,53 +1,57 @@
 requiereLogin()
 
-async function cargarPersonas() {
-    const resultado = await llamarApi("/api/personas")
+const tabla = crearTabla({
+    contenedor: "tablaPersonas",
+    textoBuscar: "Buscar por nombre o RUT…",
+    vacio: "Esta empresa todavía no tiene personas registradas.",
+    columnas: [
+        { titulo: "ID", valor: (p) => p.id, numero: true },
+        { titulo: "RUT", valor: (p) => formatearRut(p.rut, p.dv) },
+        { titulo: "Nombre", valor: (p) => nombreCompleto(p) },
+        { titulo: "Situación", valor: (p) => textoEstado("situacionPersona", p.situacion), html: (p) => insignia("situacionPersona", p.situacion) }
+    ],
+    filtros: [{ titulo: "Situación", valor: (p) => p.situacion, opciones: opcionesDe("situacionPersona") }]
+})
 
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+async function cargarPersonas() {
+    const listas = await cargarListas(["/api/personas", "/api/trabajadores"])
+    if (!listas) {
         return
     }
+    const [personas, trabajadores] = listas
+    const trabajadoresEmpresa = deEmpresaActual(trabajadores)
 
-    const lista = document.getElementById("listaPersonas")
-    lista.innerHTML = deEmpresaActual(resultado.datos).map(function (persona) {
-        return `<li>${escaparHtml(persona.nombres)} (${escaparHtml(persona.rut)}) </li>`
-    }).join("")
+    tabla.mostrar(deEmpresaActual(personas).map((persona) => ({
+        ...persona,
+        situacion: situacionPersona(trabajadoresEmpresa.filter((t) => t.persona_id === persona.id))
+    })))
 }
 
 const formulario = document.getElementById("formCrearPersona")
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
-
-    document.getElementById("mensajeError").textContent = ""
+    limpiarMensajes()
 
     if (exigirEmpresaActual() === null) {
         return
     }
 
-    const datos = {
+    const creada = await crearRegistro("/api/personas", {
         empresa_id: empresaActual(),
-        rut: document.getElementById("rut").value,
-        dv: document.getElementById("dv").value,
-        nombres: document.getElementById("nombres").value,
-        apellido_paterno: document.getElementById("apellidoPaterno").value,
+        rut: document.getElementById("rut").value.replace(/\D/g, ""),
+        dv: document.getElementById("dv").value.trim().toUpperCase(),
+        nombres: document.getElementById("nombres").value.trim(),
+        apellido_paterno: document.getElementById("apellidoPaterno").value.trim(),
         nacionalidad: document.getElementById("nacionalidad").value,
         fecha_nacimiento: document.getElementById("fechaNacimiento").value,
-        direccion: document.getElementById("direccion").value
+        direccion: document.getElementById("direccion").value.trim()
+    }, "Persona creada.")
+
+    if (creada) {
+        cerrarPanelCrear(formulario)
+        cargarPersonas()
     }
-
-    const resultado = await llamarApi("/api/personas", {
-        method: "POST",
-        body: JSON.stringify(datos)
-    })
-
-    if (resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        return
-    }
-
-    formulario.reset()
-    cargarPersonas()
 })
 
 document.addEventListener("empresa-lista", cargarPersonas)

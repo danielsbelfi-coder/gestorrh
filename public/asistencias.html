@@ -10,41 +10,53 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Asistencia">
-        <h1>Asistencia</h1>
-        <p id="mensajeError"></p>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Asistencia</h1>
+                <p>Marcas y movimientos de asistencia de los trabajadores.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
 
-        <ul id="listaAsistencias"></ul>
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Registrar asistencia</summary>
+            <form id="formCrearAsistencias">
+                <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Fecha<input type="date" id="fecha" required></label>
+                <label>Entrada<input type="time" id="horaEntrada"></label>
+                <label>Salida<input type="time" id="horaSalida"></label>
+                <label>Tipo
+                    <select id="tipo">
+                        <option value="normal">Normal</option>
+                        <option value="atraso">Atraso</option>
+                        <option value="inasistencia">Inasistencia</option>
+                        <option value="permiso_con_goce">Permiso con goce</option>
+                        <option value="permiso_sin_goce">Permiso sin goce</option>
+                        <option value="vacaciones">Vacaciones</option>
+                        <option value="licencia_medica">Licencia médica</option>
+                    </select>
+                </label>
+                <label>Fuente
+                    <select id="fuente">
+                        <option value="manual">Manual</option>
+                        <option value="geovictoria">GeoVictoria</option>
+                        <option value="importado_csv">Importado CSV</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </label>
+                <label class="campo-ancho">Observaciones<input type="text" id="observaciones"></label>
+                <button type="submit">Registrar</button>
+            </form>
+        </details>
 
-        <h2>Crear asistencia</h2>
-        <form id="formCrearAsistencias">
-            <input type="text" id="trabajadorId" placeholder="trabajador id" required>
-            <input type="date" id="fecha" placeholder="Fecha" required>
-            <input type="time" id="horaEntrada" placeholder="Hora entrada">
-            <input type="time" id="horaSalida" placeholder="Hora salida">
-            <select id="tipo">
-                <option value="normal">Normal</option>
-                <option value="atraso">Atraso</option>
-                <option value="inasistencia">Inasistencia</option>
-                <option value="permiso_con_goce">Permiso con goce</option>
-                <option value="permiso_sin_goce">Permiso sin goce</option>
-                <option value="vacaciones">Vacaciones</option>
-                <option value="licencia_medica">Licencia médica</option>
-            </select>
-            <select id="fuente">
-                <option value="manual">Manual</option>
-                <option value="geovictoria">GeoVictoria</option>
-                <option value="importado_csv">Importado csv</option>
-                <option value="otro">Otro</option>
-            </select>
-            <input type="text" id="observaciones" placeholder="Observaciones">
-            <button type="submit">Crear</button>
-        </form>
-
+        <div id="tablaAsistencias"></div>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
     <script src="js/asistencias.js"></script>
 </body>
 

@@ -8,10 +8,26 @@ function mostrarInfo(texto) {
     document.getElementById("mensajeInfo").textContent = texto
 }
 
-function limpiarMensajes() {
-    mostrarError("")
-    mostrarInfo("")
-    mostrarProblemas("listaProblemas", [])
+// Nombre de cada trabajador de la empresa, para mostrar y para el buscador de "Calcular".
+let nombreTrabajador = new Map()
+
+async function cargarTrabajadores() {
+    const listas = await cargarListas(["/api/trabajadores", "/api/personas"])
+    if (!listas) {
+        return
+    }
+    const [trabajadores, personas] = listas
+    const personaPorId = porId(personas)
+    const deLaEmpresa = deEmpresaActual(trabajadores)
+
+    nombreTrabajador = new Map(deLaEmpresa.map((t) => [t.id, nombreCompleto(personaPorId.get(t.persona_id)) || `Trabajador ${t.id}`]))
+
+    llenarBuscador(document.getElementById("trabajador"), deLaEmpresa
+        .filter((t) => t.estado !== "postulante")
+        .map((t) => {
+            const persona = personaPorId.get(t.persona_id)
+            return { id: t.id, texto: `${persona ? textoPersona(persona) : "Trabajador " + t.id} · #${t.id}` }
+        }))
 }
 
 function botonesLiquidacion(liquidacion) {
@@ -81,7 +97,7 @@ async function cargarLiquidaciones() {
     lista.innerHTML = resultado.datos.map(function (liquidacion) {
         return `<li>
                     <details>
-                        <summary>Trabajador ${liquidacion.trabajador_id} - versión ${liquidacion.version} - ${liquidacion.estado === "emitida" ? "cerrada" : liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
+                        <summary>${escaparHtml(nombreTrabajador.get(liquidacion.trabajador_id) ?? "Trabajador " + liquidacion.trabajador_id)} - versión ${liquidacion.version} - ${liquidacion.estado === "emitida" ? "cerrada" : liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
                         <p>Sueldo proporcional: ${formatearPesos(liquidacion.sueldo_base_proporcional)}</p>
                         <p>Monto horas extras: ${formatearPesos(liquidacion.monto_horas_extra)}</p>
                         <p>Monto gratificación: ${formatearPesos(liquidacion.monto_gratificacion)}</p>
@@ -103,7 +119,11 @@ document.getElementById("formCalcular").addEventListener("submit", async functio
     document.getElementById("mensajeInfo").textContent = ""
 
     const periodoId = document.getElementById("periodo").value
-    const trabajadorId = document.getElementById("trabajadorId").value
+    const trabajadorId = valorBuscador(document.getElementById("trabajador"))
+    if (trabajadorId === null) {
+        mostrarError("Elige un trabajador de la lista de sugerencias")
+        return
+    }
 
     const resultado = await llamarApi(
         `/api/periodos-remuneracion/${periodoId}/liquidaciones`,
@@ -253,5 +273,8 @@ document.getElementById("btnPrevired").addEventListener("click", descargarPrevir
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
 
-document.addEventListener("empresa-lista", cargarSelectorPeriodos)
+document.addEventListener("empresa-lista", async function () {
+    await cargarTrabajadores()
+    cargarSelectorPeriodos()
+})
 document.getElementById("periodo").addEventListener("change", cargarLiquidaciones)
