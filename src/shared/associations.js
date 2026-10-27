@@ -25,6 +25,7 @@ const { LiquidacionLinea } = require("../remuneraciones/liquidacion_linea.model.
 const { Mutualidad } = require("../remuneraciones/mutualidad.model.js");
 const { LicenciaMedica } = require("../asistencia/licencia_medica.model.js");
 const { SituacionPrevisional } = require("../trabajadores/situacion_previsional.model.js");
+const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 
 Trabajador.belongsTo(Persona, {
     foreignKey: "persona_id"
@@ -288,6 +289,12 @@ SituacionPrevisional.belongsTo(Persona, {
 Persona.hasMany(SituacionPrevisional, {
     foreignKey: "persona_id"
 })
+Finiquito.belongsTo(Trabajador, {
+    foreignKey: "trabajador_id"
+})
+Trabajador.hasOne(Finiquito, {
+    foreignKey: "trabajador_id"
+})
 
 module.exports = {
     Empresa,
@@ -316,5 +323,6 @@ module.exports = {
     ResumenAsistencia,
     LiquidacionLinea,
     LicenciaMedica,
-    SituacionPrevisional
+    SituacionPrevisional,
+    Finiquito
 }

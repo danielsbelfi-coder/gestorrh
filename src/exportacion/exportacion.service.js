@@ -4,7 +4,8 @@ const {
     Empresa, Cargo, Persona, Trabajador, ContratoTrabajo, ContratoAnexo,
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
-    ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional
+    ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional,
+    Finiquito
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
 
@@ -27,6 +28,7 @@ const TABLAS = [
     { archivo: "resumenes_asistencia.csv", modelo: ResumenAsistencia, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "liquidaciones.csv", modelo: Liquidacion, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "liquidacion_lineas.csv", modelo: LiquidacionLinea, filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
+    { archivo: "finiquitos.csv", modelo: Finiquito, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
 ]
 
 async function generarArchivosEmpresa(empresaId) {
