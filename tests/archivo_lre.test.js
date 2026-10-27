@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre } = require("../src/remuneraciones/archivo_lre.js")
+const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("../src/remuneraciones/archivo_lre.js")
 
 test("plantilla: 147 columnas con su código, sin repetidos, en el orden oficial", () => {
     const columnas = columnasLre()
@@ -112,4 +112,29 @@ test("montos: un concepto propio sin código LRE se informa como faltante", () =
     const { sinCodigo } = camposMontosLre([linea("BONO_ASISTENCIA", null, "haber", 20000)])
 
     assert.deepStrictEqual(sinCodigo, ["BONO_ASISTENCIA"])
+})
+
+test("finiquito en el LRE: indemnizaciones en 23xx, imputación en 3185, descuentos con su código y totales", () => {
+    const finiquito = {
+        monto_feriado: 314860, monto_anios_servicio: 2248920, monto_aviso_previo: 1124460, imputacion_afc: 400000,
+        descuentos: [{ glosa: "Préstamo empresa", monto: 50000, codigo_lre: 3188 }]
+    }
+    const { valores } = camposMontosLre([
+        linea("SUELDO_BASE", 2101, "haber", 410000),
+        linea("AFP", 3141, "descuento", 46000),
+        ...lineasFiniquitoLre(finiquito)
+    ])
+
+    assert.deepStrictEqual([valores[2313], valores[2314], valores[2315]], [314860, 2248920, 1124460])
+    assert.deepStrictEqual([valores[3185], valores[3188]], [400000, 50000])
+    assert.deepStrictEqual([valores[5502], valores[5565], valores[5564]], [3688240, 3688240, 0])
+    assert.deepStrictEqual([valores[5201], valores[5230]], [4098240, 3688240])
+    assert.strictEqual(valores[5302], 450000)
+    assert.strictEqual(valores[5501], 3602240)
+})
+
+test("finiquito por renuncia: solo el feriado; sin filas en cero", () => {
+    const lineas = lineasFiniquitoLre({ monto_feriado: 314860, monto_anios_servicio: 0, monto_aviso_previo: 0, imputacion_afc: 0, descuentos: [] })
+
+    assert.deepStrictEqual(lineas.map((l) => l.codigo_lre), [2313])
 })

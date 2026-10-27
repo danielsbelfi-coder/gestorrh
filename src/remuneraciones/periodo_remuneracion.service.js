@@ -1,4 +1,4 @@
-const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo } = require("../shared/associations");
+const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo, Finiquito } = require("../shared/associations");
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js");
 const { PERMISOS, exigirRol } = require("../shared/permisos.js");
@@ -112,6 +112,13 @@ async function problemasDeCierre(periodo) {
         const pendientes = await VariablePeriodo.count({ where: { ...filtro, estado: "pendiente" } })
         if (pendientes > 0) {
             motivos.push(`Tiene ${pendientes} variable(s) pendiente(s) de aprobación`)
+        }
+
+        if (trabajador.fecha_termino !== null && trabajador.fecha_termino.slice(0, 7) === `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}`) {
+            const finiquito = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
+            if (finiquito === null || finiquito.estado === "calculado") {
+                motivos.push("Terminó en el mes y no tiene su finiquito emitido")
+            }
         }
 
         if (motivos.length > 0) {

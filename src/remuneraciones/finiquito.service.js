@@ -9,9 +9,11 @@ const { contratoDelMes } = require("./contrato_del_mes.js")
 const { camposMontosLre } = require("./archivo_lre.js")
 const { tiempoServido, diasFeriadoGanados, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
 const { esFechaValida } = require("../shared/fechas.js")
-const { armarFiniquito } = require("../remuneraciones/armar_finiquito.js")
+const { armarFiniquito } = require("./armar_finiquito.js")
 
 const TOPE_UF_INDEMNIZACION = 90
+
+const CODIGOS_DESCUENTO_FINIQUITO = [3171, 3183, 3185, 3186, 3188]
 
 async function montosMesesAnteriores(trabajador, anio, mes) {
     const liquidaciones = await Liquidacion.findAll({
@@ -73,13 +75,24 @@ function validarDatosFiniquito(datos, fechaTermino) {
 
     const descuentos = datos.descuentos ?? []
     const descuentosValidos = Array.isArray(descuentos) && descuentos.every((d) =>
-        typeof d.glosa === "string" && d.glosa.trim() !== "" && Number.isInteger(d.monto) && d.monto > 0)
+        typeof d.glosa === "string" && d.glosa.trim() !== "" && Number.isInteger(d.monto) && d.monto > 0
+        && CODIGOS_DESCUENTO_FINIQUITO.includes(d.codigo_lre))
 
     if (!descuentosValidos) {
-        throw new ValidationError("Cada descuento debe tener una glosa y un monto entero mayor que 0")
+        throw new ValidationError(`Cada descuento debe tener una glosa, un monto entero mayor que 0 y un código LRE (${CODIGOS_DESCUENTO_FINIQUITO.join(", ")})`)
     }
 
-    return descuentos.map((d) => ({ glosa: d.glosa.trim(), monto: d.monto }))
+    return descuentos.map((d) => ({ glosa: d.glosa.trim(), monto: d.monto, codigo_lre: d.codigo_lre }))
+}
+
+async function exigirPeriodoAbierto(trabajador) {
+    const anio = Number(trabajador.fecha_termino.slice(0, 4))
+    const mes = Number(trabajador.fecha_termino.slice(5, 7))
+    const periodo = await PeriodoRemuneracion.findOne({ where: { empresa_id: trabajador.empresa_id, anio, mes } })
+
+    if (periodo === null || periodo.estado !== "abierto") {
+        throw new ConflictError(`El periodo ${mes}/${anio} del término no existe o está cerrado; el finiquito ya no se puede calcular ni emitir`)
+    }
 }
 
 async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
@@ -95,11 +108,13 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
         throw new ConflictError("Registre primero la fecha y la causal de término del trabajador")
     }
 
+    await exigirPeriodoAbierto(trabajador)
+
     const descuentos = validarDatosFiniquito(datos, trabajador.fecha_termino)
 
     const existente = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
-    if (existente !== null && existente.estado !== "calculado") {
-        throw new ConflictError("El finiquito ya fue emitido y no se puede recalcular")
+    if (existente !== null && existente.estado === "pagado") {
+        throw new ConflictError("El finiquito ya está pagado; las diferencias se tratan como refiniquito")
     }
 
     const anio = Number(trabajador.fecha_termino.slice(0, 4))
@@ -170,7 +185,7 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     }
 
     if (existente !== null) {
-        return await existente.update(campos)
+        return await existente.update({ ...campos, estado: "calculado", fecha_emision: null, emitido_por_id: null })
     }
 
     return await Finiquito.create({ ...campos, trabajador_id: trabajador.id, usuario_registro_id: usuarioId })
@@ -198,6 +213,8 @@ async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
     if (finiquito.estado !== "calculado") {
         throw new ConflictError("El finiquito ya fue emitido")
     }
+
+    await exigirPeriodoAbierto(finiquito.Trabajador)
 
     const detalle = finiquito.detalle_calculo
     if (detalle.fechaTermino !== finiquito.Trabajador.fecha_termino || detalle.causal !== finiquito.Trabajador.causal_termino) {

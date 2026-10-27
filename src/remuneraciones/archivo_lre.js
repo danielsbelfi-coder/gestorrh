@@ -71,6 +71,8 @@ const COTIZACIONES_TRABAJADOR = [3141, 3143, 3144, 3146, 3151, 3154, 3155, 3156,
 function camposMontosLre(lineas) {
     const montos = {}
     const sinCodigo = []
+    const INDEMNIZACIONES_NO_TRIBUTABLES = [2313, 2314, 2315, 2316, 2331]
+    const INDEMNIZACIONES_TRIBUTABLES = [2417, 2418]
 
     for (const linea of lineas) {
         if (linea.codigo_lre === null) {
@@ -117,10 +119,24 @@ function camposMontosLre(lineas) {
             5302: totalDescuentos - impuestos - cotizaciones,
             5410: sumar((c) => Math.floor(c / 1000) === 4),
             5501: totalHaberes - totalDescuentos,
-            5564: 0
+            5502: sumar((c) => INDEMNIZACIONES_NO_TRIBUTABLES.includes(c) || INDEMNIZACIONES_TRIBUTABLES.includes(c)),
+            5564: sumar((c) => INDEMNIZACIONES_TRIBUTABLES.includes(c)),
+            5565: sumar((c) => INDEMNIZACIONES_NO_TRIBUTABLES.includes(c))
         },
         sinCodigo
     }
+}
+
+const CODIGO_IMPUTACION_AFC = 3185
+
+function lineasFiniquitoLre(finiquito) {
+    return [
+        { codigo: "FINIQUITO_FERIADO", codigo_lre: 2313, tipo: "haber", monto: finiquito.monto_feriado },
+        { codigo: "FINIQUITO_ANIOS_SERVICIO", codigo_lre: 2314, tipo: "haber", monto: finiquito.monto_anios_servicio },
+        { codigo: "FINIQUITO_AVISO_PREVIO", codigo_lre: 2315, tipo: "haber", monto: finiquito.monto_aviso_previo },
+        { codigo: "FINIQUITO_IMPUTACION_AFC", codigo_lre: CODIGO_IMPUTACION_AFC, tipo: "descuento", monto: finiquito.imputacion_afc },
+        ...finiquito.descuentos.map((d) => ({ codigo: "FINIQUITO_DESCUENTO", codigo_lre: d.codigo_lre, tipo: "descuento", monto: d.monto }))
+    ].filter((linea) => linea.monto > 0)
 }
 
 module.exports = {
@@ -128,5 +144,6 @@ module.exports = {
     encabezadoLre,
     lineaLre,
     camposIdentificacionLre,
-    camposMontosLre
+    camposMontosLre,
+    lineasFiniquitoLre
 }
