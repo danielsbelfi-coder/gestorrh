@@ -28,6 +28,7 @@ const conceptoRoutes = require("./remuneraciones/concepto_remuneracion.routes.js
 const variableRoutes = require("./remuneraciones/variable_periodo.routes.js")
 const resumenAsistenciaRoutes = require("./asistencia/resumen_asistencia.routes.js")
 const licenciaMedicaRoutes = require("./asistencia/licencia_medica.routes.js")
+const finiquitoRoutes = require("./remuneraciones/finiquito.routes.js")
 
 app.use(helmet())
 app.use(express.json());
@@ -53,6 +54,7 @@ app.use("/api/conceptos", verificarToken, conceptoRoutes)
 app.use("/api/variables", verificarToken, variableRoutes)
 app.use("/api/resumenes-asistencia", verificarToken, resumenAsistenciaRoutes)
 app.use("/api/licencias-medicas", verificarToken, licenciaMedicaRoutes)
+app.use("/api/finiquitos", verificarToken, finiquitoRoutes)
 
 app.use(express.static(path.join(__dirname, "../public")))
 app.use(manejarErrores)

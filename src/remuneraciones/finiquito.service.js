@@ -7,6 +7,7 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { camposMontosLre } = require("./archivo_lre.js")
 const { tiempoServido, diasFeriadoGanados, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
+const { esFechaValida } = require("../shared/fechas.js")
 
 const TOPE_UF_INDEMNIZACION = 90
 
@@ -173,6 +174,55 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     return await Finiquito.create({ ...campos, trabajador_id: trabajador.id, usuario_registro_id: usuarioId })
 }
 
+async function obtenerFiniquitoPermitido(where, empresasPermitidas) {
+    const finiquito = await Finiquito.findOne({ where, include: [Trabajador] })
+
+    if (finiquito === null || !empresasPermitidas.includes(finiquito.Trabajador.empresa_id)) {
+        throw new NotFoundError("Finiquito no encontrado")
+    }
+
+    return finiquito
+}
+
+async function obtenerFiniquito(trabajadorId, empresasPermitidas) {
+    return await obtenerFiniquitoPermitido({ trabajador_id: trabajadorId }, empresasPermitidas)
+}
+
+async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
+    const finiquito = await obtenerFiniquitoPermitido({ id }, empresasPermitidas)
+
+    await exigirRol(usuarioId, finiquito.Trabajador.empresa_id, PERMISOS.GESTIONAR_FINIQUITOS)
+
+    if (finiquito.estado !== "calculado") {
+        throw new ConflictError("El finiquito ya fue emitido")
+    }
+
+    const detalle = finiquito.detalle_calculo
+    if (detalle.fechaTermino !== finiquito.Trabajador.fecha_termino || detalle.causal !== finiquito.Trabajador.causal_termino) {
+        throw new ConflictError("La fecha o la causal de término cambiaron después del cálculo; recalcule el finiquito antes de emitirlo")
+    }
+
+    return await finiquito.update({ estado: "emitido", fecha_emision: new Date(), emitido_por_id: usuarioId })
+}
+
+async function pagarFiniquito(id, fechaPago, empresasPermitidas, usuarioId) {
+    const finiquito = await obtenerFiniquitoPermitido({ id }, empresasPermitidas)
+
+    await exigirRol(usuarioId, finiquito.Trabajador.empresa_id, PERMISOS.GESTIONAR_FINIQUITOS)
+
+    if (!esFechaValida(fechaPago) || fechaPago < finiquito.Trabajador.fecha_termino) {
+        throw new ValidationError("La fecha de pago debe ser válida (AAAA-MM-DD) y no anterior a la fecha de término")
+    }
+    if (finiquito.estado !== "emitido") {
+        throw new ConflictError(finiquito.estado === "pagado" ? "El finiquito ya está pagado" : "El finiquito debe emitirse antes de marcarlo como pagado")
+    }
+
+    return await finiquito.update({ estado: "pagado", fecha_pago: fechaPago })
+}
+
 module.exports = {
-    calcularFiniquito
+    calcularFiniquito,
+    obtenerFiniquito,
+    emitirFiniquito,
+    pagarFiniquito
 }
