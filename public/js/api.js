@@ -14,7 +14,7 @@ async function llamarApi(ruta, opciones = {}) {
         headers: headers
     })
 
-    const datos = await respuesta.json()
+    const datos = respuesta.status === 204 ? null : await respuesta.json()
 
     return { status: respuesta.status, datos }
 }
