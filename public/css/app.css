@@ -1100,3 +1100,120 @@ input.campo-corto {
         width: 100%;
     }
 }
+
+/* ---------- Remuneraciones: barra de acciones, detalle, finiquitos ---------- */
+
+.encabezado-pagina > label select {
+    min-width: 220px;
+}
+
+.barra-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.barra-acciones form {
+    flex: 1 1 380px;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    background: none;
+}
+
+.acciones-grupo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detalle table {
+    box-shadow: none;
+}
+
+.detalle tr.total td {
+    font-weight: 700;
+    background: #f8fafc;
+}
+
+.detalle .liquido {
+    font-size: 1.15rem;
+    margin: 18px 0 6px;
+}
+
+.detalle details {
+    margin-top: 14px;
+}
+
+.detalle details table {
+    margin-top: 10px;
+}
+
+.rejilla-ancha {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.archivo-legal {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+.archivo-legal button {
+    margin-top: auto;
+    align-self: flex-start;
+}
+
+.archivo-legal p {
+    margin: 0 0 10px;
+}
+
+.descuentos {
+    flex: 1 1 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.descuentos-titulo {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+}
+
+.fila-descuento {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+}
+
+.fila-descuento .glosa {
+    flex: 2 1 220px;
+}
+
+.fila-descuento .monto {
+    flex: 1 1 120px;
+    min-width: 0;
+}
+
+.fila-descuento .codigo {
+    flex: 2 1 240px;
+}
+
+.detalle .rejilla {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.tabla-datos td:last-child {
+    white-space: normal;
+    min-width: 200px;
+}
+
+.tabla-datos td:last-child .chico {
+    margin: 2px 0;
+}

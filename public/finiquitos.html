@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Finiquitos</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Finiquitos">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Finiquitos</h1>
+                <p>Registra el término, calcula el finiquito, ciérralo y marca su pago. Pertenece al periodo del mes del término.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Registrar término de un trabajador</summary>
+            <form id="formTermino">
+                <label class="campo-ancho">Trabajador<input type="search" id="trabajadorTermino" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Fecha de término<input type="date" id="fechaTermino" required></label>
+                <label class="campo-ancho">Causal<select id="causalTermino" required></select></label>
+                <button type="submit">Registrar término</button>
+            </form>
+        </details>
+
+        <div id="tablaFiniquitos"></div>
+
+        <section class="tarjeta" id="panelCalculo" hidden>
+            <div class="encabezado-pagina">
+                <div>
+                    <h2 id="tituloCalculo">Calcular finiquito</h2>
+                    <p id="subtituloCalculo"></p>
+                </div>
+                <button type="button" class="secundario chico" id="cerrarCalculo">Cancelar</button>
+            </div>
+            <form id="formCalculo">
+                <label>Fecha del finiquito<input type="date" id="fechaFiniquito" required></label>
+                <label class="campo-ancho">Lugar de firma<input type="text" id="lugar" required></label>
+                <label>¿Se dio aviso previo?
+                    <select id="avisoPrevio">
+                        <option value="false">No</option>
+                        <option value="true">Sí</option>
+                    </select>
+                </label>
+                <label>Días de feriado tomados<input type="number" id="diasTomados" min="0" step="0.01" value="0" required></label>
+                <label>Días inhábiles<input type="number" id="diasInhabiles" min="0" step="1" value="0" required></label>
+                <label>Imputación seguro de cesantía ($)<input type="number" id="imputacionAfc" min="0" step="1" value="0"></label>
+
+                <div class="descuentos">
+                    <div class="descuentos-titulo">Otros descuentos</div>
+                    <div id="listaDescuentos"></div>
+                    <button type="button" class="secundario chico" id="agregarDescuento">＋ Agregar descuento</button>
+                </div>
+
+                <button type="submit">Calcular</button>
+            </form>
+        </section>
+
+        <section class="tarjeta detalle" id="panelDetalle" hidden></section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/finiquitos.js"></script>
+</body>
+
+</html>

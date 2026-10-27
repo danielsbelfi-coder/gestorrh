@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Previred y LRE</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Previred y LRE">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Archivos legales</h1>
+                <p>Genera los archivos del periodo para subirlos a Previred y a la Dirección del Trabajo.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
+
+        <div class="rejilla rejilla-ancha">
+            <section class="tarjeta archivo-legal">
+                <h2>Archivo Previred</h2>
+                <p class="texto-suave">Cotizaciones previsionales del mes, en el formato de 105 campos separados por punto y coma.</p>
+                <p class="texto-suave">Todavía no se informan pensionados, cargas familiares, CCAF ni APV: revísalos antes de subir.</p>
+                <button type="button" id="btnPrevired">Descargar archivo Previred</button>
+            </section>
+
+            <section class="tarjeta archivo-legal">
+                <h2>Libro de Remuneraciones Electrónico</h2>
+                <p class="texto-suave">Archivo CSV con el formato de la Dirección del Trabajo. Incluye los finiquitos del mes de término.</p>
+                <p class="texto-suave">Los aportes de la reforma previsional no se informan hasta que la Dirección del Trabajo publique sus códigos.</p>
+                <button type="button" id="btnLre">Descargar archivo LRE</button>
+            </section>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/legales.js"></script>
+</body>
+
+</html>

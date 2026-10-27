@@ -1,28 +1,61 @@
 requiereLogin()
 
-function mostrarError(texto) {
-    document.getElementById("mensajeError").textContent = texto
+let periodos = []
+let trabajadores = []
+let personaPorId = new Map()
+let liquidaciones = []
+
+const selectorPeriodo = document.getElementById("periodo")
+
+function periodoElegido() {
+    return periodos.find((periodo) => String(periodo.id) === selectorPeriodo.value) ?? null
 }
 
-function mostrarInfo(texto) {
-    document.getElementById("mensajeInfo").textContent = texto
+function nombreDe(trabajadorId) {
+    const trabajador = trabajadores.find((t) => t.id === trabajadorId)
+    return nombreCompleto(personaPorId.get(trabajador?.persona_id)) || `Trabajador ${trabajadorId}`
 }
 
-// Nombre de cada trabajador de la empresa, para mostrar y para el buscador de "Calcular".
-let nombreTrabajador = new Map()
+function rutDe(trabajadorId) {
+    const persona = personaPorId.get(trabajadores.find((t) => t.id === trabajadorId)?.persona_id)
+    return persona ? formatearRut(persona.rut, persona.dv) : ""
+}
+
+const tabla = crearTabla({
+    contenedor: "tablaLiquidaciones",
+    textoBuscar: "Buscar por nombre o RUT…",
+    vacio: "Todavía no hay liquidaciones calculadas en este periodo.",
+    columnas: [
+        { titulo: "Trabajador", valor: (l) => nombreDe(l.trabajador_id) },
+        { titulo: "RUT", valor: (l) => rutDe(l.trabajador_id) },
+        { titulo: "Versión", valor: (l) => l.version, numero: true },
+        { titulo: "Estado", valor: (l) => textoEstado("liquidacion", l.estado), html: (l) => insignia("liquidacion", l.estado) },
+        { titulo: "Haberes", valor: (l) => Number(l.total_haberes), html: (l) => escaparHtml(pesos(l.total_haberes)), numero: true },
+        { titulo: "Descuentos", valor: (l) => Number(l.total_descuentos), html: (l) => escaparHtml(pesos(l.total_descuentos)), numero: true },
+        { titulo: "Líquido", valor: (l) => Number(l.liquido_a_pagar), html: (l) => `<strong>${escaparHtml(pesos(l.liquido_a_pagar))}</strong>`, numero: true },
+        {
+            titulo: "", orden: false, valor: () => "",
+            html: (l) => `
+                <button type="button" class="chico secundario" data-accion="detalle" data-id="${l.id}">Detalle</button>
+                ${l.estado === "calculada"
+                    ? `<button type="button" class="chico" data-accion="emitir" data-id="${l.id}">Cerrar liquidación</button>`
+                    : `<button type="button" class="chico secundario" data-accion="recalcular" data-id="${l.id}">Recalcular</button>`}
+                <button type="button" class="chico secundario" data-accion="pdf" data-id="${l.id}">PDF</button>
+                <button type="button" class="chico secundario" data-accion="pdf-aportes" data-id="${l.id}">PDF con aportes</button>`
+        }
+    ],
+    filtros: [{ titulo: "Estado", valor: (l) => l.estado, opciones: opcionesDe("liquidacion") }]
+})
 
 async function cargarTrabajadores() {
     const listas = await cargarListas(["/api/trabajadores", "/api/personas"])
     if (!listas) {
         return
     }
-    const [trabajadores, personas] = listas
-    const personaPorId = porId(personas)
-    const deLaEmpresa = deEmpresaActual(trabajadores)
+    trabajadores = deEmpresaActual(listas[0])
+    personaPorId = porId(listas[1])
 
-    nombreTrabajador = new Map(deLaEmpresa.map((t) => [t.id, nombreCompleto(personaPorId.get(t.persona_id)) || `Trabajador ${t.id}`]))
-
-    llenarBuscador(document.getElementById("trabajador"), deLaEmpresa
+    llenarBuscador(document.getElementById("trabajador"), trabajadores
         .filter((t) => t.estado !== "postulante")
         .map((t) => {
             const persona = personaPorId.get(t.persona_id)
@@ -30,164 +63,194 @@ async function cargarTrabajadores() {
         }))
 }
 
-function botonesLiquidacion(liquidacion) {
-    const id = liquidacion.id
-    const principal = liquidacion.estado === "calculada"
-        ? `<button data-accion="emitir" data-id="${id}">Cerrar liquidación</button>`
-        : `<button data-accion="recalcular" data-id="${id}">Recalcular</button>`
-
-    return `${principal}
-        <button data-accion="pdf" data-id="${id}">PDF</button>
-        <button data-accion="pdf-aportes" data-id="${id}">PDF con aportes</button>`
-}
-
-function formatearPesos(valor) {
-    return "$" + Math.round(Number(valor)).toLocaleString("es-CL")
-}
-
-async function cargarSelectorPeriodos() {
-    const resultado = await llamarApi("/api/periodos-remuneracion")
-
-    if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
-        return
-    }
-
-    const periodos = deEmpresaActual(resultado.datos)
-        .sort((a, b) => b.anio - a.anio || b.mes - a.mes)
-
-    const selector = document.getElementById("periodo")
-    selector.innerHTML = periodos.map(function (periodo) {
-        const estado = periodo.estado === "abierto" ? "" : " (cerrado)"
-        return `<option value="${periodo.id}">${escaparHtml(nombrePeriodo(periodo) + estado)}</option>`
-    }).join("")
-
-    // Desde Inicio se llega con ?periodo=ID: se deja ese periodo elegido (la primera vez).
-    const pedido = new URLSearchParams(location.search).get("periodo")
-    if (pedido && periodos.some((periodo) => String(periodo.id) === pedido)) {
-        selector.value = pedido
-        history.replaceState(null, "", location.pathname)
-    } else {
-        const abierto = periodos.find((periodo) => periodo.estado === "abierto")
-        if (abierto) {
-            selector.value = abierto.id
-        }
-    }
-
-    cargarLiquidaciones()
-}
-
 async function cargarLiquidaciones() {
-    const periodoId = document.getElementById("periodo").value
-    const lista = document.getElementById("listaLiquidaciones")
+    document.getElementById("detalle").hidden = true
+    const periodo = periodoElegido()
 
-    if (!periodoId) {
-        lista.innerHTML = ""
-        mostrarInfo("Esta empresa no tiene periodos. Ábrelo en Periodos.")
+    if (!periodo) {
+        liquidaciones = []
+        tabla.mostrar([])
+        mensaje("info", "Esta empresa no tiene periodos. Ábrelo en Periodos.")
         return
     }
 
-    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones`)
-
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodo.id}/liquidaciones`)
     if (resultado.status !== 200) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+        mensaje("error", resultado.datos?.error ?? "No se pudieron cargar las liquidaciones")
         return
     }
 
-    lista.innerHTML = resultado.datos.map(function (liquidacion) {
-        return `<li>
-                    <details>
-                        <summary>${escaparHtml(nombreTrabajador.get(liquidacion.trabajador_id) ?? "Trabajador " + liquidacion.trabajador_id)} - versión ${liquidacion.version} - ${liquidacion.estado === "emitida" ? "cerrada" : liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
-                        <p>Sueldo proporcional: ${formatearPesos(liquidacion.sueldo_base_proporcional)}</p>
-                        <p>Monto horas extras: ${formatearPesos(liquidacion.monto_horas_extra)}</p>
-                        <p>Monto gratificación: ${formatearPesos(liquidacion.monto_gratificacion)}</p>
-                        <p>Total Haberes: ${formatearPesos(liquidacion.total_haberes)}</p>
-                        <p>Descuento AFP: ${formatearPesos(liquidacion.descuento_afp)}</p>
-                        <p>Descuento salud: ${formatearPesos(liquidacion.descuento_salud)}</p>
-                        <p>Descuento cesantía: ${formatearPesos(liquidacion.descuento_cesantia)}</p>
-                        <p>Monto impuesto unico: ${formatearPesos(liquidacion.monto_impuesto_unico)}</p>
-                        <p>Liquido a pagar: ${formatearPesos(liquidacion.liquido_a_pagar)}</p>
-                    </details>
-                    ${botonesLiquidacion(liquidacion)}
-                </li>`
-    }).join("")
+    liquidaciones = resultado.datos
+    tabla.mostrar(liquidaciones)
+}
+
+function filaDetalle(texto, valor, clase = "") {
+    return `<tr class="${clase}"><td>${escaparHtml(texto)}</td><td class="numero">${escaparHtml(pesos(valor))}</td></tr>`
+}
+
+function mostrarDetalle(liquidacion) {
+    const panel = document.getElementById("detalle")
+    panel.innerHTML = `
+        <div class="encabezado-pagina">
+            <div>
+                <h2>${escaparHtml(nombreDe(liquidacion.trabajador_id))}</h2>
+                <p>${escaparHtml(nombrePeriodo(periodoElegido()))} · versión ${escaparHtml(liquidacion.version)} · ${escaparHtml(textoEstado("liquidacion", liquidacion.estado))}</p>
+            </div>
+            <button type="button" class="secundario chico" id="cerrarDetalle">Cerrar detalle</button>
+        </div>
+        <div class="rejilla">
+            <table>
+                <thead><tr><th>Haberes</th><th class="numero">Monto</th></tr></thead>
+                <tbody>
+                    ${filaDetalle("Sueldo proporcional", liquidacion.sueldo_base_proporcional)}
+                    ${filaDetalle("Horas extra", liquidacion.monto_horas_extra)}
+                    ${filaDetalle("Gratificación", liquidacion.monto_gratificacion)}
+                    ${filaDetalle("Total haberes", liquidacion.total_haberes, "total")}
+                </tbody>
+            </table>
+            <table>
+                <thead><tr><th>Descuentos</th><th class="numero">Monto</th></tr></thead>
+                <tbody>
+                    ${filaDetalle("AFP", liquidacion.descuento_afp)}
+                    ${filaDetalle("Salud", liquidacion.descuento_salud)}
+                    ${filaDetalle("Seguro de cesantía", liquidacion.descuento_cesantia)}
+                    ${filaDetalle("Impuesto único", liquidacion.monto_impuesto_unico)}
+                    ${filaDetalle("Total descuentos", liquidacion.total_descuentos, "total")}
+                </tbody>
+            </table>
+        </div>
+        <p class="liquido">Líquido a pagar: <strong>${escaparHtml(pesos(liquidacion.liquido_a_pagar))}</strong></p>
+        <p class="texto-suave">El detalle completo, con todos los conceptos, está en el PDF.</p>`
+    panel.hidden = false
+    panel.querySelector("#cerrarDetalle").addEventListener("click", () => { panel.hidden = true })
+    panel.scrollIntoView({ behavior: "smooth", block: "start" })
+}
+
+async function calcularUna(periodoId, trabajadorId) {
+    return await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones`, {
+        method: "POST",
+        body: JSON.stringify({ trabajador_id: trabajadorId })
+    })
 }
 
 document.getElementById("formCalcular").addEventListener("submit", async function (evento) {
     evento.preventDefault()
-    document.getElementById("mensajeError").textContent = ""
-    document.getElementById("mensajeInfo").textContent = ""
+    limpiarMensajes()
 
-    const periodoId = document.getElementById("periodo").value
     const trabajadorId = valorBuscador(document.getElementById("trabajador"))
     if (trabajadorId === null) {
-        mostrarError("Elige un trabajador de la lista de sugerencias")
+        mensaje("error", "Elige un trabajador de la lista de sugerencias")
         return
     }
 
-    const resultado = await llamarApi(
-        `/api/periodos-remuneracion/${periodoId}/liquidaciones`,
-        {
-            method: "POST",
-            body: JSON.stringify({ trabajador_id: trabajadorId })
-        }
-    )
-
+    const resultado = await calcularUna(selectorPeriodo.value, trabajadorId)
     if (resultado.status !== 200 && resultado.status !== 201) {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+        mensaje("error", resultado.datos?.error ?? "No se pudo calcular")
         return
     }
 
-    const advertencias = resultado.datos.advertencias
-    const mensaje = resultado.status === 201 ? "Liquidación calculada." : "Borrador recalculado."
-    document.getElementById("mensajeInfo").textContent = [mensaje, ...advertencias].join(" ")
-
-    document.getElementById("formCalcular").reset()
+    const texto = resultado.status === 201 ? "Liquidación calculada." : "Borrador recalculado."
+    mensaje("info", [texto, ...(resultado.datos.advertencias ?? [])].join(" "))
+    this.reset()
     cargarLiquidaciones()
 })
 
-document.getElementById("listaLiquidaciones").addEventListener("click", async function (evento) {
-    const { accion, id } = evento.target.dataset
-
-    if (!accion) {
+// Calcula (o vuelve a calcular el borrador de) cada trabajador contratado en el mes, de a uno.
+// Se saltan los que ya tienen la liquidación cerrada.
+document.getElementById("btnCalcularTodas").addEventListener("click", async function () {
+    limpiarMensajes()
+    const periodo = periodoElegido()
+    if (!periodo) {
         return
     }
 
+    const cerradas = new Set(liquidaciones.filter((l) => l.estado === "emitida").map((l) => l.trabajador_id))
+    const pendientes = trabajadores.filter((t) => vigenteEnPeriodo(t, periodo) && !cerradas.has(t.id))
+
+    if (pendientes.length === 0) {
+        mensaje("info", "No hay liquidaciones por calcular: todos los trabajadores del mes ya tienen su liquidación cerrada.")
+        return
+    }
+
+    if (!confirm(`¿Calcular las liquidaciones de ${pendientes.length} trabajador(es) de ${nombrePeriodo(periodo)}? Los borradores existentes se vuelven a calcular.`)) {
+        return
+    }
+
+    const boton = this
+    boton.disabled = true
+    const problemas = []
+    let calculadas = 0
+
+    for (const [i, trabajador] of pendientes.entries()) {
+        boton.textContent = `Calculando ${i + 1} de ${pendientes.length}…`
+        const resultado = await calcularUna(periodo.id, trabajador.id)
+        if (resultado.status === 200 || resultado.status === 201) {
+            calculadas++
+            if (resultado.datos.advertencias?.length) {
+                problemas.push({ nombre: nombreDe(trabajador.id), motivos: resultado.datos.advertencias })
+            }
+        } else {
+            problemas.push({ nombre: nombreDe(trabajador.id), motivos: [resultado.datos?.error ?? "Error al calcular"] })
+        }
+    }
+
+    boton.disabled = false
+    boton.textContent = "Calcular todas"
+    mensaje("info", `Se calcularon ${calculadas} de ${pendientes.length} liquidación(es).`)
+    if (problemas.length) {
+        mensaje("error", "Revisa estos trabajadores (errores y advertencias):")
+        mostrarProblemasConNombre(problemas)
+    }
+    cargarLiquidaciones()
+})
+
+document.getElementById("tablaLiquidaciones").addEventListener("click", async function (evento) {
+    const boton = evento.target.closest("[data-accion]")
+    if (!boton) {
+        return
+    }
+    const { accion, id } = boton.dataset
+    const liquidacion = liquidaciones.find((l) => String(l.id) === id)
+
     limpiarMensajes()
-    const periodoId = document.getElementById("periodo").value
-    const base = `/api/periodos-remuneracion/${periodoId}/liquidaciones/${id}`
+    const base = `/api/periodos-remuneracion/${selectorPeriodo.value}/liquidaciones/${id}`
+
+    if (accion === "detalle") {
+        mostrarDetalle(liquidacion)
+        return
+    }
 
     if (accion === "pdf" || accion === "pdf-aportes") {
         const resultado = await descargarArchivo(`${base}/documento${accion === "pdf-aportes" ? "?con_aportes=1" : ""}`)
         if (resultado.status !== 200) {
-            mostrarError(resultado.datos.error)
+            mensaje("error", resultado.datos?.error ?? "No se pudo descargar")
         }
         return
     }
 
     if (accion === "emitir") {
-        if (!confirm("¿Cerrar esta liquidación? Después solo se podrá modificar con un recálculo.")) {
+        if (!confirm(`¿Cerrar la liquidación de ${nombreDe(liquidacion.trabajador_id)}? Después solo se podrá modificar con un recálculo.`)) {
             return
         }
         const resultado = await llamarApi(`${base}/emitir`, { method: "POST" })
         if (resultado.status !== 200) {
-            mostrarError(resultado.datos.error)
+            mensaje("error", resultado.datos?.error ?? "No se pudo cerrar")
             return
         }
-        mostrarInfo("Liquidación cerrada.")
+        mensaje("info", "Liquidación cerrada.")
     }
 
     if (accion === "recalcular") {
-        const motivo = prompt("Motivo del recálculo:")
+        const motivo = prompt(`Motivo del recálculo de ${nombreDe(liquidacion.trabajador_id)}:`)
         if (motivo === null) {
             return
         }
         const resultado = await llamarApi(`${base}/recalcular`, { method: "POST", body: JSON.stringify({ motivo }) })
         if (resultado.status !== 201) {
-            mostrarError(resultado.datos.error)
+            mensaje("error", resultado.datos?.error ?? "No se pudo recalcular")
             return
         }
-        mostrarInfo(["Nueva versión creada en borrador.", ...resultado.datos.advertencias].join(" "))
+        mensaje("info", ["Nueva versión creada como borrador.", ...(resultado.datos.advertencias ?? [])].join(" "))
     }
 
     cargarLiquidaciones()
@@ -196,85 +259,45 @@ document.getElementById("listaLiquidaciones").addEventListener("click", async fu
 document.getElementById("btnEmitirTodas").addEventListener("click", async function () {
     limpiarMensajes()
 
-    if (!confirm("¿Cerrar todas las liquidaciones calculadas del periodo? Si alguna tiene pendientes, no se cerrará ninguna.")) {
+    if (!confirm("¿Cerrar todas las liquidaciones por cerrar del periodo? Si alguna tiene pendientes, no se cerrará ninguna.")) {
         return
     }
 
-    const periodoId = document.getElementById("periodo").value
-    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones/emitir`, { method: "POST" })
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${selectorPeriodo.value}/liquidaciones/emitir`, { method: "POST" })
 
     if (resultado.status === 409 && resultado.datos.problemas) {
-        mostrarError("No se cerró ninguna liquidación. Resuelve estos pendientes:")
-        mostrarProblemas("listaProblemas", resultado.datos.problemas)
+        mensaje("error", "No se cerró ninguna liquidación. Resuelve estos pendientes:")
+        mostrarProblemasConNombre(resultado.datos.problemas.map((p) => ({
+            nombre: nombreDe(p.trabajador_id),
+            motivos: p.motivos ?? [p.motivo]
+        })))
         return
     }
 
     if (resultado.status !== 200) {
-        mostrarError(resultado.datos.error)
+        mensaje("error", resultado.datos?.error ?? "No se pudieron cerrar")
         return
     }
 
-    mostrarInfo(`Se cerraron ${resultado.datos.emitidas} liquidación(es).`)
+    mensaje("info", `Se cerraron ${resultado.datos.emitidas} liquidación(es).`)
     cargarLiquidaciones()
 })
 
 async function descargarTodas(conAportes) {
     limpiarMensajes()
-    const periodoId = document.getElementById("periodo").value
-    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/liquidaciones/documento${conAportes ? "?con_aportes=1" : ""}`)
-
+    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${selectorPeriodo.value}/liquidaciones/documento${conAportes ? "?con_aportes=1" : ""}`)
     if (resultado.status !== 200) {
-        mostrarError(resultado.datos.error)
+        mensaje("error", resultado.datos?.error ?? "No se pudo descargar")
     }
 }
-
-async function descargarPrevired() {
-    limpiarMensajes()
-    const periodoId = document.getElementById("periodo").value
-    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/previred`)
-
-    if (resultado.status === 409 && resultado.datos.problemas) {
-        mostrarError(resultado.datos.error)
-        mostrarProblemas("listaProblemas", resultado.datos.problemas)
-        return
-    }
-
-    if (resultado.status !== 200) {
-        mostrarError(resultado.datos.error)
-        return
-    }
-
-    mostrarInfo(["Archivo Previred generado. Pensionados, cargas familiares, CCAF y APV todavía no se informan.", ...resultado.advertencias].join(" "))
-}
-
-async function descargarLre() {
-    limpiarMensajes()
-    const periodoId = document.getElementById("periodo").value
-    const resultado = await descargarArchivo(`/api/periodos-remuneracion/${periodoId}/lre`)
-
-    if (resultado.status === 409 && resultado.datos.problemas) {
-        mostrarError(resultado.datos.error)
-        mostrarProblemas("listaProblemas", resultado.datos.problemas)
-        return
-    }
-
-    if (resultado.status !== 200) {
-        mostrarError(resultado.datos.error)
-        return
-    }
-
-    mostrarInfo(["Archivo LRE generado. Los aportes de la reforma previsional no se informan hasta que la Dirección del Trabajo publique sus códigos.", ...resultado.advertencias].join(" "))
-}
-
-document.getElementById("btnLre").addEventListener("click", descargarLre)
-
-document.getElementById("btnPrevired").addEventListener("click", descargarPrevired)
 
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
+selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); cargarLiquidaciones() })
 
 document.addEventListener("empresa-lista", async function () {
+    limpiarMensajes()
     await cargarTrabajadores()
-    cargarSelectorPeriodos()
+    periodos = await llenarSelectorPeriodos(selectorPeriodo)
+    cargarLiquidaciones()
 })
-document.getElementById("periodo").addEventListener("change", cargarLiquidaciones)

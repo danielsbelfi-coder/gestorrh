@@ -283,3 +283,82 @@ function cerrarPanelCrear(formulario) {
 function opcionesDe(grupo) {
     return Object.entries(ESTADOS[grupo]).map(([clave, [texto]]) => [clave, texto])
 }
+
+// ---------- Remuneraciones ----------
+
+ESTADOS.liquidacion = {
+    calculada: ["Por cerrar", "advertencia"],
+    emitida: ["Cerrada", "exito"]
+}
+
+ESTADOS.finiquito = {
+    sin_calcular: ["Sin calcular", ""],
+    calculado: ["Por cerrar", "advertencia"],
+    emitido: ["Cerrado", "info"],
+    pagado: ["Pagado", "exito"]
+}
+
+// Tabla de causales de término de la Dirección del Trabajo (copia de src/shared/causales_termino.js).
+const CAUSALES = {
+    3: "Art. 159 N° 1: Mutuo acuerdo de las partes",
+    4: "Art. 159 N° 2: Renuncia del trabajador",
+    5: "Art. 159 N° 3: Muerte del trabajador",
+    6: "Art. 159 N° 4: Vencimiento del plazo convenido en el contrato",
+    7: "Art. 159 N° 5: Conclusión del trabajo o servicio que dio origen al contrato",
+    8: "Art. 159 N° 6: Caso fortuito o fuerza mayor",
+    11: "Art. 160 N° 2: Negociaciones prohibidas por escrito",
+    12: "Art. 160 N° 3: No concurrencia a las labores",
+    13: "Art. 160 N° 4: Abandono del trabajo",
+    14: "Art. 160 N° 5: Actos, omisiones o imprudencias temerarias",
+    15: "Art. 160 N° 6: Perjuicio material causado intencionalmente",
+    16: "Art. 160 N° 7: Incumplimiento grave de las obligaciones que impone el contrato",
+    18: "Art. 161 inciso 1°: Necesidades de la empresa",
+    19: "Art. 161 inciso 2°: Desahucio escrito del empleador",
+    20: "Art. 163 bis: Procedimiento concursal de liquidación",
+    24: "Art. 160 N° 1 letra a): Falta de probidad",
+    25: "Art. 160 N° 1 letra b): Conductas de acoso sexual",
+    26: "Art. 160 N° 1 letra c): Vías de hecho",
+    27: "Art. 160 N° 1 letra d): Injurias",
+    28: "Art. 160 N° 1 letra e): Conducta inmoral",
+    29: "Art. 160 N° 1 letra f): Conductas de acoso laboral"
+}
+
+// ¿El trabajador estuvo contratado al menos un día del mes del periodo? (misma regla del backend)
+function vigenteEnPeriodo(trabajador, periodo) {
+    const mm = String(periodo.mes).padStart(2, "0")
+    const primerDia = `${periodo.anio}-${mm}-01`
+    const ultimoDia = `${periodo.anio}-${mm}-${String(new Date(periodo.anio, periodo.mes, 0).getDate()).padStart(2, "0")}`
+    return trabajador.estado !== "postulante"
+        && Boolean(trabajador.fecha_ingreso) && trabajador.fecha_ingreso <= ultimoDia
+        && (!trabajador.fecha_termino || trabajador.fecha_termino >= primerDia)
+}
+
+// Lista de problemas con nombre del trabajador: [{ nombre, motivos }]
+function mostrarProblemasConNombre(problemas) {
+    document.getElementById("listaProblemas").innerHTML = problemas.map((problema) =>
+        `<li><strong>${escaparHtml(problema.nombre)}:</strong> ${escaparHtml(problema.motivos.join("; "))}</li>`).join("")
+}
+
+// Selector de periodos de la empresa de trabajo. Devuelve los periodos (del más reciente al más antiguo).
+async function llenarSelectorPeriodos(select) {
+    const listas = await cargarListas(["/api/periodos-remuneracion"])
+    if (!listas) {
+        return []
+    }
+    const periodos = deEmpresaActual(listas[0]).sort((a, b) => b.anio - a.anio || b.mes - a.mes)
+
+    select.innerHTML = periodos.map((periodo) =>
+        `<option value="${periodo.id}">${escaparHtml(nombrePeriodo(periodo) + (periodo.estado === "abierto" ? "" : " (cerrado)"))}</option>`).join("")
+
+    const pedido = new URLSearchParams(location.search).get("periodo")
+    if (pedido && periodos.some((periodo) => String(periodo.id) === pedido)) {
+        select.value = pedido
+        history.replaceState(null, "", location.pathname)
+    } else {
+        const abierto = periodos.find((periodo) => periodo.estado === "abierto")
+        if (abierto) {
+            select.value = abierto.id
+        }
+    }
+    return periodos
+}

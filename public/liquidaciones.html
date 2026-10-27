@@ -10,29 +10,34 @@
 
 <body>
     <main class="contenido" data-empresa data-titulo="Liquidaciones">
-        <h1>Liquidaciones</h1>
-        <p id="mensajeInfo"></p>
-        <p id="mensajeError"></p>
-        <ul id="listaProblemas"></ul>
-        <select id="periodo"></select>
-
-        <div>
-            <button id="btnEmitirTodas">Cerrar todas</button>
-            <button id="btnPdfTodas">PDF de todas</button>
-            <button id="btnPdfTodasAportes">PDF de todas con aportes</button>
-            <button id="btnPrevired">Archivo Previred</button>
-            <button id="btnLre">Archivo LRE</button>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Liquidaciones</h1>
+                <p>Calcula, revisa y cierra las liquidaciones de sueldo del periodo.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
         </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+        <ul id="listaProblemas"></ul>
 
-        <ul id="listaLiquidaciones"></ul>
+        <section class="tarjeta barra-acciones">
+            <form id="formCalcular">
+                <label class="campo-ancho">Calcular la liquidación de<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <button type="submit">Calcular</button>
+            </form>
+            <div class="acciones-grupo">
+                <button type="button" id="btnCalcularTodas" class="secundario">Calcular todas</button>
+                <button type="button" id="btnEmitirTodas">Cerrar todas</button>
+                <button type="button" id="btnPdfTodas" class="secundario">PDF de todas</button>
+                <button type="button" id="btnPdfTodasAportes" class="secundario">PDF con aportes</button>
+            </div>
+        </section>
 
-        <form id="formCalcular">
-            <label class="campo-ancho">Calcular la liquidación de<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
-            <button type="submit">Calcular</button>
-        </form>
+        <div id="tablaLiquidaciones"></div>
 
+        <section class="tarjeta detalle" id="detalle" hidden></section>
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
