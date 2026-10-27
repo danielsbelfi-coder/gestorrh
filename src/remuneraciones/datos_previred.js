@@ -1,4 +1,3 @@
-const { edadAl } = require("../shared/fechas.js")
 const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
 const { movimientosDelMes } = require("./movimientos_previred.js")
 
@@ -28,6 +27,7 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
             anio,
             mes,
             diasTrabajados: liquidacion.dias_trabajados,
+            tipoCotizante: detalle.cotizante.tipo,
             tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo)
         },
         prevision: {
@@ -67,8 +67,6 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
     }
 }
 
-const EDAD_LIMITE = { masculino: 65, femenino: 60 }
-
 function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasPermisoSinGoce }) {
     const persona = liquidacion.Trabajador.Persona
     const detalle = liquidacion.detalle_calculo
@@ -77,7 +75,7 @@ function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasP
     if (liquidacion.estado === "calculada") {
         problemas.push("La liquidación está en borrador; emítala antes de generar el archivo")
     }
-    if (detalle?.aportes?.baseSeguroSocial === undefined) {
+    if (detalle?.cotizante === undefined) {
         problemas.push("La liquidación se calculó con un formato anterior; recalcúlela")
         return problemas
     }
@@ -90,17 +88,12 @@ function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasP
     if (detalle.salud.sistema === "Isapre" && !persona.Isapre?.codigo_previred) {
         problemas.push("La isapre de la persona no tiene código Previred")
     }
+
     if (detalle.diasPago.inasistencia !== fechasInasistencia.length) {
         problemas.push(`El resumen tiene ${detalle.diasPago.inasistencia} día(s) de inasistencia, pero hay ${fechasInasistencia.length} marca(s) aprobada(s) con fecha`)
     }
     if (detalle.diasPago.permisoSinGoce !== fechasPermisoSinGoce.length) {
         problemas.push(`El resumen tiene ${detalle.diasPago.permisoSinGoce} día(s) de permiso sin goce, pero hay ${fechasPermisoSinGoce.length} marca(s) aprobada(s) con fecha`)
-    }
-
-    const limite = EDAD_LIMITE[persona.sexo_genero]
-    const edad = edadAl(persona.fecha_nacimiento, primerDia)
-    if (limite !== undefined && edad >= limite) {
-        problemas.push(`Tiene ${edad} años: puede corresponder a un tipo de cotizante (3 u 8) que todavía no se informa`)
     }
 
     return problemas

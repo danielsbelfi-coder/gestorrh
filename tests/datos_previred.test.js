@@ -26,9 +26,10 @@ const entrada = {
             cotizaciones: { rentaImponible: 1072299, baseCotizaciones: 1072299 },
             salud: { sistema: "Fonasa", planUF: 0 },
             cesantia: { base: 1072299 },
+            cotizante: { tipo: 0 },
             aportes: { rimaMes: 0, baseSeguroSocial: 1072299 },
             diasPago: { inasistencia: 1, permisoSinGoce: 0 },
-            licencias: [{ fecha_inicio: "2027-07-15", fecha_termino: "2027-07-16", tipo: "comun", pagador_rut: "61603000", pagador_dv: "0", rima: 0 }]
+            licencias: [{ fecha_inicio: "2027-07-15", fecha_termino: "2027-07-16", tipo: "comun", pagador_rut: "61603000", pagador_dv: "0", rima: 0 }],
         },
         LiquidacionLineas: lineas,
         Trabajador: {
@@ -55,6 +56,7 @@ test("de la liquidación a los datos: montos por código, tramo, mutual con SANN
         { codigo: 11, desde: "2027-07-12", hasta: "2027-07-12" },
         { codigo: 3, desde: "2027-07-15", hasta: "2027-07-16" }
     ])
+    assert.strictEqual(datos.trabajador.tipoCotizante, 0)
 })
 
 test("de punta a punta: la liquidación de Ana da una línea 00 y una 01", () => {
@@ -77,7 +79,7 @@ test("sin problemas: Ana de julio está lista para el archivo", () => {
     assert.deepStrictEqual(problemasPrevired(revision()), [])
 })
 
-test("borrador, marcas que no calzan y edad límite", () => {
+test("borrador y marcas que no calzan", () => {
     const liquidacion = {
         ...entrada.liquidacion,
         estado: "calculada",
@@ -89,10 +91,9 @@ test("borrador, marcas que no calzan y edad límite", () => {
 
     const problemas = problemasPrevired(revision({ liquidacion, fechasInasistencia: [] }))
 
-    assert.strictEqual(problemas.length, 3)
+    assert.strictEqual(problemas.length, 2)
     assert.match(problemas[0], /borrador/)
     assert.match(problemas[1], /1 día\(s\) de inasistencia, pero hay 0/)
-    assert.match(problemas[2], /Tiene 60 años/)
 })
 
 test("liquidación con formato anterior: un solo problema y no revisa lo demás", () => {
@@ -101,8 +102,8 @@ test("liquidación con formato anterior: un solo problema y no revisa lo demás"
     assert.deepStrictEqual(problemasPrevired(revision({ liquidacion })), ["La liquidación se calculó con un formato anterior; recalcúlela"])
 })
 
-test("edad: un día antes del cumpleaños todavía no cumple", () => {
-    const persona = { ...entrada.liquidacion.Trabajador.Persona, fecha_nacimiento: "1967-07-02" }
+test("la edad ya no bloquea: una persona de 70 años sin problemas de datos está lista", () => {
+    const persona = { ...entrada.liquidacion.Trabajador.Persona, fecha_nacimiento: "1957-01-10" }
     const liquidacion = { ...entrada.liquidacion, Trabajador: { ...entrada.liquidacion.Trabajador, Persona: persona } }
 
     assert.deepStrictEqual(problemasPrevired(revision({ liquidacion })), [])

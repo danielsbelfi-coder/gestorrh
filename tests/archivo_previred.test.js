@@ -27,7 +27,7 @@ test("línea vacía: 105 campos, texto en blanco, numéricos en 0 y rellenos con
 
 const ana = {
     rut: "88888888", dv: "8", apellidoPaterno: "Soto", apellidoMaterno: null, nombres: "Ana",
-    sexo: "femenino", nacionalidad: "chilena", anio: 2027, mes: 7, diasTrabajados: 27, tramo: "C"
+    sexo: "femenino", nacionalidad: "chilena", anio: 2027, mes: 7, diasTrabajados: 27, tramo: "C", tipoCotizante: 0
 }
 
 test("datos del trabajador: identificación, periodo, días y tramo", () => {
@@ -137,4 +137,10 @@ test("una línea 00 con el primer movimiento y una 01 por cada movimiento siguie
     assert.deepStrictEqual(adicional.slice(25, 29), ["08", "0", "0", "0"])
     assert.deepStrictEqual([adicional[74], adicional[92], adicional[93], adicional[95]], ["0", "1", "0", "01"])
     assert.strictEqual(adicional[102], "0")
+})
+
+test("tipo de cotizante: un pensionado que no cotiza va con 2 en el campo 12", () => {
+    const campos = asignar(lineaVacia(), camposTrabajador({ ...ana, tipoCotizante: 2 }))
+
+    assert.strictEqual(campos[11], 2)
 })

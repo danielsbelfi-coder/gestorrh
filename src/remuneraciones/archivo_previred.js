@@ -42,7 +42,7 @@ function camposTrabajador(datos) {
         8: "01",
         9: `${String(datos.mes).padStart(2, "0")}${datos.anio}`,
         11: "AFP",
-        12: 0,
+        12: datos.tipoCotizante,
         13: datos.diasTrabajados,
         18: datos.tramo,
         25: "N"
