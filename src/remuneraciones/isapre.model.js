@@ -19,6 +19,10 @@ const Isapre = sequelize.define("Isapre", {
     codigo_previred: {
         type: DataTypes.STRING(2),
         allowNull: true
+    },
+    codigo_lre: {
+        type: DataTypes.SMALLINT,
+        allowNull: true
     }
 }, {
     tableName: "isapres"

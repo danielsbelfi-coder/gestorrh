@@ -18,6 +18,10 @@ const Trabajador = sequelize.define("Trabajador", {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
+    causal_termino: {
+        type: DataTypes.SMALLINT,
+        allowNull: true
+    },
     estado: {
         type: DataTypes.ENUM(
             "postulante",

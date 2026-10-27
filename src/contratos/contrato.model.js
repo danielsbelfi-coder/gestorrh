@@ -14,7 +14,7 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.DATEONLY,
         allowNull: false
     },
-        fecha_termino: {
+    fecha_termino: {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
@@ -22,7 +22,7 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.STRING,
         allowNull: true
     },
-        obra_faena_descripcion: {
+    obra_faena_descripcion: {
         type: DataTypes.STRING,
         allowNull: true
     },
@@ -37,6 +37,10 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
     lugar_prestacion_servicios: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    comuna_prestacion: {
+        type: DataTypes.STRING(5),
+        allowNull: true
     },
     tipo_jornada: {
         type: DataTypes.ENUM("completa", "parcial", "excluido_limitacion"),
@@ -74,7 +78,7 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.ENUM("vigente", "terminado", "anulado"),
         defaultValue: "vigente"
     }
-},{
+}, {
     tableName: "contratos_trabajo"
 })
 
