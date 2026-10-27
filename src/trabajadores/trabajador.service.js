@@ -4,6 +4,8 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
 const { esFechaValida } = require("../shared/fechas.js")
+const { CAUSALES_TERMINO } = require("../shared/causales_termino.js")
+
 
 async function crearTrabajador(datos, empresasPermitidas, usuarioId) {
     const empresaId = Number(datos.empresa_id)
@@ -67,8 +69,11 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
         throw new ValidationError("Fecha de término inválida")
     }
 
+    if (datos.causal_termino !== undefined && datos.causal_termino !== null && !CAUSALES_TERMINO.includes(Number(datos.causal_termino))) {
+        throw new ValidationError("La causal de término no está en la tabla de la Dirección del Trabajo")
+    }
 
-    const campos = ["fecha_ingreso", "fecha_termino", "estado"]
+    const campos = ["fecha_ingreso", "fecha_termino", "estado", "causal_termino"]
 
     const antes = {
         estado: trabajador.estado,

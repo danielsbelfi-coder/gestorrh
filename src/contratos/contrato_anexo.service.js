@@ -1,8 +1,8 @@
 const { ContratoAnexo, ContratoTrabajo, Trabajador } = require("../shared/associations.js")
+const { COMUNAS } = require("../shared/comunas_lre.js")
 const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { PERMISOS, exigirRol } = require("../shared/permisos.js")
-
 
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
@@ -14,7 +14,8 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         "lugar_prestacion_servicios",
         "sistema_remuneracion",
         "periodicidad_pago",
-        "fecha_termino"
+        "fecha_termino",
+        "comuna_prestacion"
     ]
     const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
         include: [Trabajador]
@@ -36,6 +37,11 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     if (!CAMPOS_MODIFICABLES.includes(datos.campo_modificado)) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
     }
+
+    if (datos.campo_modificado === "comuna_prestacion" && COMUNAS[datos.valor_nuevo] === undefined) {
+        throw new ValidationError("La comuna de prestación no está en la tabla de la Dirección del Trabajo")
+    }
+
 
     return await ContratoAnexo.create({
         ...datos, valor_anterior: contrato[

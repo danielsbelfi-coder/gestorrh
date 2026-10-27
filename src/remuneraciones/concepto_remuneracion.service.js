@@ -56,6 +56,13 @@ async function crearConcepto(datos, empresasPermitidas, usuarioId) {
     }
 
     try {
+        const codigoLre = datos.codigo_lre === undefined || datos.codigo_lre === null ? null : Number(datos.codigo_lre)
+        const primerDigito = esHaber ? 2 : 3
+
+        if (codigoLre !== null && (!Number.isInteger(codigoLre) || Math.floor(codigoLre / 1000) !== primerDigito)) {
+            throw new ValidationError(`El código LRE de un ${datos.tipo} debe ser un código ${primerDigito}xxx del manual de la Dirección del Trabajo`)
+        }
+
         return await ConceptoRemuneracion.create({
             empresa_id: empresaId,
             codigo,
@@ -66,7 +73,7 @@ async function crearConcepto(datos, empresasPermitidas, usuarioId) {
             base_gratificacion: esHaber && datos.base_gratificacion === true,
             recargo_hora_extra: null,
             calculado_por_sistema: false,
-            codigo_lre: null,
+            codigo_lre: codigoLre,
             activo: true
         })
     } catch (error) {
@@ -121,7 +128,7 @@ async function reactivarConcepto(id, empresasPermitidas, usuarioId) {
 
 module.exports = {
     listarConceptos,
-    crearConcepto, 
+    crearConcepto,
     desactivarConcepto,
     reactivarConcepto,
 }

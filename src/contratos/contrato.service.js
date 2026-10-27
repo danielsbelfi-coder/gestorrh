@@ -2,6 +2,8 @@ const { ContratoTrabajo, Trabajador, Cargo } = require("../shared/associations.j
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
+const { COMUNAS } = require("../shared/comunas_lre.js")
+
 
 async function crearContrato(datos, empresasPermitidas, usuarioId) {
     const trabajador = await Trabajador.findByPk(datos.trabajador_id)
@@ -29,6 +31,10 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
         throw new NotFoundError("Cargo no encontrado")
     }
 
+    if (datos.comuna_prestacion !== undefined && datos.comuna_prestacion !== null && COMUNAS[datos.comuna_prestacion] === undefined) {
+        throw new ValidationError("La comuna de prestación no está en la tabla de la Dirección del Trabajo")
+    }
+
     return await ContratoTrabajo.create(datos, {
         fields: [
             "trabajador_id",
@@ -45,7 +51,8 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
             "dias_trabajados",
             "sistema_remuneracion",
             "sueldo_base",
-            "periodicidad_pago"
+            "periodicidad_pago",
+            "comuna_prestacion"
         ]
     })
 }
