@@ -176,5 +176,6 @@ function dibujarLiquidacion(doc, d, { conAportes = false } = {}) {
 
 module.exports = {
     dibujarLiquidacion,
-    TAMANO_PAGINA
+    TAMANO_PAGINA,
+    marcaBorrador
 }

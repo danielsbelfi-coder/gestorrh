@@ -1,4 +1,7 @@
-const { calcularFiniquito, obtenerFiniquito, emitirFiniquito, pagarFiniquito } = require("./finiquito.service.js")
+const PDFDocument = require("pdfkit")
+const { dibujarFiniquito } = require("./dibujar_finiquito.js")
+
+const { calcularFiniquito, obtenerFiniquito, emitirFiniquito, pagarFiniquito, documentoFiniquito } = require("./finiquito.service.js")
 
 async function calcular(req, res) {
     const finiquito = await calcularFiniquito(req.body ?? {}, req.empresasPermitidas, req.usuario.id)
@@ -20,9 +23,20 @@ async function pagar(req, res) {
     res.status(200).json(finiquito)
 }
 
+async function documento(req, res) {
+    const datos = await documentoFiniquito(req.params.id, req.empresasPermitidas)
+    const doc = new PDFDocument({ size: "LETTER", margin: 40 })
+
+    res.attachment(`finiquito-${req.params.id}.pdf`)
+    doc.pipe(res)
+    dibujarFiniquito(doc, datos)
+    doc.end()
+}
+
 module.exports = {
     calcular,
     obtener,
     emitir,
-    pagar
+    pagar,
+    documento
 }

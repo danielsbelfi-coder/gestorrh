@@ -1,5 +1,6 @@
 const { Finiquito, Trabajador, Persona, Liquidacion, LiquidacionLinea, ConceptoRemuneracion,
-    PeriodoRemuneracion, ContratoTrabajo, ContratoAnexo } = require("../shared/associations.js")
+    PeriodoRemuneracion, ContratoTrabajo, ContratoAnexo,
+    Empresa, Cargo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
@@ -8,6 +9,7 @@ const { contratoDelMes } = require("./contrato_del_mes.js")
 const { camposMontosLre } = require("./archivo_lre.js")
 const { tiempoServido, diasFeriadoGanados, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
 const { esFechaValida } = require("../shared/fechas.js")
+const { armarFiniquito } = require("../remuneraciones/armar_finiquito.js")
 
 const TOPE_UF_INDEMNIZACION = 90
 
@@ -220,9 +222,40 @@ async function pagarFiniquito(id, fechaPago, empresasPermitidas, usuarioId) {
     return await finiquito.update({ estado: "pagado", fecha_pago: fechaPago })
 }
 
+async function documentoFiniquito(id, empresasPermitidas) {
+    const finiquito = await Finiquito.findOne({
+        where: { id },
+        include: [{ model: Trabajador, include: [Persona] }]
+    })
+
+    if (finiquito === null || !empresasPermitidas.includes(finiquito.Trabajador.empresa_id)) {
+        throw new NotFoundError("Finiquito no encontrado")
+    }
+
+    const empresa = await Empresa.findByPk(finiquito.Trabajador.empresa_id)
+    const contrato = await ContratoTrabajo.findOne({
+        where: { trabajador_id: finiquito.trabajador_id, estado: "vigente" },
+        include: [Cargo]
+    })
+
+    const documento = armarFiniquito({
+        finiquito: finiquito.toJSON(),
+        empresa,
+        cargo: contrato?.Cargo?.nombre ?? "",
+        lugarServicios: contrato?.lugar_prestacion_servicios ?? ""
+    })
+
+    if (!documento.totalCuadra) {
+        throw new ConflictError("El documento no cuadra con el total guardado en el finiquito")
+    }
+
+    return documento
+}
+
 module.exports = {
     calcularFiniquito,
     obtenerFiniquito,
     emitirFiniquito,
-    pagarFiniquito
+    pagarFiniquito,
+    documentoFiniquito
 }
