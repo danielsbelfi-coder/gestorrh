@@ -1,6 +1,8 @@
-const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo, Trabajador, TramoImpuesto,
+const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo,
+    Trabajador, TramoImpuesto, SituacionPrevisional,
     Persona, Afp, ConceptoRemuneracion,
-    ResumenAsistencia, VariablePeriodo, LiquidacionLinea, Empresa, LicenciaMedica, ContratoAnexo } = require("../shared/associations.js")
+    ResumenAsistencia, VariablePeriodo, LiquidacionLinea,
+    Empresa, LicenciaMedica, ContratoAnexo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
@@ -12,7 +14,8 @@ const { calcularLiquidacionPorLineas } = require("./calculo_lineas.js")
 const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
-const { sumarDias } = require("../shared/fechas.js")
+const { sumarDias, edadAl } = require("../shared/fechas.js")
+const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -343,21 +346,23 @@ async function prepararCalculo(periodo, trabajador) {
     })
 
     const primerDia = `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`
+    const situaciones = await SituacionPrevisional.findAll({ where: { persona_id: persona.id } })
+    const situacion = situacionDelMes(situaciones.map((s) => s.toJSON()), primerDia)
+    const tipoCotizanteMes = tipoCotizante(situacion, edadAl(persona.fecha_nacimiento, primerDia))
+    const reglas = reglasCotizante(tipoCotizanteMes)
+    const siSeguroSocial = (tasa) => reglas.seguroSocial ? tasa : 0
     const parametros = await obtenerParametrosDelMes(primerDia)
     const tramos = await obtenerTramos(primerDia)
-
     const empresa = await Empresa.findByPk(periodo.empresa_id)
-
     const tasasAportes = {
-        cesantia: tasaCesantiaEmpleador(contrato, trabajador, parametros, primerDia),
+        cesantia: reglas.cesantia ? tasaCesantiaEmpleador(contrato, trabajador, parametros, primerDia) : 0,
+        sis: siSeguroSocial(parametros.sis),
+        expectativaVida: siSeguroSocial(parametros.expectativaVida),
+        cuentaIndividual: siSeguroSocial(parametros.cuentaIndividual),
+        rentabilidadProtegida: siSeguroSocial(parametros.rentabilidadProtegida),
         mutual: parametros.mutualBasica + Number(empresa.tasa_adicional_mutual),
-        sanna: parametros.sanna,
-        sis: parametros.sis,
-        expectativaVida: parametros.expectativaVida,
-        cuentaIndividual: parametros.cuentaIndividual,
-        rentabilidadProtegida: parametros.rentabilidadProtegida
+        sanna: parametros.sanna
     }
-
     const datos = {
         sueldoBase: Number(contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
@@ -366,13 +371,13 @@ async function prepararCalculo(periodo, trabajador) {
         variables: aprobadas,
         minutosAtraso: resumen.minutos_atraso,
         ingresoMinimoMensual: parametros.ingresoMinimoMensual,
-        tasaAfp: parametros.cotizacionAfp + Number(persona.Afp.comision),
+        tasaAfp: reglas.afp ? parametros.cotizacionAfp + Number(persona.Afp.comision) : 0,
         tasaSalud: parametros.tasaSalud,
         planSaludUF: persona.sistema_salud === "Isapre" ? Number(persona.plan_isapre_uf) : 0,
         topeImponibleUF: parametros.topeImponibleUF,
         valorUF: parametros.valorUF,
         valorUTM: parametros.valorUTM,
-        tasaCesantia: trabajadorCotizaCesantia(contrato, trabajador, primerDia) ? parametros.tasaCesantia : 0,
+        tasaCesantia: reglas.cesantia && trabajadorCotizaCesantia(contrato, trabajador, primerDia) ? parametros.tasaCesantia : 0,
         topeCesantiaUF: parametros.topeCesantiaUF,
         tramos,
         saldoPendiente,
@@ -389,7 +394,6 @@ async function prepararCalculo(periodo, trabajador) {
 
     const rimaMes = rimaDelMes(licenciasDelMes, periodo.anio, periodo.mes)
     const baseSeguroSocial = Math.min(resultado.baseCotizaciones + rimaMes, resultado.topeImponible)
-
     const { aportes, totalAportes } = calcularAportesEmpleador({
         baseCotizaciones: resultado.baseCotizaciones,
         baseCesantia: resultado.baseCesantia,
@@ -397,19 +401,15 @@ async function prepararCalculo(periodo, trabajador) {
         tasas: tasasAportes,
         conceptos
     })
-
     const montoDe = (codigo) => resultado.lineas
         .filter((l) => l.concepto.codigo === codigo)
         .reduce((suma, l) => suma + l.monto, 0)
-
     const lineasHoras = resultado.lineas.filter((l) => l.concepto.recargo_hora_extra !== null)
-
     const lineasOrdenadas = [
         ...resultado.lineas.filter((l) => l.concepto.tipo === "haber"),
         ...resultado.lineas.filter((l) => l.concepto.tipo === "descuento"),
         ...aportes
     ]
-
     const detalleCalculo = {
         diasPago: {
             diasPagados,
@@ -421,6 +421,7 @@ async function prepararCalculo(periodo, trabajador) {
             minutosAtraso: resumen.minutos_atraso
         },
         sueldo: { tramos: tramosConDias },
+        cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension },
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
@@ -433,7 +434,6 @@ async function prepararCalculo(periodo, trabajador) {
         aportes: { tasas: tasasAportes, total: totalAportes, rimaMes, baseSeguroSocial },
         licencias: licenciasDelMes
     }
-
     const campos = {
         snapshot_contrato: {
             sueldo_base: contrato.sueldo_base,
