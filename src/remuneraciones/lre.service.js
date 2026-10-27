@@ -1,5 +1,6 @@
 const { Liquidacion, LiquidacionLinea, ConceptoRemuneracion, Trabajador, Persona, Afp, Isapre,
-    Empresa, Mutualidad, ContratoTrabajo, ContratoAnexo } = require("../shared/associations.js")
+    Empresa, Mutualidad, ContratoTrabajo, ContratoAnexo,
+    Finiquito } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
 const { obtenerLimitesTramo } = require("./previred.service.js")
@@ -7,7 +8,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
-const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre } = require("./archivo_lre.js")
+const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
 
 async function contratoDelTrabajador(trabajadorId, periodo, primerDia) {
     const vigente = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajadorId, estado: "vigente" } })
@@ -112,13 +113,28 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             tipo: linea.tipo,
             monto: Number(linea.monto)
         }))
+
+        let liquidoEsperado = Number(liquidacion.liquido_a_pagar)
+
+        if (terminoEnElMes) {
+            const finiquito = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
+
+            if (finiquito === null || finiquito.estado === "calculado") {
+                motivos.push("Terminó en el mes y no tiene su finiquito emitido")
+            } else {
+                lineasLiquidacion.push(...lineasFiniquitoLre(finiquito.toJSON()))
+                liquidoEsperado += finiquito.total_a_pagar
+            }
+        }
+
         const montos = camposMontosLre(lineasLiquidacion)
 
         if (montos.sinCodigo.length > 0) {
             motivos.push(`Conceptos sin código LRE: ${montos.sinCodigo.join(", ")}`)
         }
-        if (montos.valores[5501] !== Number(liquidacion.liquido_a_pagar)) {
-            motivos.push(`El líquido del LRE (${montos.valores[5501]}) no coincide con el de la liquidación (${liquidacion.liquido_a_pagar})`)
+
+        if (montos.valores[5501] !== liquidoEsperado) {
+            motivos.push(`El líquido del LRE (${montos.valores[5501]}) no coincide con el de la liquidación y el finiquito (${liquidoEsperado})`)
         }
 
         if (motivos.length > 0) {
