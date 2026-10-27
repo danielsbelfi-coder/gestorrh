@@ -9,7 +9,7 @@ async function cargarTrabajadores() {
     }
 
     const lista = document.getElementById("listaTrabajadores")
-    lista.innerHTML = resultado.datos.map(function(trabajador) {
+    lista.innerHTML = deEmpresaActual(resultado.datos).map(function(trabajador) {
         return `<li>${trabajador.persona_id} (${trabajador.empresa_id}) - ${trabajador.estado} </li>`
     }).join("")
 }
@@ -21,9 +21,13 @@ formulario.addEventListener("submit", async function (evento) {
 
     document.getElementById("mensajeError").textContent = ""
 
+    if (exigirEmpresaActual() === null) {
+        return
+    }
+
     const datos = {
         persona_id: document.getElementById("personaId").value,
-        empresa_id: document.getElementById("empresaId").value,
+        empresa_id: empresaActual(),
         fecha_ingreso: document.getElementById("fechaIngreso").value
     }
 
@@ -41,4 +45,4 @@ formulario.addEventListener("submit", async function (evento) {
     cargarTrabajadores()
 })
 
-document.addEventListener("DOMContentLoaded", cargarTrabajadores)
+document.addEventListener("empresa-lista", cargarTrabajadores)

@@ -142,6 +142,56 @@ async function iniciarLayout() {
     velo.addEventListener("click", () => document.body.classList.remove("menu-abierto"))
 
     document.dispatchEvent(new CustomEvent("usuario-listo", { detail: usuario }))
+
+    if (contenido.hasAttribute("data-empresa")) {
+        await iniciarSelectorEmpresa(barra)
+    }
+}
+
+// Selector de empresa de trabajo. Solo aparece en las pantallas marcadas con data-empresa.
+// Al elegir una empresa se avisa con el evento "empresa-lista" y cada pantalla recarga sus datos.
+async function iniciarSelectorEmpresa(barra) {
+    const resultado = await llamarApi("/api/empresas")
+    const empresas = resultado.status === 200 ? resultado.datos : []
+
+    empresas.sort((a, b) => (a.estado === "inactiva") - (b.estado === "inactiva")
+        || nombreEmpresa(a).localeCompare(nombreEmpresa(b), "es"))
+
+    const contenedor = document.createElement("label")
+    contenedor.className = "selector-empresa"
+
+    if (empresas.length === 0) {
+        contenedor.textContent = "Sin empresas"
+        barra.appendChild(contenedor)
+        document.dispatchEvent(new CustomEvent("empresa-lista", { detail: null }))
+        return
+    }
+
+    if (!empresas.some((empresa) => empresa.id === empresaActual())) {
+        guardarEmpresaActual(empresas[0].id)
+    }
+
+    contenedor.innerHTML = `<span>Empresa</span><select id="empresaTrabajo">${empresas.map((empresa) => {
+        const inactiva = empresa.estado === "inactiva" ? " (inactiva)" : ""
+        const elegida = empresa.id === empresaActual() ? " selected" : ""
+        return `<option value="${empresa.id}"${elegida}>${escaparHtml(nombreEmpresa(empresa) + inactiva)}</option>`
+    }).join("")}</select>`
+    barra.appendChild(contenedor)
+
+    const avisar = () => document.dispatchEvent(new CustomEvent("empresa-lista", {
+        detail: empresas.find((empresa) => empresa.id === empresaActual())
+    }))
+
+    contenedor.querySelector("select").addEventListener("change", function (evento) {
+        guardarEmpresaActual(evento.target.value)
+        avisar()
+    })
+
+    avisar()
+}
+
+function nombreEmpresa(empresa) {
+    return empresa.nombre_fantasia || empresa.razon_social || `Empresa ${empresa.id}`
 }
 
 iniciarLayout()

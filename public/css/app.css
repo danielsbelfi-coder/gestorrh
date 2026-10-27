@@ -944,3 +944,31 @@ a.paso:hover {
 .contenido > select {
     margin-bottom: 12px;
 }
+
+/* Selector de empresa de trabajo (barra superior) */
+.selector-empresa {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.selector-empresa select {
+    min-width: 200px;
+    max-width: 320px;
+    min-height: 36px;
+    padding: 6px 10px;
+    font-weight: 500;
+}
+
+@media (max-width: 860px) {
+    .selector-empresa span {
+        display: none;
+    }
+
+    .selector-empresa select {
+        min-width: 0;
+        width: auto;
+        max-width: 55vw;
+    }
+}

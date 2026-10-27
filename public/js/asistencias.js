@@ -9,7 +9,7 @@ async function cargarAsistencias() {
     }
 
     const lista = document.getElementById("listaAsistencias")
-    lista.innerHTML = resultado.datos.map(function (asistencia) {
+    lista.innerHTML = deEmpresaActual(resultado.datos, (asistencia) => asistencia.Trabajador?.empresa_id).map(function (asistencia) {
         return `<li>${asistencia.trabajador_id} (${asistencia.fecha})</li>`
     }).join("")
 }
@@ -55,4 +55,4 @@ formulario.addEventListener("submit", async function (evento) {
     cargarAsistencias()
 })
 
-document.addEventListener("DOMContentLoaded", cargarAsistencias)
+document.addEventListener("empresa-lista", cargarAsistencias)

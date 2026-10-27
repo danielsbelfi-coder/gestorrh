@@ -9,7 +9,7 @@ async function cargarCargos() {
     }
 
     const lista = document.getElementById("listaCargos")
-    lista.innerHTML = resultado.datos.map(function (cargo) {
+    lista.innerHTML = deEmpresaActual(resultado.datos).map(function (cargo) {
         return `<li>${escaparHtml(cargo.nombre)} (${cargo.empresa_id}) </li>`
     }).join("")
 }
@@ -21,8 +21,12 @@ formulario.addEventListener("submit", async function (evento) {
 
     document.getElementById("mensajeError").textContent = ""
 
+    if (exigirEmpresaActual() === null) {
+        return
+    }
+
     const datos = {
-        empresa_id: document.getElementById("empresaId").value,
+        empresa_id: empresaActual(),
         nombre: document.getElementById("nombre").value,
         departamento_id: document.getElementById("departamentoId").value,
         descripcion: document.getElementById("descripcion").value
@@ -49,4 +53,4 @@ formulario.addEventListener("submit", async function (evento) {
     cargarCargos()
 })
 
-document.addEventListener("DOMContentLoaded", cargarCargos)
+document.addEventListener("empresa-lista", cargarCargos)

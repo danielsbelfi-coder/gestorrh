@@ -9,7 +9,7 @@ async function cargarPeriodos() {
     }
 
     const lista = document.getElementById("listaPeriodos")
-    lista.innerHTML = resultado.datos.map(function (periodo) {
+    lista.innerHTML = deEmpresaActual(resultado.datos).map(function (periodo) {
         return `<li>${periodo.mes} (${periodo.anio}) - (${periodo.estado}) ${periodo.estado === "abierto" ? `<button data-id="${periodo.id}">Cerrar</button>` : ""}</li>`
     }).join("")
 }
@@ -21,8 +21,12 @@ formulario.addEventListener("submit", async function (evento) {
 
     document.getElementById("mensajeError").textContent = ""
 
+    if (exigirEmpresaActual() === null) {
+        return
+    }
+
     const datos = {
-        empresa_id: document.getElementById("empresaId").value,
+        empresa_id: empresaActual(),
         mes: document.getElementById("mes").value,
         anio: document.getElementById("anio").value,
         fecha_apertura: document.getElementById("fechaApertura").value
@@ -75,4 +79,4 @@ lista.addEventListener("click", async function (evento) {
 
 })
 
-document.addEventListener("DOMContentLoaded", cargarPeriodos)
+document.addEventListener("empresa-lista", cargarPeriodos)

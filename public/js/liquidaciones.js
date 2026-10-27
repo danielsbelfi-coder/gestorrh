@@ -17,7 +17,7 @@ function limpiarMensajes() {
 function botonesLiquidacion(liquidacion) {
     const id = liquidacion.id
     const principal = liquidacion.estado === "calculada"
-        ? `<button data-accion="emitir" data-id="${id}">Emitir</button>`
+        ? `<button data-accion="emitir" data-id="${id}">Cerrar liquidación</button>`
         : `<button data-accion="recalcular" data-id="${id}">Recalcular</button>`
 
     return `${principal}
@@ -37,16 +37,39 @@ async function cargarSelectorPeriodos() {
         return
     }
 
+    const periodos = deEmpresaActual(resultado.datos)
+        .sort((a, b) => b.anio - a.anio || b.mes - a.mes)
+
     const selector = document.getElementById("periodo")
-    selector.innerHTML = resultado.datos.map(function (periodo) {
-        return `<option value="${periodo.id}">${periodo.mes}/${periodo.anio}</option>`
+    selector.innerHTML = periodos.map(function (periodo) {
+        const estado = periodo.estado === "abierto" ? "" : " (cerrado)"
+        return `<option value="${periodo.id}">${escaparHtml(nombrePeriodo(periodo) + estado)}</option>`
     }).join("")
+
+    // Desde Inicio se llega con ?periodo=ID: se deja ese periodo elegido (la primera vez).
+    const pedido = new URLSearchParams(location.search).get("periodo")
+    if (pedido && periodos.some((periodo) => String(periodo.id) === pedido)) {
+        selector.value = pedido
+        history.replaceState(null, "", location.pathname)
+    } else {
+        const abierto = periodos.find((periodo) => periodo.estado === "abierto")
+        if (abierto) {
+            selector.value = abierto.id
+        }
+    }
 
     cargarLiquidaciones()
 }
 
 async function cargarLiquidaciones() {
     const periodoId = document.getElementById("periodo").value
+    const lista = document.getElementById("listaLiquidaciones")
+
+    if (!periodoId) {
+        lista.innerHTML = ""
+        mostrarInfo("Esta empresa no tiene periodos. Ábrelo en Periodos.")
+        return
+    }
 
     const resultado = await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones`)
 
@@ -55,12 +78,10 @@ async function cargarLiquidaciones() {
         return
     }
 
-
-    const lista = document.getElementById("listaLiquidaciones")
     lista.innerHTML = resultado.datos.map(function (liquidacion) {
         return `<li>
                     <details>
-                        <summary>Trabajador ${liquidacion.trabajador_id} - versión ${liquidacion.version} - ${liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
+                        <summary>Trabajador ${liquidacion.trabajador_id} - versión ${liquidacion.version} - ${liquidacion.estado === "emitida" ? "cerrada" : liquidacion.estado} - Líquido: ${formatearPesos(liquidacion.liquido_a_pagar)}</summary>
                         <p>Sueldo proporcional: ${formatearPesos(liquidacion.sueldo_base_proporcional)}</p>
                         <p>Monto horas extras: ${formatearPesos(liquidacion.monto_horas_extra)}</p>
                         <p>Monto gratificación: ${formatearPesos(liquidacion.monto_gratificacion)}</p>
@@ -125,7 +146,7 @@ document.getElementById("listaLiquidaciones").addEventListener("click", async fu
     }
 
     if (accion === "emitir") {
-        if (!confirm("¿Emitir esta liquidación? Después solo se podrá modificar con un recálculo.")) {
+        if (!confirm("¿Cerrar esta liquidación? Después solo se podrá modificar con un recálculo.")) {
             return
         }
         const resultado = await llamarApi(`${base}/emitir`, { method: "POST" })
@@ -133,7 +154,7 @@ document.getElementById("listaLiquidaciones").addEventListener("click", async fu
             mostrarError(resultado.datos.error)
             return
         }
-        mostrarInfo("Liquidación emitida.")
+        mostrarInfo("Liquidación cerrada.")
     }
 
     if (accion === "recalcular") {
@@ -155,7 +176,7 @@ document.getElementById("listaLiquidaciones").addEventListener("click", async fu
 document.getElementById("btnEmitirTodas").addEventListener("click", async function () {
     limpiarMensajes()
 
-    if (!confirm("¿Emitir todas las liquidaciones calculadas del periodo? Si alguna tiene pendientes, no se emitirá ninguna.")) {
+    if (!confirm("¿Cerrar todas las liquidaciones calculadas del periodo? Si alguna tiene pendientes, no se cerrará ninguna.")) {
         return
     }
 
@@ -163,7 +184,7 @@ document.getElementById("btnEmitirTodas").addEventListener("click", async functi
     const resultado = await llamarApi(`/api/periodos-remuneracion/${periodoId}/liquidaciones/emitir`, { method: "POST" })
 
     if (resultado.status === 409 && resultado.datos.problemas) {
-        mostrarError("No se emitió ninguna liquidación. Resuelva estos pendientes:")
+        mostrarError("No se cerró ninguna liquidación. Resuelve estos pendientes:")
         mostrarProblemas("listaProblemas", resultado.datos.problemas)
         return
     }
@@ -173,7 +194,7 @@ document.getElementById("btnEmitirTodas").addEventListener("click", async functi
         return
     }
 
-    mostrarInfo(`Se emitieron ${resultado.datos.emitidas} liquidación(es).`)
+    mostrarInfo(`Se cerraron ${resultado.datos.emitidas} liquidación(es).`)
     cargarLiquidaciones()
 })
 
@@ -232,5 +253,5 @@ document.getElementById("btnPrevired").addEventListener("click", descargarPrevir
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
 
-document.addEventListener("DOMContentLoaded", cargarSelectorPeriodos)
+document.addEventListener("empresa-lista", cargarSelectorPeriodos)
 document.getElementById("periodo").addEventListener("change", cargarLiquidaciones)

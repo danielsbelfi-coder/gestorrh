@@ -9,7 +9,7 @@
 </head>
 
 <body>
-    <main class="contenido" data-titulo="Periodos de remuneración">
+    <main class="contenido" data-empresa data-titulo="Periodos de remuneración">
         <h1>Periodos Remuneración</h1>
         <p id="mensajeError"></p>
         <ul id="listaProblemas"></ul>
@@ -18,7 +18,6 @@
 
         <h2>Crear periodos de remuneración</h2>
         <form id="formCrearPeriodos">
-            <input type="text" id="empresaId" placeholder="empresa id" required>
             <input type="number" id="mes" placeholder="mes" min="1" max="12" required>
             <input type="number" id="anio" placeholder="año" required>
             <input type="date" id="fechaApertura" placeholder="Fecha apertura" required>

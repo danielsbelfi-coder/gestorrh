@@ -9,7 +9,7 @@ async function cargarContratos() {
     }
 
     const lista = document.getElementById("listaContratos")
-    lista.innerHTML = resultado.datos.map(function(contrato) {
+    lista.innerHTML = deEmpresaActual(resultado.datos, (contrato) => contrato.Trabajador?.empresa_id).map(function(contrato) {
         return `<li>${contrato.trabajador_id} (${contrato.estado}) </li>`
     }).join("")
 }
@@ -50,4 +50,4 @@ formulario.addEventListener("submit", async function (evento) {
     cargarContratos()
 })
 
-document.addEventListener("DOMContentLoaded", cargarContratos)
+document.addEventListener("empresa-lista", cargarContratos)

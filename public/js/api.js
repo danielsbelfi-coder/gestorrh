@@ -91,3 +91,42 @@ function mostrarProblemas(idLista, problemas) {
         return `<li>Trabajador ${problema.trabajador_id}: ${escaparHtml(motivos.join("; "))}</li>`
     }).join("")
 }
+
+// Empresa de trabajo: la elige el usuario en la barra superior y se recuerda en este navegador.
+function empresaActual() {
+    try {
+        return Number(localStorage.getItem("empresa_id")) || null
+    } catch {
+        return null
+    }
+}
+
+function guardarEmpresaActual(id) {
+    try {
+        localStorage.setItem("empresa_id", String(id))
+    } catch {
+        // Sin almacenamiento disponible: la elección dura hasta recargar la página.
+    }
+}
+
+// Deja solo los registros de la empresa de trabajo. obtenerEmpresa dice dónde está el id de empresa de cada registro.
+function deEmpresaActual(lista, obtenerEmpresa = (registro) => registro.empresa_id) {
+    const id = empresaActual()
+    return id === null ? lista : lista.filter((registro) => Number(obtenerEmpresa(registro)) === id)
+}
+
+// Para formularios que crean registros de la empresa de trabajo.
+function exigirEmpresaActual() {
+    const id = empresaActual()
+    if (id === null) {
+        document.getElementById("mensajeError").textContent = "Primero elige una empresa en la barra superior"
+    }
+    return id
+}
+
+const NOMBRES_MES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto",
+    "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+function nombrePeriodo(periodo) {
+    return `${NOMBRES_MES[periodo.mes - 1]} ${periodo.anio}`
+}
