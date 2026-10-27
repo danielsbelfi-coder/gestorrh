@@ -1,27 +1,57 @@
+// Ingreso de usuarios. Más adelante podrán existir otros tipos de acceso (postulantes, trabajadores);
+// cada uno tendrá su propia ruta de login y su propio destino, sin tocar este flujo.
+
+const ACCESOS = {
+    usuario: {
+        ruta: "/api/auth/login",
+        destino(datos) {
+            if (datos.debeCambiarPassword === true) {
+                return "cambiar-password.html"
+            }
+            if (datos.cuentaCancelada === true) {
+                return "empresas.html"
+            }
+            return "index.html"
+        }
+    }
+}
+
 const formulario = document.getElementById("formLogin")
+const boton = document.getElementById("botonEntrar")
+const mensajeError = document.getElementById("mensajeError")
+
+if (localStorage.getItem("token")) {
+    window.location.href = "index.html"
+}
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
-    const email = document.getElementById("email").value
+    mensajeError.textContent = ""
+
+    const acceso = ACCESOS[formulario.dataset.tipo]
+    const email = document.getElementById("email").value.trim()
     const password = document.getElementById("password").value
 
-    const resultado = await llamarApi("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password })
-    })
+    boton.disabled = true
+    boton.textContent = "Ingresando…"
 
-    if (resultado.status === 200) {
-        localStorage.setItem("token", resultado.datos.token)
+    try {
+        const resultado = await llamarApi(acceso.ruta, {
+            method: "POST",
+            body: JSON.stringify({ email, password })
+        })
 
-        if (resultado.datos.debeCambiarPassword === true) {
-            window.location.href = "cambiar-password.html"
-        } else if (resultado.datos.cuentaCancelada === true) {
-            window.location.href = "empresas.html"
-        } else {
-            window.location.href = "index.html"
+        if (resultado.status === 200) {
+            localStorage.setItem("token", resultado.datos.token)
+            window.location.href = acceso.destino(resultado.datos)
+            return
         }
-        
-    } else {
-        document.getElementById("mensajeError").textContent = resultado.datos.error
+
+        mensajeError.textContent = resultado.datos?.error ?? "No se pudo iniciar sesión"
+    } catch {
+        mensajeError.textContent = "No se pudo conectar con el servidor. Intenta de nuevo."
     }
+
+    boton.disabled = false
+    boton.textContent = "Entrar"
 })

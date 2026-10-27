@@ -5,28 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Cargos</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Cargos</h1>
+    <main class="contenido" data-titulo="Cargos">
+        <h1>Cargos</h1>
+        <p id="mensajeError"></p>
 
-    <ul id="listaCargos"></ul>
+        <ul id="listaCargos"></ul>
 
-    <h2>Crear cargos</h2>
-    <form id="formCrearCargo">
-        <input type="text" id="empresaId" placeholder="Empresa Id" required>
-        <input type="text" id="nombre" placeholder="Nombre" required>
-        <input type="text" id="departamentoId" placeholder="Departamento Id">
-        <input type="text" id="descripcion" placeholder="Descripcion">
-        <button type="submit">Crear</button>
-    </form>
+        <h2>Crear cargos</h2>
+        <form id="formCrearCargo">
+            <input type="text" id="empresaId" placeholder="Empresa Id" required>
+            <input type="text" id="nombre" placeholder="Nombre" required>
+            <input type="text" id="departamentoId" placeholder="Departamento Id">
+            <input type="text" id="descripcion" placeholder="Descripcion">
+            <button type="submit">Crear</button>
+        </form>
 
-    <p id="mensajeError"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/cargos.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

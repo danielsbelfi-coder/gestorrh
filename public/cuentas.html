@@ -5,54 +5,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Cuentas</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Cuentas</h1>
+    <main class="contenido" data-titulo="Cuentas">
+        <h1>Cuentas</h1>
+        <p id="mensaje"></p>
 
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>RUT titular</th>
-                <th>Email de contacto</th>
-                <th>Estado</th>
-                <th>Plan</th>
-                <th>Usuarios adicionales</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="cuerpoCuentas"></tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>RUT titular</th>
+                    <th>Email de contacto</th>
+                    <th>Estado</th>
+                    <th>Plan</th>
+                    <th>Usuarios adicionales</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoCuentas"></tbody>
+        </table>
 
-    <h2>Crear cuenta</h2>
-    <form id="formCrearCuenta">
-        <input type="text" id="nombre" placeholder="Nombre de la cuenta" required>
-        <input type="text" id="rutTitular" placeholder="RUT titular (sin DV)" required>
-        <input type="text" id="dvTitular" placeholder="DV" maxlength="1" required>
-        <input type="text" id="razonSocialTitular" placeholder="Razón social del titular" required>
-        <input type="email" id="emailContacto" placeholder="Email de contacto" required>
-        <input type="text" id="adminNombre" placeholder="Nombre del administrador" required>
-        <input type="email" id="adminEmail" placeholder="Email del administrador" required>
-        <select id="crearPlan" required></select>
-        <input type="number" id="crearAdicionales" min="0" value="0" required>
-        <button type="submit">Crear cuenta</button>
-    </form>
+        <h2>Crear cuenta</h2>
+        <form id="formCrearCuenta">
+            <input type="text" id="nombre" placeholder="Nombre de la cuenta" required>
+            <input type="text" id="rutTitular" placeholder="RUT titular (sin DV)" required>
+            <input type="text" id="dvTitular" placeholder="DV" maxlength="1" required>
+            <input type="text" id="razonSocialTitular" placeholder="Razón social del titular" required>
+            <input type="email" id="emailContacto" placeholder="Email de contacto" required>
+            <input type="text" id="adminNombre" placeholder="Nombre del administrador" required>
+            <input type="email" id="adminEmail" placeholder="Email del administrador" required>
+            <select id="crearPlan" required></select>
+            <input type="number" id="crearAdicionales" min="0" value="0" required>
+            <button type="submit">Crear cuenta</button>
+        </form>
 
-    <h2>Cambiar plan</h2>
-    <form id="formPlan">
-        <select id="planCuenta" required></select>
-        <select id="planNuevo" required></select>
-        <input type="number" id="planAdicionales" min="0" required>
-        <button type="submit">Guardar plan</button>
-    </form>
+        <h2>Cambiar plan</h2>
+        <form id="formPlan">
+            <select id="planCuenta" required></select>
+            <select id="planNuevo" required></select>
+            <input type="number" id="planAdicionales" min="0" required>
+            <button type="submit">Guardar plan</button>
+        </form>
 
-    <p id="mensaje"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/cuentas.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

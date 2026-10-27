@@ -5,35 +5,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Personas</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Personas</h1>
+    <main class="contenido" data-titulo="Personas">
+        <h1>Personas</h1>
+        <p id="mensajeError"></p>
 
-    <ul id="listaPersonas"></ul>
+        <ul id="listaPersonas"></ul>
 
-    <h2>Crear personas</h2>
-    <form id="formCrearPersona">
-        <input type="text" id="empresaId" placeholder="empresa id" required>
-        <input type="text" id="rut" placeholder="Rut" required>
-        <input type="text" id="dv" placeholder="Dv" required>
-        <input type="text" id="nombres" placeholder="Nombres" required>
-        <input type="text" id="apellidoPaterno" placeholder="apellido paterno" required>
-        <select id="nacionalidad" required>
-            <option value="chilena">Chilena</option>
-            <option value="extranjera">Extranjera</option>
-        </select>
-        <input type="date" id="fechaNacimiento" required>
-        <input type="text" id="direccion" placeholder="Dirección" required>
-        <button type="submit">Crear</button>
-    </form>
+        <h2>Crear personas</h2>
+        <form id="formCrearPersona">
+            <input type="text" id="empresaId" placeholder="empresa id" required>
+            <input type="text" id="rut" placeholder="Rut" required>
+            <input type="text" id="dv" placeholder="Dv" required>
+            <input type="text" id="nombres" placeholder="Nombres" required>
+            <input type="text" id="apellidoPaterno" placeholder="apellido paterno" required>
+            <select id="nacionalidad" required>
+                <option value="chilena">Chilena</option>
+                <option value="extranjera">Extranjera</option>
+            </select>
+            <input type="date" id="fechaNacimiento" required>
+            <input type="text" id="direccion" placeholder="Dirección" required>
+            <button type="submit">Crear</button>
+        </form>
 
-    <p id="mensajeError"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/personas.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

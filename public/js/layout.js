@@ -1,0 +1,147 @@
+// Estructura común de las pantallas internas: menú lateral, barra superior y sesión.
+// Cada pantalla solo necesita <main class="contenido" data-titulo="..."> y cargar este archivo después de api.js.
+
+const ICONOS = {
+    inicio: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/>',
+    personas: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2A5 5 0 0 1 21.5 19"/>',
+    trabajadores: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+    contratos: '<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+    cargos: '<path d="M4 7h16M4 12h16M4 17h10"/>',
+    periodos: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    asistencias: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    liquidaciones: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/>',
+    empresas: '<path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M8 8h3M8 12h3M8 16h3M3 21h18"/>',
+    usuarios: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    consumo: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    cuentas: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 14h4"/>',
+    clave: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    salir: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>'
+}
+
+function icono(nombre) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre]}</svg>`
+}
+
+function gruposDelMenu(usuario) {
+    if (usuario.rol_plataforma === "comercial") {
+        return [{ titulo: "Comercial", enlaces: [["cuentas.html", "Cuentas", "cuentas"]] }]
+    }
+
+    if (usuario.cuenta_estado === "cancelada") {
+        return [{ titulo: "Cuenta", enlaces: [["empresas.html", "Exportar datos", "empresas"]] }]
+    }
+
+    const administracion = [["empresas.html", "Empresas", "empresas"]]
+    if (usuario.es_admin_cuenta === true) {
+        administracion.push(["usuarios.html", "Usuarios", "usuarios"], ["consumo.html", "Consumo del plan", "consumo"])
+    }
+
+    return [
+        { titulo: "", enlaces: [["index.html", "Inicio", "inicio"]] },
+        {
+            titulo: "Personas",
+            enlaces: [
+                ["personas.html", "Personas", "personas"],
+                ["trabajadores.html", "Trabajadores", "trabajadores"],
+                ["contratos.html", "Contratos", "contratos"],
+                ["cargos.html", "Cargos", "cargos"]
+            ]
+        },
+        {
+            titulo: "Remuneraciones",
+            enlaces: [
+                ["periodos.html", "Periodos", "periodos"],
+                ["asistencias.html", "Asistencia", "asistencias"],
+                ["liquidaciones.html", "Liquidaciones", "liquidaciones"]
+            ]
+        },
+        { titulo: "Administración", enlaces: administracion }
+    ]
+}
+
+function iniciales(nombre) {
+    return String(nombre ?? "?")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((parte) => parte[0]?.toUpperCase() ?? "")
+        .join("")
+}
+
+function armarLateral(usuario) {
+    const paginaActual = location.pathname.split("/").pop() || "index.html"
+
+    const grupos = gruposDelMenu(usuario).map((grupo) => {
+        const enlaces = grupo.enlaces.map(([href, texto, nombreIcono]) => {
+            const activo = href === paginaActual ? " activo" : ""
+            return `<a class="lateral-enlace${activo}" href="${href}">${icono(nombreIcono)}<span>${escaparHtml(texto)}</span></a>`
+        }).join("")
+        const titulo = grupo.titulo ? `<div class="lateral-titulo">${escaparHtml(grupo.titulo)}</div>` : ""
+        return `<div class="lateral-grupo">${titulo}${enlaces}</div>`
+    }).join("")
+
+    return `
+        <a class="lateral-marca" href="index.html"><span class="marca-logo">RH</span><span>GestorRH</span></a>
+        <nav class="lateral-nav">${grupos}</nav>
+        <div class="lateral-pie">
+            <div class="lateral-usuario">
+                <span class="avatar">${escaparHtml(iniciales(usuario.nombre))}</span>
+                <div class="lateral-usuario-datos">
+                    <div class="lateral-usuario-nombre">${escaparHtml(usuario.nombre ?? "")}</div>
+                    <div class="lateral-usuario-email">${escaparHtml(usuario.email ?? "")}</div>
+                </div>
+            </div>
+            <a class="lateral-enlace" href="cambiar-password.html">${icono("clave")}<span>Cambiar contraseña</span></a>
+            <button type="button" class="lateral-enlace lateral-boton" id="botonSalir">${icono("salir")}<span>Cerrar sesión</span></button>
+        </div>`
+}
+
+async function iniciarLayout() {
+    if (!localStorage.getItem("token")) {
+        window.location.href = "login.html"
+        return
+    }
+
+    const contenido = document.querySelector("main.contenido")
+    if (!contenido) {
+        return
+    }
+
+    const resultado = await llamarApi("/api/auth/usuario")
+    const usuario = resultado.status === 200 ? resultado.datos : {}
+
+    document.body.classList.add("app")
+
+    const lateral = document.createElement("aside")
+    lateral.className = "lateral"
+    lateral.innerHTML = armarLateral(usuario)
+
+    const velo = document.createElement("div")
+    velo.className = "velo"
+
+    const principal = document.createElement("div")
+    principal.className = "principal"
+
+    const barra = document.createElement("header")
+    barra.className = "barra-superior"
+    barra.innerHTML = `
+        <button type="button" class="boton-menu" id="botonMenu" aria-label="Abrir menú">${icono("menu")}</button>
+        <div class="barra-titulo"></div>
+        <div class="barra-espacio"></div>`
+    barra.querySelector(".barra-titulo").textContent = contenido.dataset.titulo ?? ""
+
+    contenido.parentNode.insertBefore(principal, contenido)
+    principal.appendChild(barra)
+    principal.appendChild(contenido)
+    document.body.prepend(velo)
+    document.body.prepend(lateral)
+
+    document.getElementById("botonSalir").addEventListener("click", sesionVencida)
+    document.getElementById("botonMenu").addEventListener("click", () => document.body.classList.toggle("menu-abierto"))
+    velo.addEventListener("click", () => document.body.classList.remove("menu-abierto"))
+
+    document.dispatchEvent(new CustomEvent("usuario-listo", { detail: usuario }))
+}
+
+iniciarLayout()

@@ -5,53 +5,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Usuarios</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Usuarios de la cuenta</h1>
+    <main class="contenido" data-titulo="Usuarios">
+        <h1>Usuarios de la cuenta</h1>
+        <p id="mensaje"></p>
 
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Estado</th>
-                <th>Admin de cuenta</th>
-                <th>Roles por empresa</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="cuerpoUsuarios"></tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th>Admin de cuenta</th>
+                    <th>Roles por empresa</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoUsuarios"></tbody>
+        </table>
 
-    <h2>Crear usuario</h2>
-    <form id="formCrearUsuario">
-        <input type="text" id="nombre" placeholder="Nombre" required>
-        <input type="email" id="email" placeholder="Email" required>
-        <button type="submit">Crear</button>
-    </form>
+        <h2>Crear usuario</h2>
+        <form id="formCrearUsuario">
+            <input type="text" id="nombre" placeholder="Nombre" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <button type="submit">Crear</button>
+        </form>
 
-    <h2>Roles por empresa</h2>
-    <form id="formRol">
-        <select id="rolUsuario" required></select>
-        <select id="rolEmpresa" required></select>
-        <select id="rolCodigo">
-            <option value="ADMIN">ADMIN</option>
-            <option value="JEFE_RRHH">JEFE_RRHH</option>
-            <option value="RRHH">RRHH</option>
-            <option value="SUPERVISOR">SUPERVISOR</option>
-            <option value="LECTURA">LECTURA</option>
-        </select>
-        <button type="submit">Asignar rol</button>
-        <button type="button" id="botonQuitarRol">Quitar rol</button>
-    </form>
+        <h2>Roles por empresa</h2>
+        <form id="formRol">
+            <select id="rolUsuario" required></select>
+            <select id="rolEmpresa" required></select>
+            <select id="rolCodigo">
+                <option value="ADMIN">ADMIN</option>
+                <option value="JEFE_RRHH">JEFE_RRHH</option>
+                <option value="RRHH">RRHH</option>
+                <option value="SUPERVISOR">SUPERVISOR</option>
+                <option value="LECTURA">LECTURA</option>
+            </select>
+            <button type="submit">Asignar rol</button>
+            <button type="button" id="botonQuitarRol">Quitar rol</button>
+        </form>
 
-    <p id="mensaje"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/usuarios.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

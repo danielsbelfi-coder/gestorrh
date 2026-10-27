@@ -5,32 +5,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Empresas</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Empresas</h1>
+    <main class="contenido" data-titulo="Empresas">
+        <h1>Empresas</h1>
+        <p id="mensajeError"></p>
 
-    <ul id="listaEmpresas"></ul>
+        <ul id="listaEmpresas"></ul>
 
-    <div id="seccionCrearEmpresa">
-        <h2>Crear empresas</h2>
-        <form id="formCrearEmpresa">
-            <input type="text" id="rut" placeholder="RUT (sin DV)" required>
-            <input type="text" id="dv" placeholder="DV" maxlength="1" required>
-            <input type="text" id="razonSocial" placeholder="Razón social" required>
-            <input type="text" id="representanteLegalNombre" placeholder="Representante Legal" required>
-            <input type="text" id="representanteLegalRut" placeholder="RUT representante" required>
-            <input type="text" id="direccion" placeholder="Dirección" required>
-            <button type="submit">Crear</button>
-        </form>
-    </div>
+        <div id="seccionCrearEmpresa">
+            <h2>Crear empresas</h2>
+            <form id="formCrearEmpresa">
+                <input type="text" id="rut" placeholder="RUT (sin DV)" required>
+                <input type="text" id="dv" placeholder="DV" maxlength="1" required>
+                <input type="text" id="razonSocial" placeholder="Razón social" required>
+                <input type="text" id="representanteLegalNombre" placeholder="Representante Legal" required>
+                <input type="text" id="representanteLegalRut" placeholder="RUT representante" required>
+                <input type="text" id="direccion" placeholder="Dirección" required>
+                <button type="submit">Crear</button>
+            </form>
+        </div>
 
-    <p id="mensajeError"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/empresas.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

@@ -4,35 +4,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestorRH - liquidaciones</title>
+    <title>GestorRH - Liquidaciones</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <select id="periodo"></select>
+    <main class="contenido" data-titulo="Liquidaciones">
+        <h1>Liquidaciones</h1>
+        <p id="mensajeInfo"></p>
+        <p id="mensajeError"></p>
+        <ul id="listaProblemas"></ul>
+        <select id="periodo"></select>
 
-    <div>
-        <button id="btnEmitirTodas">Emitir todas</button>
-        <button id="btnPdfTodas">PDF de todas</button>
-        <button id="btnPdfTodasAportes">PDF de todas con aportes</button>
-        <button id="btnPrevired">Archivo Previred</button>
-        <button id="btnLre">Archivo LRE</button>
-    </div>
+        <div>
+            <button id="btnEmitirTodas">Emitir todas</button>
+            <button id="btnPdfTodas">PDF de todas</button>
+            <button id="btnPdfTodasAportes">PDF de todas con aportes</button>
+            <button id="btnPrevired">Archivo Previred</button>
+            <button id="btnLre">Archivo LRE</button>
+        </div>
 
-    <ul id="listaLiquidaciones"></ul>
+        <ul id="listaLiquidaciones"></ul>
 
-    <form id="formCalcular">
-        <input type="text" id="trabajadorId" placeholder="trabajador id" required>
-        <button type="submit">Calcular</button>
-    </form>
+        <form id="formCalcular">
+            <input type="text" id="trabajadorId" placeholder="trabajador id" required>
+            <button type="submit">Calcular</button>
+        </form>
 
-    <p id="mensajeInfo"></p>
-    <p id="mensajeError"></p>
-    <ul id="listaProblemas"></ul>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/liquidaciones.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

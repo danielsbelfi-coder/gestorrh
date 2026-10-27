@@ -5,27 +5,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestorRH - Trabajadores</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Trabajadores</h1>
+    <main class="contenido" data-titulo="Trabajadores">
+        <h1>Trabajadores</h1>
+        <p id="mensajeError"></p>
 
-    <ul id="listaTrabajadores"></ul>
+        <ul id="listaTrabajadores"></ul>
 
-    <h2>Crear trabajadores</h2>
-    <form id="formCrearTrabajador">
-        <input type="text" id="personaId" placeholder="Persona id" required>
-        <input type="text" id="empresaId" placeholder="empresa id" required>
-        <input type="date" id="fechaIngreso" required>
-        <button type="submit">Crear</button>
-    </form>
+        <h2>Crear trabajadores</h2>
+        <form id="formCrearTrabajador">
+            <input type="text" id="personaId" placeholder="Persona id" required>
+            <input type="text" id="empresaId" placeholder="empresa id" required>
+            <input type="date" id="fechaIngreso" required>
+            <button type="submit">Crear</button>
+        </form>
 
-    <p id="mensajeError"></p>
+    </main>
+
 
     <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
     <script src="js/trabajadores.js"></script>
-    <script src="js/menu.js"></script>
 </body>
 
 </html>

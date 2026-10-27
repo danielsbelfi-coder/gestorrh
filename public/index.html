@@ -4,14 +4,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestorRH</title>
+    <title>GestorRH - Inicio</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Funciona</h1>
+    <main class="contenido" data-titulo="Inicio">
+        <div class="saludo encabezado-pagina">
+            <div>
+                <h1 id="saludo">Hola</h1>
+                <p>Este es el ciclo de remuneraciones de cada mes, paso a paso.</p>
+            </div>
+        </div>
+
+        <p id="mensajeError" role="alert"></p>
+
+        <section class="tarjeta">
+            <h2>Periodos abiertos</h2>
+            <div id="periodosAbiertos" class="texto-suave">Cargando…</div>
+        </section>
+
+        <h2>Ciclo mensual</h2>
+        <div class="pasos rejilla">
+            <a class="paso" href="periodos.html">
+                <div class="paso-titulo">Abrir el periodo</div>
+                <div class="paso-texto">Crea el mes de remuneraciones de la empresa.</div>
+            </a>
+            <a class="paso" href="contratos.html">
+                <div class="paso-titulo">Revisar contratos</div>
+                <div class="paso-texto">Ingresos, términos y anexos del mes.</div>
+            </a>
+            <div class="paso pronto">
+                <div class="paso-titulo">Variables del mes</div>
+                <div class="paso-texto">Bonos, horas extra y descuentos.</div>
+            </div>
+            <a class="paso" href="asistencias.html">
+                <div class="paso-titulo">Asistencia</div>
+                <div class="paso-texto">Marcas, ausencias y atrasos.</div>
+            </a>
+            <div class="paso pronto">
+                <div class="paso-titulo">Licencias médicas</div>
+                <div class="paso-texto">Registra las licencias del mes.</div>
+            </div>
+            <a class="paso" href="liquidaciones.html">
+                <div class="paso-titulo">Calcular y emitir</div>
+                <div class="paso-texto">Liquidaciones de sueldo y sus PDF.</div>
+            </a>
+            <a class="paso" href="liquidaciones.html">
+                <div class="paso-titulo">Previred y LRE</div>
+                <div class="paso-texto">Descarga los archivos para subir.</div>
+            </a>
+            <a class="paso" href="periodos.html">
+                <div class="paso-titulo">Cerrar el periodo</div>
+                <div class="paso-texto">Deja el mes bloqueado.</div>
+            </a>
+        </div>
+    </main>
+
     <script src="js/api.js"></script>
-    <script src="js/menu.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/inicio.js"></script>
 </body>
 
 </html>

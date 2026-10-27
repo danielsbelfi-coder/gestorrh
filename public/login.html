@@ -3,22 +3,47 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>GestorRH - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Iniciar sesión</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <div id="menu"></div>
-    <h1>Iniciar sesión</h1>
-    <form id="formLogin">
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Contraseña" required>
-        <button type="submit">Entrar</button>
-    </form>
-    <p id="mensajeError"></p>
+    <div class="acceso">
+        <section class="acceso-marca">
+            <a class="lateral-marca" href="login.html"><span class="marca-logo">RH</span><span>GestorRH</span></a>
+            <div>
+                <h1>Remuneraciones y personas, en orden y al día.</h1>
+                <p>Contratos, asistencia, liquidaciones, Previred, Libro de Remuneraciones Electrónico y finiquitos en un solo lugar.</p>
+                <ul class="acceso-lista">
+                    <li>Cálculo de liquidaciones con la normativa chilena vigente</li>
+                    <li>Archivo Previred y LRE listos para subir</li>
+                    <li>Finiquitos con indemnizaciones y feriado proporcional</li>
+                </ul>
+            </div>
+            <div class="acceso-pie">© GestorRH</div>
+        </section>
+
+        <section class="acceso-formulario">
+            <div class="acceso-tarjeta">
+                <h2>Iniciar sesión</h2>
+                <p>Ingresa con tu correo y contraseña.</p>
+                <p id="mensajeError" role="alert"></p>
+                <form id="formLogin" data-tipo="usuario">
+                    <label>Correo
+                        <input type="email" id="email" autocomplete="username" required>
+                    </label>
+                    <label>Contraseña
+                        <input type="password" id="password" autocomplete="current-password" required>
+                    </label>
+                    <button type="submit" id="botonEntrar">Entrar</button>
+                </form>
+            </div>
+        </section>
+    </div>
 
     <script src="js/api.js"></script>
     <script src="js/login.js"></script>
-
 </body>
 
 </html>

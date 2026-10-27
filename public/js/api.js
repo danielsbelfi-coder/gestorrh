@@ -14,9 +14,19 @@ async function llamarApi(ruta, opciones = {}) {
         headers: headers
     })
 
+    if (respuesta.status === 401 && ruta !== "/api/auth/login") {
+        sesionVencida()
+    }
+
     const datos = respuesta.status === 204 ? null : await respuesta.json()
 
     return { status: respuesta.status, datos }
+}
+
+// Token vencido o inválido: se borra y se vuelve al login.
+function sesionVencida() {
+    localStorage.removeItem("token")
+    window.location.href = "login.html"
 }
 
 function requiereLogin() {
@@ -41,6 +51,10 @@ async function descargarArchivo(ruta) {
     const respuesta = await fetch(ruta, {
         headers: { "Authorization": "Bearer " + token }
     })
+
+    if (respuesta.status === 401) {
+        sesionVencida()
+    }
 
     if (!respuesta.ok) {
         const datos = await respuesta.json()
