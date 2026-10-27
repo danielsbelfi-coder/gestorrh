@@ -1,3 +1,4 @@
+const { edadAl } = require("../shared/fechas.js")
 const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
 const { movimientosDelMes } = require("./movimientos_previred.js")
 
@@ -67,11 +68,6 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
 }
 
 const EDAD_LIMITE = { masculino: 65, femenino: 60 }
-
-function edadAl(fechaNacimiento, fecha) {
-    const anios = Number(fecha.slice(0, 4)) - Number(fechaNacimiento.slice(0, 4))
-    return fecha.slice(5) < fechaNacimiento.slice(5) ? anios - 1 : anios
-}
 
 function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasPermisoSinGoce }) {
     const persona = liquidacion.Trabajador.Persona

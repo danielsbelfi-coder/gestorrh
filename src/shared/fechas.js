@@ -45,10 +45,17 @@ function tramosContinuos(fechas) {
     return tramos
 }
 
+
+function edadAl(fechaNacimiento, fecha) {
+    const anios = Number(fecha.slice(0, 4)) - Number(fechaNacimiento.slice(0, 4))
+    return fecha.slice(5) < fechaNacimiento.slice(5) ? anios - 1 : anios
+}
+
 module.exports = {
     esFechaValida,
     sumarDias,
     fechaChilena,
     diasEntre,
-    tramosContinuos
+    tramosContinuos,
+    edadAl
 }
