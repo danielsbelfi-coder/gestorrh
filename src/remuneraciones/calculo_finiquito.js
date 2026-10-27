@@ -60,7 +60,7 @@ function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, b
 
     const montoAniosServicio = art161 && tiempo.anios >= 1 ? baseTopada * anios : 0
     const montoAvisoPrevio = art161 && !avisoPrevioDado ? baseTopada : 0
-    const diasFeriado = diasPendientes + diasInhabiles
+    const diasFeriado = Math.round((diasPendientes + diasInhabiles) * 100) / 100
     const montoFeriado = Math.round(baseFeriado / 30 * diasFeriado)
 
     const imputacion = art161 ? Math.min(imputacionAfc, montoAniosServicio) : 0
