@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Feriados</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Feriados">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Feriados</h1>
+                <p>Feriados legales de Chile: nacionales, regionales y comunales. Son los mismos para todas las empresas y los mantiene la plataforma. El libro de asistencia los usa para saber qué días no se espera al trabajador, según la comuna de prestación de su contrato.</p>
+            </div>
+            <div class="selector-mes">
+                <button type="button" class="secundario chico" id="anioAnterior" aria-label="Año anterior">‹</button>
+                <label>Año<input type="number" id="anio" min="2000" max="2100" step="1"></label>
+                <button type="button" class="secundario chico" id="anioSiguiente" aria-label="Año siguiente">›</button>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelSoporte" hidden>
+            <summary id="tituloPanel">＋ Nuevo feriado (soporte)</summary>
+            <form id="formFeriado">
+                <label>Fecha<input type="date" id="fecha" required></label>
+                <label class="campo-ancho">Nombre<input type="text" id="nombre" maxlength="100" required></label>
+                <label>Alcance
+                    <select id="alcance">
+                        <option value="nacional">Nacional</option>
+                        <option value="regional">Regional</option>
+                        <option value="comunal">Comunal</option>
+                    </select>
+                </label>
+                <label id="campoRegion" hidden>Región<select id="region"></select></label>
+                <label id="campoComuna" class="campo-ancho" hidden>Comuna<input type="search" id="comuna" placeholder="Escribe la comuna…"></label>
+                <label class="casilla"><input type="checkbox" id="irrenunciable"> Irrenunciable (comercio)</label>
+                <div class="acciones-grupo campo-ancho">
+                    <button type="submit" id="botonGuardar">Crear feriado</button>
+                    <button type="button" class="secundario" id="cancelarEdicion" hidden>Cancelar edición</button>
+                </div>
+            </form>
+            <p class="texto-suave">Un feriado comunal rige solo en esa comuna: si aplica a varias (por ejemplo Chillán y Chillán Viejo), crea uno por comuna.</p>
+        </details>
+
+        <div id="tablaFeriados"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/comunas.js"></script>
+    <script src="js/feriados.js"></script>
+</body>
+
+</html>
