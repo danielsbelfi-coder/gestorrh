@@ -3,3 +3,4 @@ node_modules/
 prueba-liquidacion.pdf
 .env.*
 !.env.example
+spec.md
