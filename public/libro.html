@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Libro de asistencia</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Libro de asistencia">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Libro de asistencia</h1>
+                <p>El mes de cada trabajador según su jornada, los feriados de su comuna y sus licencias. Solo se anotan las diferencias: un día sin anotación se trabajó según horario. Lo anotado queda pendiente hasta que la jefatura lo aprueba, y solo lo aprobado pasa al resumen y a la liquidación.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta libro-controles">
+            <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…"></label>
+            <div class="selector-mes">
+                <button type="button" class="secundario chico" id="mesAnterior" aria-label="Mes anterior">‹</button>
+                <label>Mes<input type="month" id="mes"></label>
+                <button type="button" class="secundario chico" id="mesSiguiente" aria-label="Mes siguiente">›</button>
+            </div>
+            <button type="button" id="aprobarMes" hidden>Aprobar todo el mes</button>
+        </section>
+
+        <section id="resumenLibro" hidden>
+            <div class="libro-totales" id="totales"></div>
+            <p class="texto-suave" id="infoJornada"></p>
+            <ul class="problemas-jornada" id="avisosLibro"></ul>
+        </section>
+
+        <div class="tabla-marco libro-marco" id="contenedorLibro" hidden>
+            <table class="tabla-libro">
+                <thead>
+                    <tr><th>Fecha</th><th>Esperado</th><th>Anotado</th><th class="numero">Descuento</th><th class="numero">Extra</th><th>Estado</th><th>Avisos</th><th></th></tr>
+                </thead>
+                <tbody id="filasLibro"></tbody>
+            </table>
+        </div>
+        <p class="texto-suave" id="sinTrabajador">Elige un trabajador para ver su libro del mes.</p>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/comunas.js"></script>
+    <script src="js/libro.js"></script>
+</body>
+
+</html>

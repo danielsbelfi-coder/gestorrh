@@ -1624,3 +1624,35 @@ input.campo-corto {
 .tabla-jornada input[type="time"] { width: 130px; }
 button.chico.peligro { background: var(--peligro-suave); color: var(--peligro); border-color: #fecaca; }
 button.chico.peligro:hover { background: var(--peligro); color: #fff; border-color: var(--peligro); }
+
+/* ---------- Libro de asistencia ---------- */
+.libro-controles { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+.libro-controles > label { flex: 1 1 320px; }
+.libro-totales { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0 8px; }
+.libro-total { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.libro-total span { color: var(--texto-suave); font-size: 0.85rem; }
+.libro-total strong { font-size: 1.35rem; }
+.libro-total.advertencia strong { color: var(--advertencia); }
+.libro-total.peligro strong { color: var(--peligro); }
+.libro-total.exito strong { color: var(--primario-oscuro, #006838); }
+.libro-marco { margin-top: 12px; }
+.tabla-libro { width: 100%; border-collapse: collapse; background: #fff; }
+.tabla-libro th, .tabla-libro td { padding: 8px 10px; border-bottom: 1px solid var(--borde); text-align: left; vertical-align: top; font-size: 0.92rem; }
+.tabla-libro th { background: #f8fafc; color: var(--texto-suave); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; }
+.tabla-libro td.numero, .tabla-libro th.numero { text-align: right; white-space: nowrap; }
+.tabla-libro .libro-fecha { white-space: nowrap; }
+.tabla-libro .libro-fecha span { color: var(--texto-suave); }
+.tabla-libro tr.esperado-libre td, .tabla-libro tr.esperado-feriado td { background: #f8fafc; }
+.tabla-libro tr.esperado-feriado td:nth-child(2) { color: var(--advertencia); font-weight: 600; }
+.tabla-libro tr.esperado-licencia td { background: #f0f9ff; }
+.tabla-libro tr.esperado-fuera_contrato td { color: var(--texto-suave); background: #fafafa; }
+.tabla-libro tr.no-cuenta td:nth-child(4), .tabla-libro tr.no-cuenta td:nth-child(5) { color: var(--texto-suave); font-style: italic; }
+.tabla-libro .libro-avisos { color: var(--advertencia); font-size: 0.82rem; max-width: 280px; }
+.tabla-libro td.libro-acciones { white-space: nowrap; text-align: right; }
+.tabla-libro td.libro-acciones button { margin: 0 0 0 4px; min-height: 28px; padding: 0 10px; }
+.tabla-libro td { padding-top: 6px; padding-bottom: 6px; }
+.tabla-libro tr.libro-editor td { background: #f0fdf4; }
+.form-marca { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.form-marca label { display: grid; gap: 4px; }
+.form-marca .campo-ancho { flex: 1 1 260px; }
+.form-marca p { flex-basis: 100%; margin: 0; }

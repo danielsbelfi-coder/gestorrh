@@ -30,6 +30,7 @@ async function cargarFicha() {
     cargoPorId = porId(listas[1])
     const jornadas = await llamarApi(`/api/jornadas?empresa_id=${trabajador.empresa_id}`)
     jornadaPorId = jornadas.status === 200 ? porId(jornadas.datos) : new Map()
+    jornadasConocidas = jornadaPorId
     contratos = listas[2]
         .filter((c) => c.trabajador_id === trabajador.id)
         .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))
@@ -43,7 +44,7 @@ async function cargarFicha() {
     const rut = encodeURIComponent(formatearRut(persona.rut, persona.dv))
     document.getElementById("enlaces").innerHTML = `
         <a class="boton secundario chico" href="persona.html?id=${persona.id}">Datos personales y previsión</a>
-        <a class="boton secundario chico" href="asistencias.html?buscar=${rut}">Asistencia</a>
+        <a class="boton secundario chico" href="libro.html?trabajador=${trabajador.id}">Libro de asistencia</a>
         <a class="boton secundario chico" href="liquidaciones.html?buscar=${rut}">Liquidaciones</a>
         ${trabajador.fecha_termino ? `<a class="boton secundario chico" href="finiquitos.html?buscar=${rut}">Finiquito</a>` : ""}`
 
@@ -133,7 +134,15 @@ function prepararCampoValor() {
     const definicion = CAMPOS_ANEXO[document.getElementById("campoAnexo").value]
     const contenedor = document.getElementById("contenedorValor")
     let control
-    if (definicion.tipo === "lista") {
+    if (definicion.tipo === "jornada") {
+        // Solo plantillas activas con las mismas horas y días del contrato: la jornada por anexo cambia el horario, no las horas.
+        const actual = contratoParaAnexo
+        const opciones = [...jornadaPorId.values()].filter((j) => j.activo && j.id !== actual?.jornada_id
+            && Number(j.horas_semanales) === Number(actual?.horas_semanales) && Number(j.dias_trabajados) === Number(actual?.dias_trabajados))
+        control = opciones.length > 0
+            ? `<select id="valorAnexo" required>${opciones.map((j) => `<option value="${j.id}">${escaparHtml(`${j.nombre} · ${textoDistribucion(j.dias)}`)}</option>`).join("")}</select>`
+            : `<select id="valorAnexo" required disabled><option value="">No hay otra jornada de ${Number(actual?.horas_semanales ?? 0)} h en ${actual?.dias_trabajados ?? "?"} días</option></select>`
+    } else if (definicion.tipo === "lista") {
         control = `<select id="valorAnexo" required>${Object.entries(definicion.opciones).map(([v, t]) => `<option value="${escaparHtml(v)}">${escaparHtml(t)}</option>`).join("")}</select>`
     } else if (definicion.tipo === "numero") {
         control = `<input type="number" id="valorAnexo" min="0" step="any" required>`

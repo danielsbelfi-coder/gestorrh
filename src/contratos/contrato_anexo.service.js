@@ -1,10 +1,29 @@
-const { ContratoAnexo, ContratoTrabajo, Trabajador } = require("../shared/associations.js")
+const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada } = require("../shared/associations.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { PERMISOS, exigirRol } = require("../shared/permisos.js")
 const { Op } = require("sequelize")
 
+
+// Cambio de plantilla de jornada por anexo. Solo cambia el horario: la plantilla nueva debe tener las mismas
+// horas y días que el contrato, porque de ellos sale el valor hora. Si cambian, primero va el anexo de horas o días.
+async function validarJornadaDelAnexo(valorNuevo, contrato) {
+    const jornada = await Jornada.findByPk(Number(valorNuevo))
+
+    if (jornada === null || jornada.empresa_id !== contrato.Trabajador.empresa_id || !jornada.activo) {
+        throw new NotFoundError("Jornada no encontrada")
+    }
+    if (contrato.tipo_jornada === "excluido_limitacion") {
+        throw new ConflictError("Un contrato excluido de la limitación de jornada no lleva plantilla de horario")
+    }
+    if (Number(jornada.id) === Number(contrato.jornada_id)) {
+        throw new ConflictError("El contrato ya tiene esa jornada")
+    }
+    if (Number(jornada.horas_semanales) !== Number(contrato.horas_semanales) || Number(jornada.dias_trabajados) !== Number(contrato.dias_trabajados)) {
+        throw new ConflictError(`La jornada "${jornada.nombre}" es de ${Number(jornada.horas_semanales)} horas en ${jornada.dias_trabajados} días y el contrato tiene ${Number(contrato.horas_semanales)} horas en ${contrato.dias_trabajados} días. Primero registra y firma el anexo de horas semanales o días trabajados.`)
+    }
+}
 
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
@@ -17,7 +36,8 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         "sistema_remuneracion",
         "periodicidad_pago",
         "fecha_termino",
-        "comuna_prestacion"
+        "comuna_prestacion",
+        "jornada_id"
     ]
     const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
         include: [Trabajador]
@@ -42,6 +62,10 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
 
     if (datos.campo_modificado === "comuna_prestacion" && COMUNAS[datos.valor_nuevo] === undefined) {
         throw new ValidationError("La comuna de prestación no está en la tabla de la Dirección del Trabajo")
+    }
+
+    if (datos.campo_modificado === "jornada_id") {
+        await validarJornadaDelAnexo(datos.valor_nuevo, contrato)
     }
 
 
@@ -78,6 +102,10 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
 
     if (anexo.estado_firma !== "pendiente") {
         throw new ConflictError("El anexo ya fue procesado")
+    }
+
+    if (anexo.campo_modificado === "jornada_id") {
+        await validarJornadaDelAnexo(anexo.valor_nuevo, contrato)
     }
 
     await sequelize.transaction(async (t) => {

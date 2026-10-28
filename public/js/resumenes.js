@@ -22,6 +22,13 @@ const tabla = crearTabla({
         { titulo: "Permiso s/goce", valor: (f) => f.resumen?.dias_permiso_sin_goce ?? "", numero: true },
         { titulo: "Vacaciones", valor: (f) => f.resumen?.dias_vacaciones ?? "", numero: true },
         { titulo: "Atraso (min)", valor: (f) => f.resumen?.minutos_atraso ?? "", numero: true },
+        {
+            // Informativo: las horas extra se aprueban en Variables del mes.
+            titulo: "Horas extra", valor: (f) => f.horasExtra?.cantidad ?? 0, numero: true,
+            html: (f) => f.horasExtra
+                ? `<a href="variables.html" title="Se aprueban en Variables del mes">${escaparHtml(f.horasExtra.cantidad.toLocaleString("es-CL"))} h</a> <span class="texto-suave">${escaparHtml(f.horasExtra.estado)}</span>`
+                : ""
+        },
         { titulo: "Fuente", valor: (f) => f.resumen ? (TEXTOS.fuenteRegistro[f.resumen.fuente] ?? f.resumen.fuente) : "" },
         { titulo: "Estado", valor: (f) => textoEstado("resumen", f.estado), html: (f) => insignia("resumen", f.estado) },
         { titulo: "", orden: false, valor: () => "", html: botones }
@@ -35,9 +42,10 @@ function botones(fila) {
     }
     const id = fila.trabajador.id
     if (fila.estado === "aprobado") {
-        return `<button type="button" class="chico secundario" data-accion="devolver" data-trabajador="${id}">Devolver</button>`
+        return `<a class="boton chico secundario" href="libro.html?trabajador=${id}&mes=${periodoElegido().anio}-${String(periodoElegido().mes).padStart(2, "0")}">Libro</a> <button type="button" class="chico secundario" data-accion="devolver" data-trabajador="${id}">Devolver</button>`
     }
-    return `<button type="button" class="chico secundario" data-accion="editar" data-trabajador="${id}">${fila.resumen ? "Editar" : "Crear"}</button>
+    const enlaceLibro = `<a class="boton chico secundario" href="libro.html?trabajador=${id}&mes=${periodoElegido().anio}-${String(periodoElegido().mes).padStart(2, "0")}">Libro</a> `
+    return `${enlaceLibro}<button type="button" class="chico secundario" data-accion="editar" data-trabajador="${id}">${fila.resumen ? "Editar" : "Crear"}</button>
         ${fila.resumen ? `<button type="button" class="chico" data-accion="aprobar" data-trabajador="${id}">Aprobar</button>` : ""}`
 }
 
@@ -56,14 +64,39 @@ async function cargarResumenes() {
         return
     }
     const resumenPorTrabajador = new Map(resultado.datos.map((r) => [r.trabajador_id, r]))
+    const horasPorTrabajador = await horasExtraDelPeriodo(periodo)
 
     // Trabajadores del mes, más cualquiera que ya tenga resumen aunque no calce con la regla.
     const delMes = datosTrabajadores.trabajadores.filter((t) => vigenteEnPeriodo(t, periodo) || resumenPorTrabajador.has(t.id))
     filas = delMes.map((trabajador) => {
         const resumen = resumenPorTrabajador.get(trabajador.id) ?? null
-        return { trabajador, resumen, estado: resumen?.estado ?? "sin_resumen" }
+        return { trabajador, resumen, estado: resumen?.estado ?? "sin_resumen", horasExtra: horasPorTrabajador.get(trabajador.id) ?? null }
     })
     tabla.mostrar(filas)
+}
+
+// Horas extra del periodo por trabajador (variables de conceptos con recargo de hora extra). Solo para mostrar.
+async function horasExtraDelPeriodo(periodo) {
+    const [variables, conceptos] = await Promise.all([
+        llamarApi(`/api/variables?periodo_id=${periodo.id}`),
+        llamarApi(`/api/conceptos?empresa_id=${periodo.empresa_id}`)
+    ])
+    const porTrabajador = new Map()
+    if (variables.status !== 200 || conceptos.status !== 200) {
+        return porTrabajador
+    }
+    const deHoraExtra = new Set(conceptos.datos.filter((c) => c.recargo_hora_extra !== null).map((c) => c.id))
+    for (const v of variables.datos.filter((x) => deHoraExtra.has(x.concepto_id) && x.estado !== "rechazada")) {
+        const actual = porTrabajador.get(v.trabajador_id) ?? { cantidad: 0, estados: new Set() }
+        actual.cantidad += Number(v.cantidad ?? 0)
+        actual.estados.add(v.estado)
+        porTrabajador.set(v.trabajador_id, actual)
+    }
+    for (const actual of porTrabajador.values()) {
+        actual.cantidad = Math.round(actual.cantidad * 100) / 100
+        actual.estado = actual.estados.size === 1 ? [...actual.estados][0] : "mixto"
+    }
+    return porTrabajador
 }
 
 function abrirEdicion(fila) {

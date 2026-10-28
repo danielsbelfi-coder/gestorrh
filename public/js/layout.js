@@ -16,6 +16,7 @@ const ICONOS = {
     parametros: '<path d="M5 20V10M12 20V4M19 20v-7"/><circle cx="5" cy="8" r="2"/><circle cx="12" cy="2.5" r="0.5"/><circle cx="19" cy="11" r="2"/>',
     feriados: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1L9 15.3l2-.3 1-2Z"/>',
     jornadas: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+    libro: '<path d="M4 4h11a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3V4Z"/><path d="M4 17a3 3 0 0 1 3-3h11M8 8h6"/>',
     finiquitos: '<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 15l2 2 4-4"/>',
     legales: '<path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7ZM17 7l-3 7a3 3 0 0 0 6 0l-3-7ZM8 21h8"/>',
     liquidaciones: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/>',
@@ -62,7 +63,8 @@ function gruposDelMenu(usuario) {
             titulo: "Remuneraciones",
             enlaces: [
                 ["periodos.html", "Periodos", "periodos"],
-                ["asistencias.html", "Asistencia", "asistencias"],
+                ["libro.html", "Libro de asistencia", "libro"],
+                ["asistencias.html", "Marcas de asistencia", "asistencias"],
                 ["licencias.html", "Licencias médicas", "licencias"],
                 ["resumenes.html", "Resumen de asistencia", "resumenes"],
                 ["variables.html", "Variables del mes", "variables"],

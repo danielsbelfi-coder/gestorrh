@@ -457,8 +457,12 @@ const CAMPOS_ANEXO = {
     sistema_remuneracion: { texto: "Sistema de remuneración", tipo: "lista", opciones: TEXTOS_CONTRATO.sistemaRemuneracion },
     periodicidad_pago: { texto: "Periodicidad de pago", tipo: "lista", opciones: TEXTOS_CONTRATO.periodicidadPago },
     fecha_termino: { texto: "Fecha de término", tipo: "fecha" },
-    comuna_prestacion: { texto: "Comuna de prestación", tipo: "comuna" }
+    comuna_prestacion: { texto: "Comuna de prestación", tipo: "comuna" },
+    jornada_id: { texto: "Jornada (horario)", tipo: "jornada" }
 }
+
+// Plantillas de jornada conocidas por la pantalla (id → jornada), para mostrar su nombre en anexos.
+let jornadasConocidas = new Map()
 
 // Muestra un valor de contrato o anexo en palabras (montos con $, fechas dd-mm-aaaa, comunas con nombre).
 function valorContrato(campo, valor) {
@@ -474,6 +478,9 @@ function valorContrato(campo, valor) {
     }
     if (definicion?.tipo === "lista") {
         return definicion.opciones[valor] ?? valor
+    }
+    if (definicion?.tipo === "jornada") {
+        return jornadasConocidas.get(Number(valor))?.nombre ?? `Jornada #${valor}`
     }
     if (definicion?.tipo === "comuna") {
         return typeof COMUNAS !== "undefined" && COMUNAS[valor] ? `${COMUNAS[valor]} (${valor})` : String(valor)

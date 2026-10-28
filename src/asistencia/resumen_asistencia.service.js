@@ -8,6 +8,7 @@ const { obtenerPeriodoPorId, rangoDelPeriodo, trabajadoresDelPeriodo } = require
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 const { diasLicenciaEnMes } = require("../remuneraciones/dias_pago.js")
+const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 
 
 
@@ -157,32 +158,26 @@ async function devolverResumen(id, empresasPermitidas, usuarioId) {
     return await resumen.update({ estado: "pendiente", aprobado_por_id: null, fecha_aprobacion: null })
 }
 
-function horasEntre(horaEntrada, horaSalida) {
-    const [horaE, minE] = horaEntrada.split(":")
-    const [horaS, minS] = horaSalida.split(":")
-
-    return ((Number(horaS) * 60 + Number(minS)) - (Number(horaE) * 60 + Number(minE))) / 60
-}
-
-async function generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, conceptoHoras, usuarioId, transaction) {
-    const asistencias = await Asistencia.findAll({
-        where: {
-            trabajador_id: trabajador.id,
-            fecha: { [Op.between]: [primerDia, ultimoDia] },
-            estado_aprobacion: "aprobada"
-        },
-        transaction
-    })
-    const contar = (tipo) => asistencias.filter((asistencia) => asistencia.tipo === tipo).length
+// Resumen y horas extra del mes a partir del libro de asistencia (solo marcas aprobadas).
+async function generarParaTrabajador(trabajador, periodo, conceptoHoras, usuarioId, transaction) {
+    const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes, transaction)
+    const { totales } = libro
 
     const dias = {
-        dias_inasistencia: contar("inasistencia"),
+        dias_inasistencia: totales.dias_inasistencia,
         dias_licencia_medica: await diasLicenciaDelPeriodo(trabajador.id, periodo, transaction),
-        dias_permiso_sin_goce: contar("permiso_sin_goce"),
-        dias_vacaciones: contar("vacaciones")
+        dias_permiso_sin_goce: totales.dias_permiso_sin_goce,
+        dias_vacaciones: totales.dias_vacaciones,
+        minutos_atraso: totales.minutos_atraso
     }
 
-    const resultado = { trabajador_id: trabajador.id, ...dias }
+    const resultado = {
+        trabajador_id: trabajador.id,
+        ...dias,
+        marcas_pendientes: totales.marcas_pendientes,
+        dias_con_advertencias: libro.dias.filter((d) => d.advertencias.length > 0).length,
+        advertencias: libro.advertencias
+    }
 
     const existente = await ResumenAsistencia.findOne({
         where: { periodo_id: periodo.id, trabajador_id: trabajador.id },
@@ -194,7 +189,6 @@ async function generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, 
             periodo_id: periodo.id,
             trabajador_id: trabajador.id,
             ...dias,
-            minutos_atraso: 0,
             estado: "pendiente",
             fuente: "asistencia",
             usuario_registro_id: usuarioId
@@ -207,32 +201,12 @@ async function generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, 
         resultado.resumen = "actualizado"
     }
 
-    const contrato = await ContratoTrabajo.findOne({
-        where: { trabajador_id: trabajador.id, estado: "vigente" },
-        transaction
-    })
-
-    if (contrato === null) {
-        resultado.horas_extra = "omitidas: sin contrato vigente"
+    if (libro.contrato === null) {
+        resultado.horas_extra = "omitidas: sin contrato en el mes"
         return resultado
     }
 
-    const horasDiarias = Number(contrato.horas_semanales) / 5
-    let horas = 0
-
-    for (const asistencia of asistencias) {
-        if (asistencia.hora_entrada === null || asistencia.hora_salida === null) {
-            continue
-        }
-
-        const trabajadas = horasEntre(asistencia.hora_entrada, asistencia.hora_salida)
-
-        if (trabajadas > horasDiarias) {
-            horas += trabajadas - horasDiarias
-        }
-    }
-
-    horas = Math.round(horas * 100) / 100
+    const horas = totales.horas_extra
 
     const filtroHoras = {
         periodo_id: periodo.id,
@@ -255,7 +229,7 @@ async function generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, 
             ...filtroHoras,
             cantidad: horas,
             monto: null,
-            glosa: "Propuesta desde la asistencia",
+            glosa: "Propuesta desde el libro de asistencia",
             estado: "pendiente",
             usuario_registro_id: usuarioId
         }, { transaction })
@@ -274,8 +248,6 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
         throw new ConflictError("El periodo de remuneraciones está cerrado")
     }
 
-    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
-
     const trabajadores = await trabajadoresDelPeriodo(periodo)
 
     const conceptoHoras = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "HORAS_EXTRA_50" } })
@@ -284,7 +256,7 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
         const resultados = []
 
         for (const trabajador of trabajadores) {
-            resultados.push(await generarParaTrabajador(trabajador, periodo, primerDia, ultimoDia, conceptoHoras, usuarioId, transaction))
+            resultados.push(await generarParaTrabajador(trabajador, periodo, conceptoHoras, usuarioId, transaction))
         }
 
         return resultados
