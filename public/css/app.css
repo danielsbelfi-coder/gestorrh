@@ -1035,8 +1035,19 @@ th.numero .tabla-orden {
     padding: 28px 14px;
 }
 
+/* Las celdas pueden partir el texto en dos líneas para que la tabla quepa sin barra horizontal;
+   montos, fechas cortas e insignias no se parten. */
 .tabla-datos td {
+    white-space: normal;
+}
+
+.tabla-datos td.numero,
+.tabla-datos .insignia {
     white-space: nowrap;
+}
+
+.tabla-datos .col-acciones {
+    min-width: 120px;
 }
 
 .tabla-datos td .chico + .chico,
@@ -1211,7 +1222,6 @@ input.campo-corto {
 
 .tabla-datos td:last-child {
     white-space: normal;
-    min-width: 200px;
 }
 
 .tabla-datos td:last-child .chico {
@@ -1437,4 +1447,51 @@ input.campo-corto {
 
 .paso-carga #btnRevisar {
     align-self: flex-start;
+}
+
+/* Columna de botones fija a la derecha en las tablas anchas */
+.tabla-datos .col-acciones {
+    position: sticky;
+    right: 0;
+    background: var(--superficie);
+    box-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.25);
+    z-index: 1;
+}
+
+.tabla-datos th.col-acciones {
+    background: #f8fafc;
+}
+
+.tabla-datos tbody tr:hover td.col-acciones {
+    background: #fafbfe;
+}
+
+.tabla-marco table {
+    overflow: visible;
+}
+
+/* El contenido usa todo el ancho de la pantalla (antes tenía un máximo de 1200 px). */
+.contenido {
+    max-width: none;
+}
+
+/* Tablas de datos más compactas: títulos que pueden ocupar dos líneas y menos relleno */
+.tabla-datos th,
+.tabla-datos td {
+    padding: 9px 10px;
+}
+
+.tabla-datos th {
+    white-space: normal;
+    letter-spacing: 0.02em;
+    vertical-align: bottom;
+}
+
+.tabla-datos .tabla-orden {
+    white-space: normal;
+    text-align: left;
+}
+
+.tabla-datos th.numero .tabla-orden {
+    text-align: right;
 }

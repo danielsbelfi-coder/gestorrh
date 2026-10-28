@@ -109,6 +109,14 @@ function situacionPersona(trabajadoresDePersona) {
 //              numero?: true, orden?: false }]
 // filtros: [{ titulo, valor(registro) → clave, opciones: [[clave, texto]], inicial? }]
 
+// La columna de botones (sin título y sin orden) queda fija a la derecha: se ve sin mover la barra horizontal.
+function claseColumna(columna) {
+    if (columna.orden === false && columna.titulo === "") {
+        return "col-acciones"
+    }
+    return columna.numero ? "numero" : ""
+}
+
 function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar…", vacio = "No hay registros." }) {
     const raiz = typeof contenedor === "string" ? document.getElementById(contenedor) : contenedor
     let datos = []
@@ -129,8 +137,8 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar�
         <div class="tabla-marco">
             <table>
                 <thead><tr>${columnas.map((columna, i) => columna.orden === false
-                    ? `<th class="${columna.numero ? "numero" : ""}">${escaparHtml(columna.titulo)}</th>`
-                    : `<th class="${columna.numero ? "numero" : ""}"><button type="button" class="tabla-orden" data-indice="${i}">${escaparHtml(columna.titulo)}<span class="flecha"></span></button></th>`
+                    ? `<th class="${claseColumna(columna)}">${escaparHtml(columna.titulo)}</th>`
+                    : `<th class="${claseColumna(columna)}"><button type="button" class="tabla-orden" data-indice="${i}">${escaparHtml(columna.titulo)}<span class="flecha"></span></button></th>`
                 ).join("")}</tr></thead>
                 <tbody></tbody>
             </table>
@@ -168,7 +176,7 @@ function crearTabla({ contenedor, columnas, filtros = [], textoBuscar = "Buscar�
         raiz.querySelector("tbody").innerHTML = filas.length === 0
             ? `<tr><td colspan="${columnas.length}" class="tabla-vacia">${escaparHtml(datos.length === 0 ? vacio : "Ningún registro coincide con la búsqueda.")}</td></tr>`
             : filas.map((registro) => `<tr>${columnas.map((columna) =>
-                `<td class="${columna.numero ? "numero" : ""}">${columna.html ? columna.html(registro) : escaparHtml(columna.valor(registro) ?? "")}</td>`
+                `<td class="${claseColumna(columna)}">${columna.html ? columna.html(registro) : escaparHtml(columna.valor(registro) ?? "")}</td>`
             ).join("")}</tr>`).join("")
 
         raiz.querySelector(".tabla-total").textContent = filas.length === datos.length
@@ -358,17 +366,49 @@ async function llenarSelectorPeriodos(select) {
     select.innerHTML = periodos.map((periodo) =>
         `<option value="${periodo.id}">${escaparHtml(nombrePeriodo(periodo) + (periodo.estado === "abierto" ? "" : " (cerrado)"))}</option>`).join("")
 
+    // Orden de preferencia: el periodo pedido en la URL, el último elegido en esta empresa, el abierto más reciente.
+    const existe = (id) => id && periodos.some((periodo) => String(periodo.id) === String(id))
     const pedido = new URLSearchParams(location.search).get("periodo")
-    if (pedido && periodos.some((periodo) => String(periodo.id) === pedido)) {
+    const recordado = leerPeriodoRecordado()
+    if (existe(pedido)) {
         select.value = pedido
         history.replaceState(null, "", location.pathname)
+    } else if (existe(recordado)) {
+        select.value = recordado
     } else {
         const abierto = periodos.find((periodo) => periodo.estado === "abierto")
         if (abierto) {
             select.value = abierto.id
         }
     }
+    recordarPeriodo(select.value)
+
+    // Al cambiar de periodo en cualquier pantalla, las demás abren en ese mismo periodo.
+    if (!select.dataset.recuerda) {
+        select.dataset.recuerda = "si"
+        select.addEventListener("change", () => recordarPeriodo(select.value))
+    }
     return periodos
+}
+
+// El periodo elegido se recuerda por empresa en este navegador.
+function leerPeriodoRecordado() {
+    try {
+        return localStorage.getItem(`periodo_${empresaActual()}`)
+    } catch {
+        return null
+    }
+}
+
+function recordarPeriodo(id) {
+    if (!id) {
+        return
+    }
+    try {
+        localStorage.setItem(`periodo_${empresaActual()}`, String(id))
+    } catch {
+        // Sin almacenamiento disponible: cada pantalla abre en el periodo abierto más reciente.
+    }
 }
 
 // ---------- Descarga CSV para Excel ----------
