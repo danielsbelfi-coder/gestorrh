@@ -1,9 +1,14 @@
-const { abrirPeriodo, cerrarPeriodo, listarPeriodos, obtenerPeriodoPorId } = require("./periodo_remuneracion.service");
+const { abrirPeriodo, cerrarPeriodo, listarPeriodos, obtenerPeriodoPorId, faltantesDelPeriodo } = require("./periodo_remuneracion.service");
 
 
 async function crear(req, res) {
-    const nuevoPeriodo = await abrirPeriodo(req.body, req.empresasPermitidas, req.usuario.id)
-    res.status(201).json(nuevoPeriodo)
+    const { periodo, advertencias } = await abrirPeriodo(req.body, req.empresasPermitidas, req.usuario.id)
+    res.status(201).json({ ...periodo.toJSON(), advertencias })
+}
+
+async function parametrosFaltantes(req, res) {
+    const faltantes = await faltantesDelPeriodo(req.params.id, req.empresasPermitidas)
+    res.status(200).json({ faltantes })
 }
 
 async function cerrar(req, res) {
@@ -33,5 +38,6 @@ module.exports = {
     crear,
     cerrar,
     listar,
-    obtenerPorId
+    obtenerPorId,
+    parametrosFaltantes
 }

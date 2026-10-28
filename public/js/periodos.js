@@ -52,6 +52,9 @@ formulario.addEventListener("submit", async function (evento) {
     }, "Periodo abierto.")
 
     if (creado) {
+        if (creado.advertencias?.length) {
+            mensaje("error", creado.advertencias.join(" "))
+        }
         document.getElementById("panelCrear").removeAttribute("open")
         cargarPeriodos()
     }

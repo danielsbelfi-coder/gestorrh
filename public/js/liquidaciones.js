@@ -4,6 +4,20 @@ let periodos = []
 let trabajadores = []
 let personaPorId = new Map()
 let liquidaciones = []
+let parametrosFaltantes = []
+
+// Avisa si al mes le faltan parámetros legales: sin ellos no se puede calcular ninguna liquidación.
+async function revisarParametros(periodo) {
+    parametrosFaltantes = []
+    if (periodo.estado !== "abierto") {
+        return
+    }
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodo.id}/parametros-faltantes`)
+    if (resultado.status === 200 && resultado.datos.faltantes.length > 0) {
+        parametrosFaltantes = resultado.datos.faltantes
+        mensaje("error", `Faltan los parámetros legales de ${nombrePeriodo(periodo)}: ${parametrosFaltantes.join(", ")}. Cárgalos antes de calcular las liquidaciones.`)
+    }
+}
 
 const selectorPeriodo = document.getElementById("periodo")
 
@@ -73,6 +87,8 @@ async function cargarLiquidaciones() {
         mensaje("info", "Esta empresa no tiene periodos. Ábrelo en Periodos.")
         return
     }
+
+    await revisarParametros(periodo)
 
     const resultado = await llamarApi(`/api/periodos-remuneracion/${periodo.id}/liquidaciones`)
     if (resultado.status !== 200) {
@@ -161,6 +177,11 @@ document.getElementById("btnCalcularTodas").addEventListener("click", async func
     limpiarMensajes()
     const periodo = periodoElegido()
     if (!periodo) {
+        return
+    }
+
+    if (parametrosFaltantes.length > 0) {
+        mensaje("error", `No se puede calcular: faltan los parámetros legales de ${nombrePeriodo(periodo)} (${parametrosFaltantes.join(", ")}).`)
         return
     }
 

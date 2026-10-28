@@ -1,5 +1,5 @@
 const express = require("express")
-const { crear, cerrar, listar, obtenerPorId } = require("./periodo_remuneracion.controller")
+const { crear, cerrar, listar, obtenerPorId, parametrosFaltantes } = require("./periodo_remuneracion.controller")
 const liquidacionRoutes = require('./liquidacion.routes')
 const { previred } = require("./previred.controller.js")
 const { lre } = require("./lre.controller.js")
@@ -12,5 +12,6 @@ router.patch("/:id/cerrar", cerrar)
 router.use("/:periodoId/liquidaciones", liquidacionRoutes)
 router.get("/:id/previred", previred)
 router.get("/:id/lre", lre)
+router.get("/:id/parametros-faltantes", parametrosFaltantes)
 
 module.exports = router

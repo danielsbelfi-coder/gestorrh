@@ -1,7 +1,34 @@
-const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo, Finiquito } = require("../shared/associations");
+const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo, Finiquito, TramoImpuesto } = require("../shared/associations");
+const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError } = require("../shared/errors.js");
 const { PERMISOS, exigirRol } = require("../shared/permisos.js");
+
+async function parametrosFaltantes(anio, mes) {
+    const { CODIGOS_PARAMETROS } = require("./liquidacion.service.js")
+    const { CODIGOS_TRAMOS } = require("./previred.service.js")
+
+    const fecha = `${anio}-${String(mes).padStart(2, "0")}-01`
+    const faltantes = []
+
+    for (const codigo of [...Object.values(CODIGOS_PARAMETROS), ...Object.values(CODIGOS_TRAMOS)]) {
+        if (await obtenerParametroVigente(codigo, fecha) === null) {
+            faltantes.push(codigo)
+        }
+    }
+
+    const tramos = await TramoImpuesto.count({
+        where: {
+            vigencia_desde: { [Op.lte]: fecha },
+            [Op.or]: [{ vigencia_hasta: null }, { vigencia_hasta: { [Op.gte]: fecha } }]
+        }
+    })
+    if (tramos === 0) {
+        faltantes.push("TRAMOS_IMPUESTO_UNICO")
+    }
+
+    return faltantes
+}
 
 async function abrirPeriodo(datos, empresasPermitidas, usuarioId) {
     if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
@@ -21,9 +48,21 @@ async function abrirPeriodo(datos, empresasPermitidas, usuarioId) {
         throw new ConflictError("Ya existe un periodo de remuneraciones creado para este mes y año")
     }
 
-    return await PeriodoRemuneracion.create(datos, {
+    const periodo = await PeriodoRemuneracion.create(datos, {
         fields: ["empresa_id", "mes", "anio", "fecha_apertura"]
     })
+
+    const faltantes = await parametrosFaltantes(periodo.anio, periodo.mes)
+    const advertencias = faltantes.length === 0 ? [] : [
+        `Faltan los parámetros legales de ${periodo.mes}/${periodo.anio}: ${faltantes.join(", ")}. Cárgalos antes de calcular las liquidaciones.`
+    ]
+
+    return { periodo, advertencias }
+}
+
+async function faltantesDelPeriodo(id, empresasPermitidas) {
+    const periodo = await obtenerPeriodoPorId(id, empresasPermitidas)
+    return await parametrosFaltantes(periodo.anio, periodo.mes)
 }
 
 async function cerrarPeriodo(id, empresasPermitidas, usuarioId) {
@@ -136,6 +175,7 @@ module.exports = {
     obtenerPeriodoPorId,
     rangoDelPeriodo,
     trabajadoresDelPeriodo,
-    problemasDeCierre
+    problemasDeCierre,
+    faltantesDelPeriodo
 }
 
