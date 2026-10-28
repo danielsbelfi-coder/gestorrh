@@ -8,6 +8,7 @@ const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { datosPrevired, problemasPrevired } = require("./datos_previred.js")
 const { lineasTrabajador } = require("./archivo_previred.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
+const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
 
 const CODIGOS_TRAMOS = {
     a: "ASIG_FAMILIAR_TRAMO_A_HASTA",
@@ -38,7 +39,9 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
 
     const empresa = await Empresa.findByPk(periodo.empresa_id, { include: [Mutualidad] })
 
-    if (!empresa.Mutualidad?.codigo_previred) {
+    const mutualidad = await mutualidadParaArchivos(empresa)
+
+    if (!mutualidad?.codigo_previred) {
         throw new ConflictError("La empresa no tiene una mutualidad con código Previred asignada")
     }
 
@@ -83,7 +86,7 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
             anio: periodo.anio,
             mes: periodo.mes,
             limitesTramo,
-            codigoMutual: empresa.Mutualidad.codigo_previred,
+            codigoMutual: mutualidad.codigo_previred,
             tipoJornada: contrato.tipo_jornada,
             fechasInasistencia,
             fechasPermisoSinGoce

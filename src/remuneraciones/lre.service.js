@@ -9,6 +9,7 @@ const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
 const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
+const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
 
 async function contratoDelTrabajador(trabajadorId, periodo, primerDia) {
     const vigente = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajadorId, estado: "vigente" } })
@@ -48,7 +49,9 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
 
     const empresa = await Empresa.findByPk(periodo.empresa_id, { include: [Mutualidad] })
 
-    if (empresa.Mutualidad?.codigo_lre === null || empresa.Mutualidad?.codigo_lre === undefined) {
+    const mutualidad = await mutualidadParaArchivos(empresa)
+
+    if (mutualidad?.codigo_lre === null || mutualidad?.codigo_lre === undefined) {
         throw new ConflictError("La empresa no tiene una mutualidad con código LRE asignada")
     }
 
@@ -158,7 +161,7 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             sistemaSalud: detalle.salud.sistema,
             isapreLre: persona.Isapre?.codigo_lre ?? null,
             cotizaCesantia: montoDe("CESANTIA") + montoDe("APORTE_CESANTIA") > 0,
-            mutualLre: empresa.Mutualidad.codigo_lre,
+            mutualLre: mutualidad.codigo_lre,
             tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo),
             diasTrabajados: liquidacion.dias_trabajados,
             diasLicencia: detalle.diasPago.licenciaMedica,
