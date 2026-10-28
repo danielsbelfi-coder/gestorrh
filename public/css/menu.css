@@ -1,0 +1,74 @@
+/* Menú lateral: secciones plegables, ocultar el menú completo, y ajustes de selectores largos. */
+
+/* El botón de menú también se ve en pantallas anchas (oculta o muestra el menú). */
+.boton-menu {
+    display: inline-grid;
+    place-items: center;
+}
+
+/* Título de sección que se puede cerrar y abrir */
+.lateral .lateral-titulo-boton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 0;
+    background: none;
+    border: 0;
+    border-radius: var(--radio-chico);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lateral-titulo);
+    padding: 6px 12px;
+}
+
+.lateral .lateral-titulo-boton:hover {
+    background: var(--lateral-hover);
+    color: #fff;
+}
+
+.lateral-titulo-boton svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    transition: transform 0.15s ease;
+}
+
+.lateral-grupo.cerrado .lateral-titulo-boton svg {
+    transform: rotate(-90deg);
+}
+
+.lateral-grupo.cerrado .lateral-enlaces {
+    display: none;
+}
+
+/* Menú oculto del todo (pantallas anchas) */
+@media (min-width: 861px) {
+    .lateral-oculto .lateral {
+        transform: translateX(-100%);
+    }
+
+    .lateral-oculto .principal {
+        margin-left: 0;
+    }
+}
+
+/* Los selectores con textos largos (por ejemplo una razón social extensa) no se salen de su tarjeta */
+.contenido label {
+    min-width: 0;
+}
+
+.contenido select,
+.contenido input {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.contenido select {
+    text-overflow: ellipsis;
+}

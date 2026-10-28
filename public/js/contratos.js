@@ -76,8 +76,9 @@ async function cargarContratos() {
 
     await cargarJornadas()
 
+    cargosDeLaEmpresa = deEmpresaActual(cargos)
     llenarSelect(document.getElementById("cargoId"),
-        deEmpresaActual(cargos).map((cargo) => ({ id: cargo.id, texto: cargo.nombre })), "Elige un cargo")
+        cargosDeLaEmpresa.map((cargo) => ({ id: cargo.id, texto: cargo.nombre })), "Elige un cargo")
 
     // Desde la ficha del trabajador se llega con ?corregir=ID.
     const corregir = Number(new URLSearchParams(location.search).get("corregir"))
@@ -85,6 +86,22 @@ async function cargarContratos() {
         abrirCorreccion(corregir)
     }
 }
+
+// ---------- Funciones: al elegir el cargo se sugieren las que tiene registradas (editables) ----------
+let cargosDeLaEmpresa = []
+let funcionesSugeridas = ""
+
+document.getElementById("cargoId").addEventListener("change", function () {
+    const campo = document.getElementById("funciones")
+    const cargo = cargosDeLaEmpresa.find((c) => String(c.id) === document.getElementById("cargoId").value)
+    const sugeridas = cargo?.descripcion ?? ""
+
+    // Solo se reemplaza si el campo está vacío o todavía tiene lo que sugirió el cargo anterior: lo que la persona escribió no se pisa.
+    if (campo.value.trim() === "" || campo.value === funcionesSugeridas) {
+        campo.value = sugeridas
+        funcionesSugeridas = sugeridas
+    }
+})
 
 // ---------- Jornada: al elegir una plantilla, las horas y los días se toman de ella ----------
 let jornadas = []

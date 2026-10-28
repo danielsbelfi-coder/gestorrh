@@ -26,7 +26,8 @@ const ICONOS = {
     cuentas: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 14h4"/>',
     clave: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
     salir: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
-    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>'
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>'
 }
 
 function icono(nombre) {
@@ -42,39 +43,46 @@ function gruposDelMenu(usuario) {
         return [{ titulo: "Cuenta", enlaces: [["empresas.html", "Exportar datos", "empresas"]] }]
     }
 
-    const administracion = [["empresas.html", "Empresas", "empresas"]]
+    // Orden del proceso: primero la empresa y sus usuarios, luego las personas, el periodo y la asistencia, y al final las liquidaciones.
+    const empresa = [["empresas.html", "Empresas", "empresas"]]
     if (usuario.es_admin_cuenta === true) {
-        administracion.push(["usuarios.html", "Usuarios", "usuarios"], ["consumo.html", "Consumo del plan", "consumo"])
+        empresa.push(["usuarios.html", "Usuarios", "usuarios"], ["consumo.html", "Consumo del plan", "consumo"])
     }
 
     return [
         { titulo: "", enlaces: [["index.html", "Inicio", "inicio"]] },
+        { titulo: "Empresa", enlaces: empresa },
         {
             titulo: "Personas",
             enlaces: [
+                ["cargos.html", "Cargos", "cargos"],
+                ["jornadas.html", "Jornadas", "jornadas"],
                 ["personas.html", "Personas", "personas"],
                 ["trabajadores.html", "Trabajadores", "trabajadores"],
-                ["contratos.html", "Contratos", "contratos"],
-                ["cargos.html", "Cargos", "cargos"],
-                ["jornadas.html", "Jornadas", "jornadas"]
+                ["contratos.html", "Contratos", "contratos"]
             ]
         },
         {
-            titulo: "Remuneraciones",
+            titulo: "Periodo y asistencia",
             enlaces: [
                 ["periodos.html", "Periodos", "periodos"],
                 ["libro.html", "Libro de asistencia", "libro"],
                 ["asistencias.html", "Marcas de asistencia", "asistencias"],
                 ["licencias.html", "Licencias médicas", "licencias"],
-                ["resumenes.html", "Resumen de asistencia", "resumenes"],
-                ["variables.html", "Variables del mes", "variables"],
-                ["liquidaciones.html", "Liquidaciones", "liquidaciones"],
-                ["finiquitos.html", "Finiquitos", "finiquitos"],
-                ["conceptos.html", "Conceptos", "conceptos"]
+                ["resumenes.html", "Resumen de asistencia", "resumenes"]
             ]
         },
-        { titulo: "Legales", enlaces: [["legales.html", "Previred y LRE", "legales"], ["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] },
-        { titulo: "Administración", enlaces: administracion }
+        {
+            titulo: "Liquidaciones",
+            enlaces: [
+                ["variables.html", "Variables del mes", "variables"],
+                ["conceptos.html", "Conceptos", "conceptos"],
+                ["liquidaciones.html", "Liquidaciones", "liquidaciones"],
+                ["finiquitos.html", "Finiquitos", "finiquitos"],
+                ["legales.html", "Previred y LRE", "legales"]
+            ]
+        },
+        { titulo: "Parámetros", enlaces: [["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] }
     ]
 }
 
@@ -87,18 +95,66 @@ function iniciales(nombre) {
         .join("")
 }
 
+// Secciones del menú que la persona dejó cerradas (se recuerda en este navegador).
+function gruposCerrados() {
+    try {
+        const guardado = JSON.parse(localStorage.getItem("menu_cerrados") ?? "[]")
+        return Array.isArray(guardado) ? guardado : []
+    } catch {
+        return []
+    }
+}
+
+function guardarGruposCerrados(lista) {
+    try {
+        localStorage.setItem("menu_cerrados", JSON.stringify(lista))
+    } catch {
+        // Sin almacenamiento disponible: el estado dura hasta recargar la página.
+    }
+}
+
+function lateralOculto() {
+    try {
+        return localStorage.getItem("menu_oculto") === "1"
+    } catch {
+        return false
+    }
+}
+
+function guardarLateralOculto(oculto) {
+    try {
+        localStorage.setItem("menu_oculto", oculto ? "1" : "0")
+    } catch {
+        // Sin almacenamiento disponible: el estado dura hasta recargar la página.
+    }
+}
+
 function armarLateral(usuario) {
     // Una pantalla de detalle (por ejemplo persona.html) puede marcar en el menú a su lista con data-menu.
     const paginaActual = document.querySelector("main.contenido")?.dataset.menu
         || location.pathname.split("/").pop() || "index.html"
 
+    const cerrados = gruposCerrados()
+
     const grupos = gruposDelMenu(usuario).map((grupo) => {
+        const tieneActivo = grupo.enlaces.some(([href]) => href === paginaActual)
         const enlaces = grupo.enlaces.map(([href, texto, nombreIcono]) => {
             const activo = href === paginaActual ? " activo" : ""
             return `<a class="lateral-enlace${activo}" href="${href}">${icono(nombreIcono)}<span>${escaparHtml(texto)}</span></a>`
         }).join("")
-        const titulo = grupo.titulo ? `<div class="lateral-titulo">${escaparHtml(grupo.titulo)}</div>` : ""
-        return `<div class="lateral-grupo">${titulo}${enlaces}</div>`
+
+        if (!grupo.titulo) {
+            return `<div class="lateral-grupo">${enlaces}</div>`
+        }
+
+        // Cada sección se puede cerrar y abrir; la que contiene la pantalla actual aparece abierta al cargar la página.
+        const cerrado = !tieneActivo && cerrados.includes(grupo.titulo)
+        return `<div class="lateral-grupo${cerrado ? " cerrado" : ""}" data-grupo="${escaparHtml(grupo.titulo)}">
+            <button type="button" class="lateral-titulo lateral-titulo-boton" aria-expanded="${cerrado ? "false" : "true"}">
+                <span>${escaparHtml(grupo.titulo)}</span>${icono("chevron")}
+            </button>
+            <div class="lateral-enlaces">${enlaces}</div>
+        </div>`
     }).join("")
 
     return `
@@ -133,6 +189,14 @@ async function iniciarLayout() {
 
     document.body.classList.add("app")
 
+    const estilos = document.createElement("link")
+    estilos.rel = "stylesheet"
+    estilos.href = "css/menu.css"
+    document.head.appendChild(estilos)
+    if (lateralOculto()) {
+        document.body.classList.add("lateral-oculto")
+    }
+
     const lateral = document.createElement("aside")
     lateral.className = "lateral"
     lateral.innerHTML = armarLateral(usuario)
@@ -146,7 +210,7 @@ async function iniciarLayout() {
     const barra = document.createElement("header")
     barra.className = "barra-superior"
     barra.innerHTML = `
-        <button type="button" class="boton-menu" id="botonMenu" aria-label="Abrir menú">${icono("menu")}</button>
+        <button type="button" class="boton-menu" id="botonMenu" aria-label="Mostrar u ocultar el menú" title="Mostrar u ocultar el menú">${icono("menu")}</button>
         <div class="barra-titulo"></div>
         <div class="barra-espacio"></div>`
     barra.querySelector(".barra-titulo").textContent = contenido.dataset.titulo ?? ""
@@ -158,7 +222,25 @@ async function iniciarLayout() {
     document.body.prepend(lateral)
 
     document.getElementById("botonSalir").addEventListener("click", sesionVencida)
-    document.getElementById("botonMenu").addEventListener("click", () => document.body.classList.toggle("menu-abierto"))
+    document.getElementById("botonMenu").addEventListener("click", () => {
+        // En pantallas angostas el menú se abre encima; en pantallas anchas se oculta o se muestra del todo.
+        if (window.matchMedia("(max-width: 860px)").matches) {
+            document.body.classList.toggle("menu-abierto")
+        } else {
+            guardarLateralOculto(document.body.classList.toggle("lateral-oculto"))
+        }
+    })
+    lateral.addEventListener("click", (evento) => {
+        const titulo = evento.target.closest(".lateral-titulo-boton")
+        if (!titulo) {
+            return
+        }
+        const grupo = titulo.closest(".lateral-grupo")
+        const cerrado = grupo.classList.toggle("cerrado")
+        titulo.setAttribute("aria-expanded", cerrado ? "false" : "true")
+        const otros = gruposCerrados().filter((nombre) => nombre !== grupo.dataset.grupo)
+        guardarGruposCerrados(cerrado ? [...otros, grupo.dataset.grupo] : otros)
+    })
     velo.addEventListener("click", () => document.body.classList.remove("menu-abierto"))
 
     document.dispatchEvent(new CustomEvent("usuario-listo", { detail: usuario }))
