@@ -9,6 +9,7 @@ const { Trabajador } = require("../trabajadores/trabajador.model");
 const { Usuario } = require("../usuarios/usuario.model");
 const { ParametroLegal } = require("../remuneraciones/parametro_legal.model");
 const { PeriodoRemuneracion } = require("../remuneraciones/periodo_remuneracion.model");
+const { PeriodoReapertura } = require("../remuneraciones/periodo_reapertura.model.js");
 const { Liquidacion } = require("../remuneraciones/liquidacion.model");
 const { UsuarioEmpresaRol } = require("../usuarios/usuario_empresa_rol.model")
 const { Rol } = require("../usuarios/rol.model")
@@ -128,6 +129,17 @@ PeriodoRemuneracion.belongsTo(Empresa, {
 })
 Empresa.hasMany(PeriodoRemuneracion, {
     foreignKey: "empresa_id"
+})
+PeriodoRemuneracion.hasMany(PeriodoReapertura, {
+    foreignKey: "periodo_id",
+    as: "reaperturas"
+})
+PeriodoReapertura.belongsTo(PeriodoRemuneracion, {
+    foreignKey: "periodo_id"
+})
+PeriodoReapertura.belongsTo(Usuario, {
+    foreignKey: "usuario_id",
+    as: "usuario"
 })
 Liquidacion.belongsTo(PeriodoRemuneracion, {
     foreignKey: "periodo_id"
@@ -309,6 +321,7 @@ Trabajador.hasOne(Finiquito, {
 })
 
 module.exports = {
+    PeriodoReapertura,
     Empresa,
     Persona,
     Trabajador,

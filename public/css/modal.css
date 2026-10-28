@@ -1,0 +1,101 @@
+/* Ventana de confirmación (cierre y reapertura de periodos). */
+.modal-fondo {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 31, 23, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1000;
+}
+
+.modal {
+    background: var(--superficie);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    border-top: 5px solid var(--advertencia);
+}
+
+.modal.peligro {
+    border-top-color: var(--peligro);
+}
+
+.modal.info {
+    border-top-color: var(--primario);
+}
+
+.modal h2 {
+    margin: 0 0 12px;
+    font-size: 1.15rem;
+}
+
+.modal p {
+    margin: 0 0 12px;
+    line-height: 1.45;
+}
+
+.modal ul {
+    margin: 0 0 14px;
+    padding-left: 20px;
+    line-height: 1.5;
+}
+
+.modal-aviso {
+    background: var(--peligro-suave);
+    color: var(--peligro);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 0.92rem;
+}
+
+.modal label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.modal input,
+.modal textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 4px;
+}
+
+.modal textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.modal-ayuda {
+    color: var(--texto-suave);
+    font-size: 0.8rem;
+    margin-bottom: 14px;
+}
+
+.modal-botones {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.reaperturas-detalle summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--advertencia);
+}
+
+.reaperturas-detalle ul {
+    margin: 6px 0 0;
+    padding-left: 16px;
+    font-size: 0.8rem;
+    color: var(--texto-suave);
+}

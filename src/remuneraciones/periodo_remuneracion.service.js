@@ -1,7 +1,9 @@
-const { PeriodoRemuneracion, Empresa, Trabajador, Liquidacion, ResumenAsistencia, VariablePeriodo, Finiquito, TramoImpuesto } = require("../shared/associations");
+const { PeriodoRemuneracion, PeriodoReapertura, Empresa, Trabajador, Persona, Usuario, Liquidacion, ResumenAsistencia, VariablePeriodo, Finiquito, TramoImpuesto } = require("../shared/associations");
+const { sequelize } = require("../shared/database.js")
+const { validarMotivo, problemasDeReapertura } = require("./reapertura_periodo.js")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { Op } = require("sequelize")
-const { NotFoundError, ConflictError } = require("../shared/errors.js");
+const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js");
 const { PERMISOS, exigirRol } = require("../shared/permisos.js");
 
 async function parametrosFaltantes(anio, mes) {
@@ -89,10 +91,86 @@ async function cerrarPeriodo(id, empresasPermitidas, usuarioId) {
 }
 
 async function listarPeriodos(empresasPermitidas) {
-    return await PeriodoRemuneracion.findAll({
+    const periodos = await PeriodoRemuneracion.findAll({
         where: {
             empresa_id: { [Op.in]: empresasPermitidas }
+        },
+        include: [{
+            model: PeriodoReapertura,
+            as: "reaperturas",
+            include: [{ model: Usuario, as: "usuario", attributes: ["id", "nombre"] }]
+        }]
+    })
+
+    return periodos.map((periodo) => {
+        const datos = periodo.toJSON()
+        datos.reaperturas.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        return datos
+    })
+}
+
+// Lo que hay que resolver antes de cerrar el periodo, con el nombre de cada trabajador (para mostrarlo antes de confirmar).
+async function revisionDeCierre(id, empresasPermitidas) {
+    const periodo = await obtenerPeriodoPorId(id, empresasPermitidas)
+    const problemas = periodo.estado === "abierto" ? await problemasDeCierre(periodo) : []
+
+    const trabajadores = await Trabajador.findAll({
+        where: { id: problemas.map((p) => p.trabajador_id) },
+        include: [Persona]
+    })
+    const nombres = new Map(trabajadores.map((t) => [t.id,
+        [t.Persona.nombres, t.Persona.apellido_paterno, t.Persona.apellido_materno].filter(Boolean).join(" ")]))
+
+    return {
+        estado: periodo.estado,
+        problemas: problemas.map((p) => ({ ...p, nombre: nombres.get(p.trabajador_id) ?? `Trabajador ${p.trabajador_id}` }))
+    }
+}
+
+// Reabre un periodo cerrado (solo ADMIN, con motivo obligatorio, dejando registro de quién, cuándo y por qué).
+async function reabrirPeriodo(id, datos, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(id, empresasPermitidas)
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.REABRIR_PERIODO)
+
+    const { motivo, error } = validarMotivo(datos?.motivo)
+    if (error) {
+        throw new ValidationError(error)
+    }
+
+    return await sequelize.transaction(async (transaction) => {
+        const actual = await PeriodoRemuneracion.findByPk(periodo.id, { transaction, lock: transaction.LOCK.UPDATE })
+
+        const otros = await PeriodoRemuneracion.findAll({
+            where: { empresa_id: actual.empresa_id, id: { [Op.ne]: actual.id } },
+            transaction
+        })
+        const emitidas = await Liquidacion.findAll({
+            attributes: ["periodo_id", [sequelize.fn("COUNT", sequelize.col("id")), "total"]],
+            where: { periodo_id: otros.map((p) => p.id), estado: "emitida", vigente: true },
+            group: ["periodo_id"],
+            raw: true,
+            transaction
+        })
+        const emitidasPorPeriodo = new Map(emitidas.map((e) => [e.periodo_id, Number(e.total)]))
+
+        const problemas = problemasDeReapertura({
+            periodo: actual,
+            posteriores: otros.map((p) => ({ mes: p.mes, anio: p.anio, estado: p.estado, emitidas: emitidasPorPeriodo.get(p.id) ?? 0 }))
+        })
+        if (problemas.length > 0) {
+            throw new ConflictError(`No se puede reabrir el periodo: ${problemas.join(". ")}`)
         }
+
+        await PeriodoReapertura.create({
+            periodo_id: actual.id,
+            usuario_id: usuarioId,
+            motivo,
+            fecha_cierre_anterior: actual.fecha_cierre
+        }, { transaction })
+
+        await actual.update({ estado: "abierto", fecha_cierre: null }, { transaction })
+
+        return actual
     })
 }
 
@@ -171,6 +249,8 @@ async function problemasDeCierre(periodo) {
 module.exports = {
     abrirPeriodo,
     cerrarPeriodo,
+    reabrirPeriodo,
+    revisionDeCierre,
     listarPeriodos,
     obtenerPeriodoPorId,
     rangoDelPeriodo,

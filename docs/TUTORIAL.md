@@ -79,9 +79,14 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 **Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan pensionados, cargas familiares, CCAF ni APV, ni los aportes de la reforma previsional.
 
 ### 6.8 Cerrar el mes
-**Periodos → Cerrar periodo** cuando todas las liquidaciones estén cerradas.
+**Periodos → Cerrar periodo**. Antes de cerrar, el sistema revisa cada trabajador (resumen aprobado, liquidación emitida, sin variables pendientes y finiquito emitido si terminó en el mes). Si falta algo, muestra la lista para resolverla.
+
+Si todo está listo, aparece una advertencia: después de cerrar no se pueden registrar marcas, resúmenes ni variables, ni calcular o emitir liquidaciones y finiquitos de ese mes. Para confirmar hay que escribir el mes (por ejemplo `10/2026`).
+
+**Reabrir un periodo (solo emergencias):** en Periodos, con el filtro de estado en "Cerrado", el botón **Reabrir** está disponible solo para ADMIN. Pide un motivo (mínimo 10 caracteres) que queda registrado con el usuario y la fecha, y se ve en la columna Reaperturas. Solo se puede reabrir el último periodo cerrado, y solo si los meses siguientes no tienen liquidaciones emitidas. Las liquidaciones ya emitidas siguen emitidas (para corregirlas se recalculan y se crea una versión nueva). Si el mes ya se declaró en Previred o en la Dirección del Trabajo, corregirlo exige rectificar esa declaración fuera del sistema.
 
 ## 7. Término de la relación laboral
+El finiquito se calcula y emite mientras el periodo del mes de término esté abierto (o reabierto).
 **Finiquitos → Registrar término**: trabajador, fecha de término, causal, fecha del finiquito, lugar de firma, aviso previo, días de feriado tomados, días inhábiles e imputación del seguro de cesantía. **Calcular finiquito** muestra el detalle (se pueden agregar descuentos), luego **Cerrar finiquito**.
 
 ## 8. Exportar datos
