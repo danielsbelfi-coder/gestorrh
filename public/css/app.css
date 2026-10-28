@@ -1527,3 +1527,55 @@ input.campo-corto {
     margin: 12px 0 0;
     font-size: 0.86rem;
 }
+
+/* Consumo del plan */
+.uso {
+    margin-bottom: 18px;
+}
+
+.uso-titulo {
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.uso-cifra {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 2px 0 6px;
+}
+
+.uso-cifra .texto-suave {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.uso-barra {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    overflow: hidden;
+}
+
+.uso-barra span {
+    display: block;
+    height: 100%;
+    background: var(--primario);
+}
+
+.uso-barra span.alto {
+    background: var(--advertencia);
+}
+
+.uso-barra span.lleno {
+    background: var(--peligro);
+}
+
+.tabla-precio {
+    box-shadow: none;
+}
+
+.tabla-precio tr.total td {
+    font-weight: 700;
+    background: #f8fafc;
+}

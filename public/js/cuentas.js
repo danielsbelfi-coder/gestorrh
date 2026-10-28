@@ -158,17 +158,8 @@ document.getElementById("cuerpoCuentas").addEventListener("click", async functio
     let resultado
 
     if (accion === "consumo") {
-        resultado = await llamarApi(`/api/cuentas/${id}/consumo`)
-
-        if (resultado.status !== 200) {
-            mensaje.textContent = resultado.datos.error
-            return
-        }
-
-        const cuenta = cuentas.find((c) => c.id === Number(id))
-        const consumo = resultado.datos
-
-        mensaje.textContent = `${cuenta.nombre}, ${consumo.periodo.mes}/${consumo.periodo.anio}: trabajadores ${textoUso(consumo.trabajadores)}; usuarios activos ${textoUso(consumo.usuarios)}.`
+        // Abre la misma pantalla de consumo que ve el cliente, para esta cuenta.
+        location.href = `consumo.html?cuenta=${id}`
         return
     }
 

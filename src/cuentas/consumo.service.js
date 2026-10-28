@@ -2,6 +2,8 @@ const { QueryTypes } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 const { Usuario, Plan, Cuenta } = require("../shared/associations.js")
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors.js")
+const { calcularPrecio } = require("./precio_plan.js")
+const { obtenerParametroVigente } = require("../remuneraciones/parametro_legal.service.js")
 
 function limitesDelMes(anio, mes) {
     const mm = String(mes).padStart(2, "0")
@@ -133,9 +135,12 @@ async function obtenerConsumo(cuentaId, anio, mes) {
     const trabajadores = await contarTrabajadoresMes(cuentaId, anio, mes)
     const usuarios = await contarUsuariosActivos(cuentaId)
 
+    const uf = plan ? await obtenerParametroVigente("UF", limitesDelMes(anio, mes).primerDia) : null
+
     return {
         periodo: { anio, mes },
         plan: plan ? plan.nombre : null,
+        plan_visible: plan ? plan.nombre_visible ?? plan.nombre : null,
         trabajadores: {
             usados: trabajadores,
             limite: plan ? plan.max_trabajadores : null
@@ -143,7 +148,10 @@ async function obtenerConsumo(cuentaId, anio, mes) {
         usuarios: {
             usados: usuarios,
             limite: plan ? plan.usuarios_incluidos + cuenta.usuarios_adicionales : null
-        }
+        },
+        precio: plan
+            ? calcularPrecio({ plan, usuariosAdicionales: cuenta.usuarios_adicionales, valorUF: uf ? Number(uf.valor) : null })
+            : null
     }
 }
 
