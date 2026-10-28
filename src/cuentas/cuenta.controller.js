@@ -1,10 +1,15 @@
-const { crearCuenta, listarCuentas, suspenderCuenta, cancelarCuenta, reactivarCuenta, cambiarPlanCuenta, listarPlanes } = require("./cuenta.service");
+const { crearCuenta, corregirAdminInicial, listarCuentas, suspenderCuenta, cancelarCuenta, reactivarCuenta, cambiarPlanCuenta, listarPlanes } = require("./cuenta.service");
 
 
 async function crear(req, res) {
     const nuevaCuenta = await crearCuenta(req.body ?? {});
 
     res.status(201).json(nuevaCuenta)
+}
+
+async function corregirAdmin(req, res) {
+    const resultado = await corregirAdminInicial(req.params.id, req.body ?? {})
+    res.status(200).json(resultado)
 }
 
 async function listar(req, res) {
@@ -39,6 +44,7 @@ async function planes(req, res) {
 
 module.exports = {
     crear,
+    corregirAdmin,
     listar,
     suspender,
     cancelar,

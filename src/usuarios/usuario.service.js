@@ -1,12 +1,23 @@
-const { NotFoundError, ForbiddenError, ConflictError } = require("../shared/errors.js")
+const { NotFoundError, ForbiddenError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { Usuario } = require("../shared/associations")
 const { generarPasswordInicial } = require("../shared/password.js")
+const { normalizarEmail, emailValido } = require("../shared/email.js")
+const { exigirEmailLibre } = require("./email_usuario.js")
 
 async function actualizarUsuario(id, datos) {
     const usuarioExistente = await Usuario.findByPk(id)
 
     if (usuarioExistente === null) {
         throw new NotFoundError("Usuario no encontrado")
+    }
+
+    datos = { ...datos }
+    if ("email" in datos) {
+        datos.email = normalizarEmail(datos.email)
+        if (!emailValido(datos.email)) {
+            throw new ValidationError("El email no es válido")
+        }
+        await exigirEmailLibre(datos.email, usuarioExistente.id)
     }
 
     return await usuarioExistente.update(datos, {

@@ -80,63 +80,6 @@ function textoDelPeriodo(periodo) {
     return `${String(periodo.mes).padStart(2, "0")}/${periodo.anio}`
 }
 
-// Muestra una ventana. Cada botón es { texto, clase, accion, requiere } (requiere: función que dice si ya se puede pulsar).
-function abrirModal({ tipo, titulo, cuerpo, botones }) {
-    const fondo = document.createElement("div")
-    fondo.className = "modal-fondo"
-    fondo.setAttribute("role", "dialog")
-    fondo.setAttribute("aria-modal", "true")
-
-    const ventana = document.createElement("div")
-    ventana.className = `modal ${tipo}`
-    ventana.innerHTML = `<h2>${escaparHtml(titulo)}</h2>${cuerpo}<div class="modal-botones"></div>`
-    fondo.appendChild(ventana)
-
-    const cerrar = () => {
-        fondo.remove()
-        document.removeEventListener("keydown", alTeclear)
-    }
-    const alTeclear = (evento) => {
-        if (evento.key === "Escape") {
-            cerrar()
-        }
-    }
-    document.addEventListener("keydown", alTeclear)
-
-    const contenedor = ventana.querySelector(".modal-botones")
-    const habilitables = []
-
-    for (const definicion of botones) {
-        const boton = document.createElement("button")
-        boton.type = "button"
-        boton.textContent = definicion.texto
-        if (definicion.clase) {
-            boton.className = definicion.clase
-        }
-        boton.addEventListener("click", async () => {
-            cerrar()
-            if (definicion.accion) {
-                await definicion.accion(ventana)
-            }
-        })
-        contenedor.appendChild(boton)
-        if (definicion.requiere) {
-            habilitables.push({ boton, requiere: definicion.requiere })
-        }
-    }
-
-    const actualizar = () => {
-        for (const { boton, requiere } of habilitables) {
-            boton.disabled = !requiere(ventana)
-        }
-    }
-    ventana.addEventListener("input", actualizar)
-    actualizar()
-
-    document.body.appendChild(fondo)
-    ventana.querySelector("input, textarea, button")?.focus()
-}
-
 async function pedirCierre(id) {
     const periodo = periodoPorId(id)
     const revision = await llamarApi(`/api/periodos-remuneracion/${id}/revision-cierre`)

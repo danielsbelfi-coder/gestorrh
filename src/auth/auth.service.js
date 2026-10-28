@@ -2,6 +2,7 @@ const { Usuario, Cuenta } = require("../shared/associations")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { AuthenticationError, ValidationError, ForbiddenError } = require("../shared/errors")
+const { condicionEmail } = require("../usuarios/email_usuario.js")
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
@@ -20,9 +21,7 @@ async function autenticarUsuario(email, password) {
     }
 
     const usuario = await Usuario.unscoped().findOne({
-        where: {
-            email
-        }
+        where: condicionEmail(email)
     })
 
     const passwordValida = await bcrypt.compare(password, usuario ? usuario.password_hash : HASH_FALSO)

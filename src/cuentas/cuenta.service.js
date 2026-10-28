@@ -1,4 +1,6 @@
 const { generarPasswordInicial } = require("../shared/password.js")
+const { normalizarEmail, emailValido } = require("../shared/email.js")
+const { exigirEmailLibre } = require("../usuarios/email_usuario.js")
 const { Cuenta, Usuario, Plan } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
 const { ValidationError, ConflictError, NotFoundError } = require("../shared/errors.js")
@@ -14,9 +16,15 @@ async function crearCuenta(datos) {
         throw new ValidationError("El RUT del titular no es válido")
     }
 
-    if (!datos.admin_nombre || !datos.admin_email) {
+    const adminEmail = normalizarEmail(datos.admin_email)
+
+    if (!datos.admin_nombre || adminEmail === "") {
         throw new ValidationError("Debe indicar el nombre y el email del administrador de la cuenta")
     }
+    if (!emailValido(adminEmail)) {
+        throw new ValidationError("El email del administrador no es válido")
+    }
+    await exigirEmailLibre(adminEmail)
 
     const planId = await validarPlan(datos.plan_id)
     const adicionales = datos.usuarios_adicionales === undefined ? 0 : validarAdicionales(datos.usuarios_adicionales)
@@ -46,7 +54,7 @@ async function crearCuenta(datos) {
 
             const admin = await Usuario.create({
                 nombre: datos.admin_nombre,
-                email: datos.admin_email,
+                email: adminEmail,
                 password_hash: passwordHash,
                 cuenta_id: cuenta.id,
                 es_admin_cuenta: true,
@@ -67,14 +75,61 @@ async function crearCuenta(datos) {
     }
 }
 
+// Corrige el correo del administrador de una cuenta (y genera una contraseña inicial nueva) mientras
+// él todavía no haya ingresado. Sirve para un correo mal escrito o una contraseña perdida antes del primer ingreso.
+async function corregirAdminInicial(cuentaId, datos) {
+    const cuenta = await Cuenta.findByPk(cuentaId)
+
+    if (cuenta === null) {
+        throw new NotFoundError("Cuenta no encontrada")
+    }
+
+    const admin = await Usuario.unscoped().findOne({
+        where: { cuenta_id: cuenta.id, es_admin_cuenta: true, debe_cambiar_password: true, password_cambiado_en: null },
+        order: [["id", "ASC"]]
+    })
+
+    const email = datos?.email === undefined ? null : normalizarEmail(datos.email)
+    if (email !== null && !emailValido(email)) {
+        throw new ValidationError("El email del administrador no es válido")
+    }
+
+    if (admin === null) {
+        throw new ConflictError("El administrador de esta cuenta ya ingresó y cambió su contraseña: ya no se puede corregir desde aquí")
+    }
+
+    if (email !== null) {
+        await exigirEmailLibre(email, admin.id)
+    }
+
+    const { password, hash } = await generarPasswordInicial()
+    await admin.update({ email: email ?? admin.email, password_hash: hash, debe_cambiar_password: true, estado: "activo" })
+
+    return { admin: { id: admin.id, nombre: admin.nombre, email: admin.email }, passwordInicial: password }
+}
+
 async function listarCuentas() {
     const cuentas = await Cuenta.findAll({
         include: { model: Plan, attributes: ["nombre"] },
         order: [["id", "ASC"]]
     })
 
+    // Administrador que todavía no ingresó (no cambió su contraseña inicial): el comercial aún puede corregir su acceso.
+    const pendientes = await Usuario.findAll({
+        where: { es_admin_cuenta: true, debe_cambiar_password: true, password_cambiado_en: null, cuenta_id: cuentas.map((c) => c.id) },
+        attributes: ["id", "cuenta_id", "email"],
+        order: [["id", "ASC"]]
+    })
+    const adminInicialPorCuenta = new Map()
+    for (const admin of pendientes) {
+        if (!adminInicialPorCuenta.has(admin.cuenta_id)) {
+            adminInicialPorCuenta.set(admin.cuenta_id, { id: admin.id, email: admin.email })
+        }
+    }
+
     return cuentas.map((cuenta) => ({
         ...cuenta.toJSON(),
+        admin_inicial: adminInicialPorCuenta.get(cuenta.id) ?? null,
         fecha_eliminacion: cuenta.fecha_cancelacion && cuenta.fecha_eliminacion_datos === null
             ? sumarDias(cuenta.fecha_cancelacion, DIAS_CONSERVACION_DATOS)
             : null
@@ -201,6 +256,7 @@ function validarAdicionales(valor) {
 }
 
 module.exports = {
+    corregirAdminInicial,
     crearCuenta,
     listarCuentas,
     suspenderCuenta,

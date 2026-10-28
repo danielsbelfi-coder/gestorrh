@@ -69,7 +69,12 @@ async function cargarEmpresas() {
 }
 
 function mostrarPasswordInicial(datos) {
-    mensaje("info", `Contraseña inicial de ${datos.usuario.email}: ${datos.passwordInicial}. Entrégala a la persona: no se volverá a mostrar y deberá cambiarla al entrar.`)
+    mostrarCredencial({
+        titulo: `Contraseña inicial de ${datos.usuario.nombre}`,
+        email: datos.usuario.email,
+        password: datos.passwordInicial,
+        destinatario: `a ${datos.usuario.nombre}`
+    })
 }
 
 document.getElementById("formCrearUsuario").addEventListener("submit", async function (evento) {

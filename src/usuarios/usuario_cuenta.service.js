@@ -2,6 +2,8 @@ const { Usuario, UsuarioEmpresaRol, Empresa, Rol } = require("../shared/associat
 const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
 const { exigirCuentaActiva } = require("../shared/permisos.js")
 const { generarPasswordInicial } = require("../shared/password.js")
+const { normalizarEmail, emailValido } = require("../shared/email.js")
+const { exigirEmailLibre } = require("./email_usuario.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
 const { verificarCupoUsuarios } = require("../cuentas/consumo.service.js")
 
@@ -34,8 +36,13 @@ async function listarUsuariosCuenta(usuario) {
 async function crearUsuarioCuenta(datos, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)
 
-    if (!datos.nombre || !datos.email)
+    const email = normalizarEmail(datos.email)
+
+    if (!datos.nombre || email === "")
         throw new ValidationError("Debe indicar el nombre y el email del usuario")
+    if (!emailValido(email))
+        throw new ValidationError("El email del usuario no es válido")
+    await exigirEmailLibre(email)
 
     await verificarCupoUsuarios(usuario.cuenta_id)
 
@@ -44,7 +51,7 @@ async function crearUsuarioCuenta(datos, usuario) {
     try {
         const nuevoUsuario = await Usuario.create({
             nombre: datos.nombre,
-            email: datos.email,
+            email,
             password_hash: passwordHash,
             cuenta_id: usuario.cuenta_id,
             debe_cambiar_password: true
@@ -107,6 +114,15 @@ async function editarUsuarioCuenta(id, datos, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)
 
     const objetivo = await obtenerUsuarioCuenta(id, usuario)
+
+    datos = { ...datos }
+    if ("email" in datos) {
+        datos.email = normalizarEmail(datos.email)
+        if (!emailValido(datos.email)) {
+            throw new ValidationError("El email del usuario no es válido")
+        }
+        await exigirEmailLibre(datos.email, objetivo.id)
+    }
 
     try {
         await (objetivo.update(datos, {

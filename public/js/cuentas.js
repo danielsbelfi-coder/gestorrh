@@ -23,6 +23,10 @@ function botonesCuenta(cuenta) {
 
     botones.push(`<button data-accion="consumo" data-id="${cuenta.id}">Ver consumo</button>`)
 
+    if (cuenta.admin_inicial) {
+        botones.push(`<button data-accion="corregir-admin" data-id="${cuenta.id}">Acceso del admin</button>`)
+    }
+
     return botones.join(" ")
 }
 
@@ -105,8 +109,43 @@ function rellenarFormPlan() {
     document.getElementById("planAdicionales").value = cuenta.usuarios_adicionales
 }
 
-function mostrarPasswordAdmin(datos) {
-    mensaje.textContent = `Cuenta creada. Contraseña inicial del administrador ${datos.admin.email}: ${datos.passwordInicial}. Entrégala al cliente: no se volverá a mostrar y deberá cambiarla al entrar.`
+function mostrarPasswordAdmin(datos, titulo = "Cuenta creada: contraseña inicial del administrador") {
+    mostrarCredencial({
+        titulo,
+        email: datos.admin.email,
+        password: datos.passwordInicial,
+        destinatario: "al administrador del cliente"
+    })
+}
+
+// Mientras el administrador no haya ingresado, el comercial puede corregir su correo y generar una contraseña nueva.
+function pedirCorreccionAdmin(cuenta) {
+    abrirModal({
+        tipo: "info",
+        titulo: `Acceso del administrador de ${cuenta.nombre}`,
+        cuerpo: `<p>El administrador todavía no ha ingresado. Puedes corregir su correo; se generará una contraseña inicial nueva y la anterior dejará de servir.</p>
+            <label for="correoAdmin">Correo del administrador</label>
+            <input type="email" id="correoAdmin" value="${escaparHtml(cuenta.admin_inicial.email)}" autocomplete="off">`,
+        botones: [
+            { texto: "Cancelar", clase: "secundario" },
+            {
+                texto: "Guardar y generar contraseña",
+                requiere: (ventana) => ventana.querySelector("#correoAdmin").value.includes("@"),
+                accion: async (ventana) => {
+                    const resultado = await llamarApi(`/api/cuentas/${cuenta.id}/admin-inicial`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ email: ventana.querySelector("#correoAdmin").value })
+                    })
+                    if (resultado.status !== 200) {
+                        mensaje.textContent = resultado.datos?.error ?? "No se pudo corregir el acceso"
+                        return
+                    }
+                    mostrarPasswordAdmin(resultado.datos, "Nueva contraseña inicial del administrador")
+                    cargarCuentas()
+                }
+            }
+        ]
+    })
 }
 
 const formCrearCuenta = document.getElementById("formCrearCuenta")
@@ -160,6 +199,11 @@ document.getElementById("cuerpoCuentas").addEventListener("click", async functio
     if (accion === "consumo") {
         // Abre la misma pantalla de consumo que ve el cliente, para esta cuenta.
         location.href = `consumo.html?cuenta=${id}`
+        return
+    }
+
+    if (accion === "corregir-admin") {
+        pedirCorreccionAdmin(cuentas.find((c) => String(c.id) === String(id)))
         return
     }
 
