@@ -62,8 +62,8 @@ document.getElementById("formCrearEmpresa").addEventListener("submit", async fun
     }, "Empresa creada.")
 
     if (creada) {
-        cerrarPanelCrear(this)
-        cargarEmpresas()
+        // Se abre su ficha para completar el resto de los datos.
+        location.href = `empresa.html?id=${creada.id}`
     }
 })
 

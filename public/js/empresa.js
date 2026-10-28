@@ -2,10 +2,37 @@ requiereLogin()
 
 const empresaId = new URLSearchParams(location.search).get("id")
 const formulario = document.getElementById("formEmpresa")
-const CAMPOS = ["razon_social", "nombre_fantasia", "direccion", "representante_legal_nombre", "representante_legal_rut", "mutualidad_id", "tasa_adicional_mutual"]
+
+// Copia de CCAF en src/empresas/datos_empresa.js
+const CCAF = {
+    los_andes: "Caja Los Andes",
+    la_araucana: "Caja La Araucana",
+    los_heroes: "Caja Los Héroes",
+    "18_septiembre": "Caja 18 de Septiembre"
+}
+
+const CAMPOS_TEXTO = ["tipo_empleador", "nombres", "apellido_paterno", "apellido_materno", "razon_social", "nombre_fantasia",
+    "giro", "codigo_actividad", "direccion", "telefono", "email", "representante_legal_nombre", "representante_legal_rut",
+    "representante_legal_email", "mutualidad_id", "tasa_adicional_mutual", "ccaf", "ccaf_agencia", "ccaf_numero_socio"]
+
 const campoComuna = document.getElementById("comuna")
 const OPCIONES_COMUNA = Object.entries(COMUNAS).map(([codigo, nombre]) => ({ id: codigo, texto: `${nombre} (${codigo})` }))
 llenarBuscador(campoComuna, OPCIONES_COMUNA)
+llenarSelect(document.getElementById("ccaf"), Object.entries(CCAF).map(([id, texto]) => ({ id, texto })), "Sin caja de compensación")
+
+function valor(id) {
+    return document.getElementById(id).value.trim()
+}
+
+function mostrarSegunTipo() {
+    const natural = valor("tipo_empleador") === "natural"
+    document.querySelectorAll(".solo-natural").forEach((campo) => { campo.hidden = !natural })
+    const conCaja = valor("ccaf") !== ""
+    document.querySelectorAll(".solo-ccaf").forEach((campo) => { campo.hidden = !conCaja })
+}
+
+document.getElementById("tipo_empleador").addEventListener("change", mostrarSegunTipo)
+document.getElementById("ccaf").addEventListener("change", mostrarSegunTipo)
 
 // Mutualidades activas; si la empresa tiene una inactiva asignada, se agrega para no perder el dato al guardar.
 async function cargarMutualidades(actual) {
@@ -23,10 +50,14 @@ function mostrarEmpresa(empresa) {
     document.getElementById("subtitulo").textContent = `RUT ${formatearRut(empresa.rut, empresa.dv)} · ID ${empresa.id}`
     document.getElementById("estadoActual").innerHTML = empresa.estado === "inactiva"
         ? `<span class="insignia advertencia">Inactiva</span>` : `<span class="insignia exito">Activa</span>`
-    for (const campo of CAMPOS) {
+    for (const campo of CAMPOS_TEXTO) {
         document.getElementById(campo).value = empresa[campo] ?? ""
     }
+    if (!empresa.tipo_empleador) {
+        document.getElementById("tipo_empleador").value = "juridica"
+    }
     campoComuna.value = OPCIONES_COMUNA.find((opcion) => opcion.id === empresa.comuna)?.texto ?? ""
+    mostrarSegunTipo()
 }
 
 async function cargarEmpresa() {
@@ -48,22 +79,35 @@ formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
     limpiarMensajes()
 
-    const valor = (id) => document.getElementById(id).value.trim()
-    const datos = {
-        razon_social: valor("razon_social"),
-        nombre_fantasia: valor("nombre_fantasia") || null,
-        direccion: valor("direccion"),
-        representante_legal_nombre: valor("representante_legal_nombre"),
-        representante_legal_rut: valor("representante_legal_rut"),
-        mutualidad_id: valor("mutualidad_id") === "" ? null : Number(valor("mutualidad_id"))
-    }
     // La comuna del empleador es el lugar que aparece en los contratos ("En Curicó, a …").
     const comuna = valorBuscador(campoComuna)
     if (campoComuna.value.trim() !== "" && comuna === null) {
         mensaje("error", "Elige una comuna de la lista de sugerencias")
         return
     }
-    datos.comuna = comuna
+
+    const natural = valor("tipo_empleador") === "natural"
+    const datos = {
+        tipo_empleador: valor("tipo_empleador"),
+        nombres: natural ? valor("nombres") : null,
+        apellido_paterno: natural ? valor("apellido_paterno") : null,
+        apellido_materno: natural ? valor("apellido_materno") : null,
+        razon_social: valor("razon_social"),
+        nombre_fantasia: valor("nombre_fantasia"),
+        giro: valor("giro"),
+        codigo_actividad: valor("codigo_actividad"),
+        direccion: valor("direccion"),
+        comuna,
+        telefono: valor("telefono"),
+        email: valor("email"),
+        representante_legal_nombre: valor("representante_legal_nombre"),
+        representante_legal_rut: valor("representante_legal_rut"),
+        representante_legal_email: valor("representante_legal_email"),
+        mutualidad_id: valor("mutualidad_id") === "" ? null : Number(valor("mutualidad_id")),
+        ccaf: valor("ccaf"),
+        ccaf_agencia: valor("ccaf_agencia"),
+        ccaf_numero_socio: valor("ccaf_numero_socio")
+    }
     if (valor("tasa_adicional_mutual") !== "") {
         datos.tasa_adicional_mutual = Number(valor("tasa_adicional_mutual"))
     }
@@ -71,6 +115,7 @@ formulario.addEventListener("submit", async function (evento) {
     const resultado = await llamarApi(`/api/empresas/${empresaId}`, { method: "PATCH", body: JSON.stringify(datos) })
     if (resultado.status !== 200) {
         mensaje("error", resultado.datos?.error ?? "No se pudieron guardar los cambios")
+        window.scrollTo({ top: 0, behavior: "smooth" })
         return
     }
     mostrarEmpresa(resultado.datos)

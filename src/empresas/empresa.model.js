@@ -34,6 +34,56 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.STRING(5),
     allowNull: true
   },
+  tipo_empleador:
+  {
+    type: DataTypes.ENUM("juridica", "natural"),
+    allowNull: false,
+    defaultValue: "juridica"
+  },
+  nombres: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  apellido_paterno: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  apellido_materno: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  giro: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  codigo_actividad: {
+    type: DataTypes.STRING(6),
+    allowNull: true
+  },
+  telefono: {
+    type: DataTypes.STRING(30),
+    allowNull: true
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  representante_legal_email: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  ccaf: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  ccaf_agencia: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  ccaf_numero_socio: {
+    type: DataTypes.STRING(30),
+    allowNull: true
+  },
   mutualidad_id: {
     type: DataTypes.INTEGER,
     allowNull: true

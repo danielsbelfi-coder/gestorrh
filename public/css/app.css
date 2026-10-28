@@ -1522,3 +1522,8 @@ input.campo-corto {
 .resultado-apertura p {
     margin: 0 0 6px;
 }
+
+.nota-ficha {
+    margin: 12px 0 0;
+    font-size: 0.86rem;
+}

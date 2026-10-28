@@ -24,19 +24,39 @@
 
         <form id="formEmpresa" class="ficha" hidden>
             <section class="tarjeta">
-                <h2>Datos de la empresa</h2>
+                <h2>Identificación</h2>
                 <div class="campos">
-                    <label class="campo-ancho">Razón social *<input type="text" id="razon_social" required></label>
+                    <label>Tipo de empleador
+                        <select id="tipo_empleador">
+                            <option value="juridica">Persona jurídica</option>
+                            <option value="natural">Persona natural</option>
+                        </select>
+                    </label>
+                    <label class="solo-natural">Nombres *<input type="text" id="nombres"></label>
+                    <label class="solo-natural">Apellido paterno *<input type="text" id="apellido_paterno"></label>
+                    <label class="solo-natural">Apellido materno<input type="text" id="apellido_materno"></label>
+                    <label class="campo-ancho">Razón social *<input type="text" id="razon_social"></label>
                     <label class="campo-ancho">Nombre de fantasía<input type="text" id="nombre_fantasia"></label>
+                    <label class="campo-ancho">Giro<input type="text" id="giro"></label>
+                    <label>Código de actividad (SII)<input type="text" id="codigo_actividad" inputmode="numeric" maxlength="6" placeholder="6 dígitos"></label>
+                </div>
+                <p class="texto-suave nota-ficha">Si el empleador es persona natural y dejas la razón social vacía, se usa su nombre completo. El código de actividad económica está en la carpeta tributaria de la empresa en el SII.</p>
+            </section>
+            <section class="tarjeta">
+                <h2>Domicilio y contacto</h2>
+                <div class="campos">
                     <label class="campo-ancho">Dirección *<input type="text" id="direccion" required></label>
                     <label class="campo-ancho">Comuna<input type="search" id="comuna" placeholder="Escribe la comuna…"></label>
+                    <label>Teléfono<input type="tel" id="telefono"></label>
+                    <label class="campo-ancho">Correo de la empresa<input type="email" id="email"></label>
                 </div>
             </section>
             <section class="tarjeta">
                 <h2>Representante legal</h2>
                 <div class="campos">
                     <label class="campo-ancho">Nombre *<input type="text" id="representante_legal_nombre" required></label>
-                    <label>RUT *<input type="text" id="representante_legal_rut" required></label>
+                    <label>RUT *<input type="text" id="representante_legal_rut" placeholder="12.345.678-9" required></label>
+                    <label class="campo-ancho">Correo<input type="email" id="representante_legal_email"></label>
                 </div>
             </section>
             <section class="tarjeta">
@@ -45,7 +65,16 @@
                     <label class="campo-ancho">Organismo administrador<select id="mutualidad_id"></select></label>
                     <label>Tasa adicional (%)<input type="number" id="tasa_adicional_mutual" min="0" step="0.01"></label>
                 </div>
-                <p class="texto-suave">Si la empresa no está adherida a una mutualidad, cotiza en el Instituto de Seguridad Laboral (ISL). La tasa adicional es la que fija el organismo según la siniestralidad.</p>
+                <p class="texto-suave nota-ficha">Si la empresa no está adherida a una mutualidad, cotiza en el Instituto de Seguridad Laboral (ISL). La tasa adicional es la que fija el organismo según la siniestralidad.</p>
+            </section>
+            <section class="tarjeta">
+                <h2>Caja de compensación (CCAF)</h2>
+                <div class="campos">
+                    <label class="campo-ancho">Caja<select id="ccaf"></select></label>
+                    <label class="solo-ccaf">Agencia<input type="text" id="ccaf_agencia"></label>
+                    <label class="solo-ccaf">Número de socio<input type="text" id="ccaf_numero_socio"></label>
+                </div>
+                <p class="texto-suave nota-ficha">Por ahora la caja solo se registra. Su efecto en el cálculo (la parte del 7% de salud de los trabajadores en Fonasa que va a la caja) y en Previred se incorpora en un paso siguiente.</p>
             </section>
             <div class="barra-guardar">
                 <button type="submit">Guardar cambios</button>

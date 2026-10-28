@@ -6,7 +6,7 @@ const { sequelize } = require("../shared/database.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { sumarDias } = require("../shared/fechas.js")
-const { COMUNAS } = require("../shared/comunas_lre.js")
+const { validarDatosEmpresa, CAMPOS_EMPRESA } = require("./datos_empresa.js")
 
 const TASA_ADICIONAL_MUTUAL_MAXIMA = 20
 
@@ -42,6 +42,11 @@ async function crearEmpresa(datos, usuario) {
         throw new ValidationError("El RUT de la empresa no es válido")
     }
 
+    const { datos: limpios, errores } = validarDatosEmpresa(datos)
+    if (errores.length > 0) {
+        throw new ValidationError(errores.join(". "))
+    }
+
     await validarMutualidad(datos)
 
     const rolAdmin = await Rol.findOne({
@@ -53,7 +58,7 @@ async function crearEmpresa(datos, usuario) {
     try {
         return await sequelize.transaction(async (t) => {
             const empresa = await Empresa.create({
-                ...datos,
+                ...limpios,
                 rut: rut,
                 dv: dv,
                 cuenta_id: usuario.cuenta_id
@@ -61,13 +66,7 @@ async function crearEmpresa(datos, usuario) {
                 fields: ["cuenta_id",
                     "rut",
                     "dv",
-                    "razon_social",
-                    "nombre_fantasia",
-                    "representante_legal_nombre",
-                    "representante_legal_rut",
-                    "direccion",
-                    "mutualidad_id",
-                    "tasa_adicional_mutual"
+                    ...CAMPOS_EMPRESA
                 ],
 
                 transaction: t
@@ -117,12 +116,13 @@ async function actualizarEmpresa(id, datos, empresasPermitidas, usuarioId) {
 
     await validarMutualidad(datos)
 
-    if (datos.comuna !== undefined && datos.comuna !== null && COMUNAS[datos.comuna] === undefined) {
-        throw new ValidationError("La comuna no está en la tabla de la Dirección del Trabajo")
+    const { datos: limpios, errores } = validarDatosEmpresa(datos)
+    if (errores.length > 0) {
+        throw new ValidationError(errores.join(". "))
     }
 
-    const actualizar = await empresa.update(datos, {
-        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id", "tasa_adicional_mutual", "comuna"]
+    const actualizar = await empresa.update(limpios, {
+        fields: CAMPOS_EMPRESA
     })
 
     return actualizar
