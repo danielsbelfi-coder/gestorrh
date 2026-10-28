@@ -1,5 +1,12 @@
 requiereLogin()
 
+let contratosEmpresa = []
+let contratoEnCorreccion = null
+
+function sinFirmar(c) {
+    return c.estado === "vigente" && c.estado_firma === "pendiente"
+}
+
 const tabla = crearTabla({
     contenedor: "tablaContratos",
     textoBuscar: "Buscar por trabajador, RUT o cargo…",
@@ -22,7 +29,9 @@ const tabla = crearTabla({
             titulo: "", orden: false, valor: () => "",
             html: (c) => `<a class="boton secundario chico" href="trabajador.html?id=${c.trabajador_id}">Ficha</a>
                 <button type="button" class="chico secundario" data-pdf="${c.id}">PDF</button>
-                ${c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar="${c.id}">Firmar</button>` : ""}`
+                ${sinFirmar(c) ? `<button type="button" class="chico" data-firmar="${c.id}">Firmar</button>
+                    <button type="button" class="chico secundario" data-corregir="${c.id}">Corregir</button>
+                    <button type="button" class="chico peligro" data-anular="${c.id}">Anular</button>` : ""}`
         }
     ],
     filtros: [
@@ -41,11 +50,12 @@ async function cargarContratos() {
     const cargoPorId = porId(cargos)
     const trabajadoresEmpresa = deEmpresaActual(trabajadores)
 
-    tabla.mostrar(deEmpresaActual(contratos, (c) => c.Trabajador?.empresa_id).map((contrato) => ({
+    contratosEmpresa = deEmpresaActual(contratos, (c) => c.Trabajador?.empresa_id).map((contrato) => ({
         ...contrato,
         persona: personaPorId.get(contrato.Trabajador?.persona_id),
         cargo: cargoPorId.get(contrato.cargo_id)?.nombre
-    })))
+    }))
+    tabla.mostrar(contratosEmpresa)
 
     llenarBuscador(document.getElementById("trabajador"), trabajadoresEmpresa.map((trabajador) => {
         const persona = personaPorId.get(trabajador.persona_id)
@@ -68,6 +78,12 @@ async function cargarContratos() {
 
     llenarSelect(document.getElementById("cargoId"),
         deEmpresaActual(cargos).map((cargo) => ({ id: cargo.id, texto: cargo.nombre })), "Elige un cargo")
+
+    // Desde la ficha del trabajador se llega con ?corregir=ID.
+    const corregir = Number(new URLSearchParams(location.search).get("corregir"))
+    if (corregir && !contratoEnCorreccion) {
+        abrirCorreccion(corregir)
+    }
 }
 
 // ---------- Jornada: al elegir una plantilla, las horas y los días se toman de ella ----------
@@ -75,7 +91,7 @@ let jornadas = []
 
 async function cargarJornadas() {
     const resultado = await llamarApi(`/api/jornadas?empresa_id=${empresaActual()}`)
-    jornadas = resultado.status === 200 ? resultado.datos.filter((j) => j.activo) : []
+    jornadas = resultado.status === 200 ? resultado.datos.filter((j) => j.activo || j.id === contratoEnCorreccion?.jornada_id) : []
     llenarSelect(document.getElementById("jornadaId"),
         jornadas.map((j) => ({ id: j.id, texto: `${j.nombre} (${Number(j.horas_semanales)} h)` })),
         "Sin plantilla: indicar horas y días a mano")
@@ -109,7 +125,7 @@ formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
     limpiarMensajes()
 
-    const trabajadorId = valorBuscador(document.getElementById("trabajador"))
+    const trabajadorId = contratoEnCorreccion ? contratoEnCorreccion.trabajador_id : valorBuscador(document.getElementById("trabajador"))
     if (trabajadorId === null) {
         mensaje("error", "Elige un trabajador de la lista de sugerencias")
         return
@@ -122,8 +138,7 @@ formulario.addEventListener("submit", async function (evento) {
         return
     }
 
-    const creado = await crearRegistro("/api/contratos", {
-        trabajador_id: trabajadorId,
+    const datos = {
         tipo_contrato: document.getElementById("tipoContrato").value,
         fecha_inicio: document.getElementById("fechaInicio").value,
         fecha_termino: document.getElementById("fechaTermino").value || null,
@@ -138,7 +153,21 @@ formulario.addEventListener("submit", async function (evento) {
         sistema_remuneracion: document.getElementById("sistemaRemuneracion").value,
         sueldo_base: document.getElementById("sueldoBase").value,
         periodicidad_pago: document.getElementById("periodicidadPago").value
-    }, "Contrato creado.")
+    }
+
+    if (contratoEnCorreccion) {
+        const resultado = await llamarApi(`/api/contratos/${contratoEnCorreccion.id}`, { method: "PATCH", body: JSON.stringify(datos) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo corregir el contrato")
+            return
+        }
+        const trabajador = contratoEnCorreccion.trabajador_id
+        salirDeCorreccion()
+        location.href = `trabajador.html?id=${trabajador}`
+        return
+    }
+
+    const creado = await crearRegistro("/api/contratos", { trabajador_id: trabajadorId, ...datos }, "Contrato creado.")
 
     if (creado) {
         cerrarPanelCrear(formulario)
@@ -146,7 +175,82 @@ formulario.addEventListener("submit", async function (evento) {
     }
 })
 
+
+// ---------- Corrección de un contrato con la firma pendiente (reutiliza el formulario de creación) ----------
+
+function abrirCorreccion(id) {
+    const c = contratosEmpresa.find((x) => x.id === id)
+    if (!c) {
+        return
+    }
+    if (!sinFirmar(c)) {
+        mensaje("error", "Solo se puede corregir un contrato vigente con la firma pendiente. Un contrato firmado se modifica con un anexo.")
+        return
+    }
+    contratoEnCorreccion = c
+    limpiarMensajes()
+
+    const campoTrabajador = document.getElementById("trabajador")
+    campoTrabajador.value = `${nombreCompleto(c.persona)} · ${formatearRut(c.persona?.rut, c.persona?.dv)}`
+    campoTrabajador.disabled = true
+
+    document.getElementById("tipoContrato").value = c.tipo_contrato
+    document.getElementById("fechaInicio").value = c.fecha_inicio ?? ""
+    document.getElementById("fechaTermino").value = c.fecha_termino ?? ""
+    document.getElementById("cargoId").value = String(c.cargo_id)
+    document.getElementById("funciones").value = c.funciones ?? ""
+    document.getElementById("lugarPrestacionServicios").value = c.lugar_prestacion_servicios ?? ""
+    document.getElementById("comuna").value = c.comuna_prestacion && COMUNAS[c.comuna_prestacion] ? `${COMUNAS[c.comuna_prestacion]} (${c.comuna_prestacion})` : ""
+    document.getElementById("tipoJornada").value = c.tipo_jornada
+    document.getElementById("horasSemanales").value = Number(c.horas_semanales)
+    document.getElementById("diasTrabajados").value = c.dias_trabajados
+    document.getElementById("sistemaRemuneracion").value = c.sistema_remuneracion
+    document.getElementById("sueldoBase").value = Number(c.sueldo_base)
+    document.getElementById("periodicidadPago").value = c.periodicidad_pago
+
+    cargarJornadas().then(() => {
+        document.getElementById("jornadaId").value = c.jornada_id ? String(c.jornada_id) : ""
+        aplicarJornada()
+    })
+
+    document.getElementById("tituloPanel").textContent = `Corregir contrato #${c.id} (firma pendiente)`
+    document.getElementById("botonGuardar").textContent = "Guardar corrección"
+    document.getElementById("cancelarCorreccion").hidden = false
+    const panel = document.getElementById("panelCrear")
+    panel.open = true
+    panel.scrollIntoView({ behavior: "smooth", block: "start" })
+}
+
+function salirDeCorreccion() {
+    contratoEnCorreccion = null
+    formulario.reset()
+    document.getElementById("trabajador").disabled = false
+    document.getElementById("tituloPanel").textContent = "＋ Nuevo contrato"
+    document.getElementById("botonGuardar").textContent = "Crear contrato"
+    document.getElementById("cancelarCorreccion").hidden = true
+    cargarJornadas()
+}
+
+document.getElementById("cancelarCorreccion").addEventListener("click", () => {
+    salirDeCorreccion()
+    document.getElementById("panelCrear").removeAttribute("open")
+    history.replaceState(null, "", "contratos.html")
+})
+
 document.getElementById("tablaContratos").addEventListener("click", async function (evento) {
+    const corregir = evento.target.closest("[data-corregir]")?.dataset.corregir
+    if (corregir) {
+        abrirCorreccion(Number(corregir))
+        return
+    }
+    const anular = evento.target.closest("[data-anular]")?.dataset.anular
+    if (anular) {
+        limpiarMensajes()
+        if (await anularContratoConMotivo(Number(anular))) {
+            cargarContratos()
+        }
+        return
+    }
     const pdf = evento.target.closest("[data-pdf]")?.dataset.pdf
     if (pdf) {
         limpiarMensajes()
@@ -174,4 +278,4 @@ document.getElementById("tablaContratos").addEventListener("click", async functi
     cargarContratos()
 })
 
-document.addEventListener("empresa-lista", cargarContratos)
+document.addEventListener("empresa-lista", () => { if (contratoEnCorreccion) { salirDeCorreccion() } cargarContratos() })

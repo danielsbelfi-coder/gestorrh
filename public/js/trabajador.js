@@ -86,8 +86,10 @@ async function dibujarContratos() {
                 <div class="contrato-estados">
                     ${insignia("contrato", c.estado)}
                     ${insignia("firma", c.estado_firma).replace(">Pendiente<", ">Firma pendiente<")}
-                    ${c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-contrato="${c.id}">Firmar contrato</button>` : ""}
-                    ${c.estado === "vigente" ? `<button type="button" class="chico secundario" data-nuevo-anexo="${c.id}">＋ Anexo</button>` : ""}
+                    ${c.estado === "vigente" && c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-contrato="${c.id}">Firmar contrato</button>
+                        <a class="boton chico secundario" href="contratos.html?corregir=${c.id}">Corregir</a>
+                        <button type="button" class="chico peligro" data-anular-contrato="${c.id}">Anular</button>` : ""}
+                    ${c.estado === "vigente" && c.estado_firma === "firmado" ? `<button type="button" class="chico secundario" data-nuevo-anexo="${c.id}">＋ Anexo</button>` : ""}
                     <button type="button" class="chico secundario" data-pdf-contrato="${c.id}">PDF</button>
                 </div>
             </header>
@@ -100,7 +102,8 @@ async function dibujarContratos() {
                 ${dato("Comuna de prestación", escaparHtml(valorContrato("comuna_prestacion", c.comuna_prestacion)))}
                 ${dato("Lugar", escaparHtml(c.lugar_prestacion_servicios ?? "—"))}
                 ${dato("Funciones", escaparHtml(c.funciones ?? "—"))}
-                ${dato("Firma", escaparHtml(c.fecha_firma ? fechaCorta(c.fecha_firma) : "Pendiente"))}
+                ${dato("Firma", escaparHtml(c.fecha_firma ? fechaCorta(c.fecha_firma) : c.estado === "anulado" ? "No firmado" : "Pendiente"))}
+                ${c.estado === "anulado" ? dato("Anulado", escaparHtml(`${fechaCorta(c.fecha_anulacion)} · ${c.motivo_anulacion ?? ""}`)) : ""}
             </dl>
             ${anexos[i].length === 0 ? `<p class="texto-suave">Sin anexos.</p>` : `
                 <table class="tabla-anexos">
@@ -200,6 +203,13 @@ document.getElementById("contratos").addEventListener("click", async function (e
         const resultado = await descargarArchivo(`/api/contratos/${boton.dataset.pdfContrato}/documento`)
         if (resultado.status !== 200) {
             mensaje("error", resultado.datos?.error ?? "No se pudo generar el contrato")
+        }
+        return
+    }
+
+    if (boton.dataset.anularContrato) {
+        if (await anularContratoConMotivo(Number(boton.dataset.anularContrato))) {
+            await cargarFicha()
         }
         return
     }

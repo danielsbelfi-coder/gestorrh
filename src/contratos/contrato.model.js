@@ -81,6 +81,14 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
     estado: {
         type: DataTypes.ENUM("vigente", "terminado", "anulado"),
         defaultValue: "vigente"
+    },
+    motivo_anulacion: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    fecha_anulacion: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
     }
 }, {
     tableName: "contratos_trabajo"

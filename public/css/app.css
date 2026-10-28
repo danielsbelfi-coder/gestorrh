@@ -1622,3 +1622,5 @@ input.campo-corto {
 .contenido form.form-jornada > * { flex: 0 0 auto; }
 .contenido form.form-jornada > label { max-width: 520px; margin-bottom: 12px; }
 .tabla-jornada input[type="time"] { width: 130px; }
+button.chico.peligro { background: var(--peligro-suave); color: var(--peligro); border-color: #fecaca; }
+button.chico.peligro:hover { background: var(--peligro); color: #fff; border-color: var(--peligro); }

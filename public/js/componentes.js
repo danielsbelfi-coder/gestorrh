@@ -562,3 +562,18 @@ function textoDistribucion(dias) {
     const texto = `${tramos.join("; ")}${colaciones.length === 1 ? ` · colación ${colaciones[0]} min` : ""}`
     return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
+
+// Anula un contrato con la firma pendiente. Pide el motivo y devuelve true si se anuló.
+async function anularContratoConMotivo(id) {
+    const motivo = prompt(`Anular el contrato #${id}.\n\nÚsalo solo si el contrato no debió existir (por ejemplo, el trabajador no se presentó). Si era su único contrato, el trabajador vuelve a postulante.\n\nMotivo de la anulación:`)
+    if (motivo === null) {
+        return false
+    }
+    const resultado = await llamarApi(`/api/contratos/${id}/anular`, { method: "PATCH", body: JSON.stringify({ motivo: motivo.trim() }) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo anular el contrato")
+        return false
+    }
+    mensaje("info", `Contrato #${id} anulado.`)
+    return true
+}

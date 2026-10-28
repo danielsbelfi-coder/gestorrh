@@ -14,7 +14,7 @@
         <div class="encabezado-pagina">
             <div>
                 <h1>Contratos</h1>
-                <p>Contratos de trabajo de la empresa. Al crear el contrato de un postulante, pasa a trabajador activo. Los anexos y el historial están en la ficha de cada trabajador.</p>
+                <p>Contratos de trabajo de la empresa. Al crear el contrato de un postulante, pasa a trabajador activo. Mientras la firma esté pendiente, el contrato se puede corregir o anular; una vez firmado, los cambios van por anexo. Los anexos y el historial están en la ficha de cada trabajador.</p>
             </div>
         </div>
         <p id="mensajeError" role="alert"></p>
@@ -22,7 +22,7 @@
         <ul id="listaProblemas"></ul>
 
         <details class="tarjeta plegable" id="panelCrear">
-            <summary>＋ Nuevo contrato</summary>
+            <summary id="tituloPanel">＋ Nuevo contrato</summary>
             <form id="formCrearContratos">
                 <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
                 <label>Tipo de contrato
@@ -64,7 +64,10 @@
                         <option value="semanal">Semanal</option>
                     </select>
                 </label>
-                <button type="submit">Crear contrato</button>
+                <div class="acciones-grupo campo-ancho">
+                    <button type="submit" id="botonGuardar">Crear contrato</button>
+                    <button type="button" class="secundario" id="cancelarCorreccion" hidden>Cancelar corrección</button>
+                </div>
             </form>
         </details>
 

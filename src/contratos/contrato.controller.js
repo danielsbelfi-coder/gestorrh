@@ -1,4 +1,4 @@
-const { crearContrato, listarContratos, obtenerContratoPorId, firmarContrato, documentoContrato } = require("./contrato.service");
+const { crearContrato, listarContratos, obtenerContratoPorId, firmarContrato, documentoContrato, corregirContrato, anularContrato } = require("./contrato.service");
 const PDFDocument = require("pdfkit")
 const { dibujarContrato } = require("./dibujar_contrato.js")
 
@@ -21,6 +21,16 @@ async function firmar(req, res) {
     res.status(200).json(contrato)
 }
 
+async function corregir(req, res) {
+    const contrato = await corregirContrato(req.params.id, req.body ?? {}, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(contrato)
+}
+
+async function anular(req, res) {
+    const contrato = await anularContrato(req.params.id, req.body?.motivo, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(contrato)
+}
+
 async function documento(req, res) {
     const datos = await documentoContrato(req.params.id, req.empresasPermitidas)
     const doc = new PDFDocument({ size: "LETTER", margin: 50 })
@@ -36,5 +46,7 @@ module.exports = {
     listar,
     obtenerPorId,
     firmar,
-    documento
+    documento,
+    corregir,
+    anular
 }
