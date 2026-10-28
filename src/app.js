@@ -33,8 +33,19 @@ const mutualidadRoutes = require("./remuneraciones/mutualidad.routes.js")
 const jornadaRoutes = require("./contratos/jornada.routes")
 const feriadoRoutes = require("./calendario/feriado.routes")
 
+// Detrás de un proxy (Render, Railway, Nginx...) la IP real del cliente viene en X-Forwarded-For.
+// TRUST_PROXY = cuántos proxies hay delante del servidor (normalmente 1). Sin definir, se ignora esa cabecera.
+if (process.env.TRUST_PROXY) {
+    app.set("trust proxy", Number(process.env.TRUST_PROXY))
+}
+
 app.use(helmet())
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
+
+// Para que el hosting compruebe que el servidor está vivo. No requiere sesión ni toca la base de datos.
+app.get("/api/salud", (req, res) => {
+    res.status(200).json({ estado: "ok" })
+})
 
 app.use("/api/empresas", verificarToken, empresaRoutes)
 app.use("/api/personas", verificarToken, personaRoutes)

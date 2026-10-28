@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "eliminar-vencidos": "node scripts/eliminar-vencidos.js",
-    "abrir-parametros": "node scripts/abrir-parametros.js"
+    "abrir-parametros": "node scripts/abrir-parametros.js",
+    "sembrar-base": "node scripts/sembrar-base.js",
+    "crear-usuario-plataforma": "node scripts/crear-usuario-plataforma.js"
   },
   "keywords": [],
   "author": "",

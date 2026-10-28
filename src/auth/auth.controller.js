@@ -1,11 +1,26 @@
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { sumarDias } = require("../shared/fechas.js")
 const { autenticarUsuario, cambiarPassword } = require("./auth.service.js")
+const { limiteLogin } = require("./limite_login.js")
+const { AuthenticationError } = require("../shared/errors.js")
 
 
 async function login(req, res) {
     const { email, password } = req.body ?? {}
-    const resultado = await autenticarUsuario(email, password)
+
+    limiteLogin.exigirPermitido(req.ip, email)
+
+    let resultado
+    try {
+        resultado = await autenticarUsuario(email, password)
+    } catch (error) {
+        if (error instanceof AuthenticationError) {
+            limiteLogin.registrarFallo(req.ip, email)
+        }
+        throw error
+    }
+
+    limiteLogin.registrarExito(email)
     res.status(200).json(resultado)
 }
 

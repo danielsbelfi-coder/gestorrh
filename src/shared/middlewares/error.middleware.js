@@ -8,6 +8,9 @@ function manejarErrores(err, req, res, next) {
     }
 
     if (err instanceof AppError) {
+        if (err.reintentarEnSegundos) {
+            res.set("Retry-After", String(err.reintentarEnSegundos))
+        }
         return res.status(err.statusCode).json({ error: err.message })
     }
 

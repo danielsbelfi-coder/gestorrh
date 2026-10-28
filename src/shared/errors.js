@@ -35,11 +35,19 @@ class ForbiddenError extends AppError {
     }
 }
 
+class TooManyRequestsError extends AppError {
+    constructor(message, reintentarEnSegundos) {
+        super(message, 429)
+        this.reintentarEnSegundos = reintentarEnSegundos
+    }
+}
+
 module.exports = {
     AppError,
     NotFoundError,
     ConflictError,
     ValidationError,
     AuthenticationError,
-    ForbiddenError
+    ForbiddenError,
+    TooManyRequestsError
 }
