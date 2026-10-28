@@ -7,6 +7,16 @@ const campoComuna = document.getElementById("comuna")
 const OPCIONES_COMUNA = Object.entries(COMUNAS).map(([codigo, nombre]) => ({ id: codigo, texto: `${nombre} (${codigo})` }))
 llenarBuscador(campoComuna, OPCIONES_COMUNA)
 
+// Mutualidades activas; si la empresa tiene una inactiva asignada, se agrega para no perder el dato al guardar.
+async function cargarMutualidades(actual) {
+    const resultado = await llamarApi("/api/mutualidades")
+    const lista = resultado.status === 200 ? resultado.datos : []
+    const visibles = lista.filter((m) => m.estado !== "inactivo" || m.id === actual)
+    llenarSelect(document.getElementById("mutualidad_id"),
+        visibles.map((m) => ({ id: m.id, texto: m.estado === "inactivo" ? `${m.nombre} (inactiva)` : m.nombre })),
+        "Sin mutualidad (ISL)")
+}
+
 function mostrarEmpresa(empresa) {
     document.title = `GestorRH - ${empresa.razon_social}`
     document.getElementById("titulo").textContent = empresa.razon_social
@@ -29,6 +39,7 @@ async function cargarEmpresa() {
         mensaje("error", resultado.datos?.error ?? "No se pudo cargar la empresa")
         return
     }
+    await cargarMutualidades(resultado.datos.mutualidad_id)
     mostrarEmpresa(resultado.datos)
     formulario.hidden = false
 }
