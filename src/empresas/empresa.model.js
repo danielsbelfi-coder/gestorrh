@@ -30,6 +30,10 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.STRING,
     allowNull: false
   },
+  comuna: {
+    type: DataTypes.STRING(5),
+    allowNull: true
+  },
   mutualidad_id: {
     type: DataTypes.INTEGER,
     allowNull: true

@@ -3,6 +3,9 @@ requiereLogin()
 const empresaId = new URLSearchParams(location.search).get("id")
 const formulario = document.getElementById("formEmpresa")
 const CAMPOS = ["razon_social", "nombre_fantasia", "direccion", "representante_legal_nombre", "representante_legal_rut", "mutualidad_id", "tasa_adicional_mutual"]
+const campoComuna = document.getElementById("comuna")
+const OPCIONES_COMUNA = Object.entries(COMUNAS).map(([codigo, nombre]) => ({ id: codigo, texto: `${nombre} (${codigo})` }))
+llenarBuscador(campoComuna, OPCIONES_COMUNA)
 
 function mostrarEmpresa(empresa) {
     document.title = `GestorRH - ${empresa.razon_social}`
@@ -13,6 +16,7 @@ function mostrarEmpresa(empresa) {
     for (const campo of CAMPOS) {
         document.getElementById(campo).value = empresa[campo] ?? ""
     }
+    campoComuna.value = OPCIONES_COMUNA.find((opcion) => opcion.id === empresa.comuna)?.texto ?? ""
 }
 
 async function cargarEmpresa() {
@@ -42,6 +46,13 @@ formulario.addEventListener("submit", async function (evento) {
         representante_legal_rut: valor("representante_legal_rut"),
         mutualidad_id: valor("mutualidad_id") === "" ? null : Number(valor("mutualidad_id"))
     }
+    // La comuna del empleador es el lugar que aparece en los contratos ("En Curicó, a …").
+    const comuna = valorBuscador(campoComuna)
+    if (campoComuna.value.trim() !== "" && comuna === null) {
+        mensaje("error", "Elige una comuna de la lista de sugerencias")
+        return
+    }
+    datos.comuna = comuna
     if (valor("tasa_adicional_mutual") !== "") {
         datos.tasa_adicional_mutual = Number(valor("tasa_adicional_mutual"))
     }

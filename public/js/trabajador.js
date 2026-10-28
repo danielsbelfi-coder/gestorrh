@@ -85,6 +85,7 @@ async function dibujarContratos() {
                     ${insignia("firma", c.estado_firma).replace(">Pendiente<", ">Firma pendiente<")}
                     ${c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-contrato="${c.id}">Firmar contrato</button>` : ""}
                     ${c.estado === "vigente" ? `<button type="button" class="chico secundario" data-nuevo-anexo="${c.id}">＋ Anexo</button>` : ""}
+                    <button type="button" class="chico secundario" data-pdf-contrato="${c.id}">PDF</button>
                 </div>
             </header>
             <dl class="datos">
@@ -190,6 +191,14 @@ document.getElementById("contratos").addEventListener("click", async function (e
         return
     }
     limpiarMensajes()
+
+    if (boton.dataset.pdfContrato) {
+        const resultado = await descargarArchivo(`/api/contratos/${boton.dataset.pdfContrato}/documento`)
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo generar el contrato")
+        }
+        return
+    }
 
     if (boton.dataset.nuevoAnexo) {
         abrirAnexo(Number(boton.dataset.nuevoAnexo))

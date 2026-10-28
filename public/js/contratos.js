@@ -21,6 +21,7 @@ const tabla = crearTabla({
         {
             titulo: "", orden: false, valor: () => "",
             html: (c) => `<a class="boton secundario chico" href="trabajador.html?id=${c.trabajador_id}">Ficha</a>
+                <button type="button" class="chico secundario" data-pdf="${c.id}">PDF</button>
                 ${c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar="${c.id}">Firmar</button>` : ""}`
         }
     ],
@@ -110,6 +111,15 @@ formulario.addEventListener("submit", async function (evento) {
 })
 
 document.getElementById("tablaContratos").addEventListener("click", async function (evento) {
+    const pdf = evento.target.closest("[data-pdf]")?.dataset.pdf
+    if (pdf) {
+        limpiarMensajes()
+        const resultado = await descargarArchivo(`/api/contratos/${pdf}/documento`)
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo generar el contrato")
+        }
+        return
+    }
     const id = evento.target.closest("[data-firmar]")?.dataset.firmar
     if (!id) {
         return

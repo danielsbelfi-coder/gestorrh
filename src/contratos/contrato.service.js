@@ -1,4 +1,6 @@
-const { ContratoTrabajo, Trabajador, Cargo, Empresa } = require("../shared/associations.js")
+const { ContratoTrabajo, Trabajador, Cargo, Empresa, Persona, Afp, Isapre, SituacionPrevisional } = require("../shared/associations.js")
+const { armarContrato } = require("./armar_contrato.js")
+const { situacionDelMes } = require("../remuneraciones/tipo_cotizante.js")
 const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
@@ -118,9 +120,39 @@ async function firmarContrato(id, fechaFirma, empresasPermitidas, usuarioId) {
     return await contrato.update({ estado_firma: "firmado", fecha_firma: fecha })
 }
 
+async function documentoContrato(id, empresasPermitidas) {
+    const contrato = await ContratoTrabajo.findByPk(id, {
+        include: [
+            Cargo,
+            { model: Trabajador, include: [{ model: Persona, include: [Afp, Isapre, SituacionPrevisional] }] }
+        ]
+    })
+
+    if (contrato === null || !empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
+        throw new NotFoundError("Contrato no encontrado")
+    }
+
+    const empresa = await Empresa.findByPk(contrato.Trabajador.empresa_id)
+    const persona = contrato.Trabajador.Persona
+    const situaciones = persona.SituacionesPrevisionales.map((s) => s.toJSON())
+
+    return armarContrato({
+        contrato: contrato.toJSON(),
+        persona: persona.toJSON(),
+        empresa: empresa.toJSON(),
+        cargo: contrato.Cargo?.nombre ?? "",
+        trabajador: contrato.Trabajador,
+        afp: persona.Afp,
+        isapre: persona.Isapre,
+        // Calidad de cotizante (activo o pensionado) vigente al inicio del contrato.
+        situacion: situacionDelMes(situaciones, contrato.fecha_inicio)
+    })
+}
+
 module.exports = {
     crearContrato,
     listarContratos,
     obtenerContratoPorId,
-    firmarContrato
+    firmarContrato,
+    documentoContrato
 }

@@ -1,6 +1,6 @@
-const { crearContrato, listarContratos, obtenerContratoPorId, firmarContrato } = require("./contrato.service");
-
-
+const { crearContrato, listarContratos, obtenerContratoPorId, firmarContrato, documentoContrato } = require("./contrato.service");
+const PDFDocument = require("pdfkit")
+const { dibujarContrato } = require("./dibujar_contrato.js")
 
 async function crear(req, res) {
     const nuevoContrato = await crearContrato(req.body, req.empresasPermitidas, req.usuario.id);
@@ -21,9 +21,20 @@ async function firmar(req, res) {
     res.status(200).json(contrato)
 }
 
+async function documento(req, res) {
+    const datos = await documentoContrato(req.params.id, req.empresasPermitidas)
+    const doc = new PDFDocument({ size: "LETTER", margin: 50 })
+
+    res.attachment(`contrato-${req.params.id}.pdf`)
+    doc.pipe(res)
+    dibujarContrato(doc, datos)
+    doc.end()
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
-    firmar
+    firmar,
+    documento
 }

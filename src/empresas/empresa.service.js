@@ -6,6 +6,7 @@ const { sequelize } = require("../shared/database.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { sumarDias } = require("../shared/fechas.js")
+const { COMUNAS } = require("../shared/comunas_lre.js")
 
 const TASA_ADICIONAL_MUTUAL_MAXIMA = 20
 
@@ -116,8 +117,12 @@ async function actualizarEmpresa(id, datos, empresasPermitidas, usuarioId) {
 
     await validarMutualidad(datos)
 
+    if (datos.comuna !== undefined && datos.comuna !== null && COMUNAS[datos.comuna] === undefined) {
+        throw new ValidationError("La comuna no está en la tabla de la Dirección del Trabajo")
+    }
+
     const actualizar = await empresa.update(datos, {
-        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id", "tasa_adicional_mutual"]
+        fields: ["razon_social", "nombre_fantasia", "representante_legal_nombre", "representante_legal_rut", "direccion", "mutualidad_id", "tasa_adicional_mutual", "comuna"]
     })
 
     return actualizar
