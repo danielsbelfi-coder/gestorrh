@@ -26,6 +26,8 @@ const { Mutualidad } = require("../remuneraciones/mutualidad.model.js");
 const { LicenciaMedica } = require("../asistencia/licencia_medica.model.js");
 const { SituacionPrevisional } = require("../trabajadores/situacion_previsional.model.js");
 const { Finiquito } = require("../remuneraciones/finiquito.model.js");
+const { Jornada } = require("../contratos/jornada.model");
+
 
 Trabajador.belongsTo(Persona, {
     foreignKey: "persona_id"
@@ -66,11 +68,21 @@ ContratoTrabajo.belongsTo(Cargo, {
 Cargo.hasMany(ContratoTrabajo, {
     foreignKey: "cargo_id"
 })
-
+Jornada.belongsTo(Empresa, {
+    foreignKey: "empresa_id"
+})
+Empresa.hasMany(Jornada, {
+    foreignKey: "empresa_id"
+})
+ContratoTrabajo.belongsTo(Jornada, {
+    foreignKey: "jornada_id"
+})
+Jornada.hasMany(ContratoTrabajo, {
+    foreignKey: "jornada_id"
+})
 ContratoAnexo.belongsTo(ContratoTrabajo, {
     foreignKey: "contrato_id"
 })
-
 ContratoTrabajo.hasMany(ContratoAnexo, {
     foreignKey: "contrato_id"
 })
@@ -324,5 +336,6 @@ module.exports = {
     LiquidacionLinea,
     LicenciaMedica,
     SituacionPrevisional,
-    Finiquito
+    Finiquito,
+    Jornada
 }

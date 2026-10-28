@@ -30,6 +30,10 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    jornada_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     funciones: {
         type: DataTypes.TEXT,
         allowNull: false

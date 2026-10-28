@@ -521,3 +521,44 @@ async function enLote(registros, accion, nombreDe) {
     }
     return { hechos, errores }
 }
+
+// ---------- Jornadas (copia de src/contratos/jornada_legal.js) ----------
+
+const NOMBRES_DIA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+function minutosDeHora(hora) {
+    const coincidencia = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(hora ?? ""))
+    return coincidencia ? Number(coincidencia[1]) * 60 + Number(coincidencia[2]) : null
+}
+
+function horasDelDia(dia) {
+    if (!dia?.trabaja) {
+        return 0
+    }
+    const inicio = minutosDeHora(dia.entrada)
+    const fin = minutosDeHora(dia.salida)
+    if (inicio === null || fin === null || fin <= inicio) {
+        return 0
+    }
+    return Math.round(((fin - inicio - Number(dia.colacion ?? 0)) / 60) * 100) / 100
+}
+
+function textoDistribucion(dias) {
+    const grupos = []
+    for (const d of (dias ?? []).filter((x) => x.trabaja)) {
+        const ultimo = grupos[grupos.length - 1]
+        if (ultimo && ultimo.hasta === d.dia - 1 && ultimo.entrada === d.entrada && ultimo.salida === d.salida && ultimo.colacion === d.colacion) {
+            ultimo.hasta = d.dia
+        } else {
+            grupos.push({ desde: d.dia, hasta: d.dia, entrada: d.entrada, salida: d.salida, colacion: d.colacion })
+        }
+    }
+    if (grupos.length === 0) {
+        return ""
+    }
+    const hora = (h) => h.replace(/^0/, "")
+    const tramos = grupos.map((g) => `${g.desde === g.hasta ? NOMBRES_DIA[g.desde - 1] : `${NOMBRES_DIA[g.desde - 1]} a ${NOMBRES_DIA[g.hasta - 1]}`} de ${hora(g.entrada)} a ${hora(g.salida)}`)
+    const colaciones = [...new Set(grupos.map((g) => g.colacion))]
+    const texto = `${tramos.join("; ")}${colaciones.length === 1 ? ` · colación ${colaciones[0]} min` : ""}`
+    return texto.charAt(0).toUpperCase() + texto.slice(1)
+}

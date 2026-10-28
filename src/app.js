@@ -30,6 +30,7 @@ const resumenAsistenciaRoutes = require("./asistencia/resumen_asistencia.routes.
 const licenciaMedicaRoutes = require("./asistencia/licencia_medica.routes.js")
 const finiquitoRoutes = require("./remuneraciones/finiquito.routes.js")
 const mutualidadRoutes = require("./remuneraciones/mutualidad.routes.js")
+const jornadaRoutes = require("./contratos/jornada.routes")
 
 app.use(helmet())
 app.use(express.json());
@@ -57,6 +58,7 @@ app.use("/api/resumenes-asistencia", verificarToken, resumenAsistenciaRoutes)
 app.use("/api/licencias-medicas", verificarToken, licenciaMedicaRoutes)
 app.use("/api/finiquitos", verificarToken, finiquitoRoutes)
 app.use("/api/mutualidades", verificarToken, mutualidadRoutes)
+app.use("/api/jornadas", verificarToken, jornadaRoutes)
 
 app.use(express.static(path.join(__dirname, "../public")))
 app.use(manejarErrores)

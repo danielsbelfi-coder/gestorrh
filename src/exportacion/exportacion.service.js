@@ -5,7 +5,7 @@ const {
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
     ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional,
-    Finiquito
+    Finiquito, Jornada
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
 
@@ -14,6 +14,7 @@ const TRABAJADORES_DE_EMPRESA = "SELECT id FROM trabajadores WHERE empresa_id = 
 const TABLAS = [
     { archivo: "empresa.csv", modelo: Empresa, filtro: "id = :empresaId" },
     { archivo: "cargos.csv", modelo: Cargo, filtro: "empresa_id = :empresaId" },
+    { archivo: "jornadas.csv", modelo: Jornada, filtro: "empresa_id = :empresaId" },
     { archivo: "conceptos_propios.csv", modelo: ConceptoRemuneracion, filtro: "empresa_id = :empresaId" },
     { archivo: "personas.csv", modelo: Persona, filtro: "empresa_id = :empresaId" },
     { archivo: "situaciones_previsionales.csv", modelo: SituacionPrevisional, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },

@@ -5,6 +5,7 @@ const trabajadorId = Number(new URLSearchParams(location.search).get("id"))
 let trabajador = null
 let persona = null
 let cargoPorId = new Map()
+let jornadaPorId = new Map()
 let contratos = []
 let contratoParaAnexo = null
 let primeraEmpresa = true
@@ -27,6 +28,8 @@ async function cargarFicha() {
     }
     persona = listas[0]
     cargoPorId = porId(listas[1])
+    const jornadas = await llamarApi(`/api/jornadas?empresa_id=${trabajador.empresa_id}`)
+    jornadaPorId = jornadas.status === 200 ? porId(jornadas.datos) : new Map()
     contratos = listas[2]
         .filter((c) => c.trabajador_id === trabajador.id)
         .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))
@@ -91,7 +94,8 @@ async function dibujarContratos() {
             <dl class="datos">
                 ${dato("Cargo", escaparHtml(cargoPorId.get(c.cargo_id)?.nombre ?? "—"))}
                 ${dato("Sueldo base", escaparHtml(pesos(c.sueldo_base)))}
-                ${dato("Jornada", escaparHtml(`${valorContrato("tipo_jornada", c.tipo_jornada)} · ${c.horas_semanales} h · ${c.dias_trabajados} días`))}
+                ${dato("Jornada", escaparHtml(`${valorContrato("tipo_jornada", c.tipo_jornada)} · ${Number(c.horas_semanales)} h · ${c.dias_trabajados} días`))}
+                ${dato("Horario", escaparHtml(jornadaPorId.get(c.jornada_id) ? `${jornadaPorId.get(c.jornada_id).nombre}: ${textoDistribucion(jornadaPorId.get(c.jornada_id).dias)}` : "Sin plantilla de jornada"))}
                 ${dato("Sistema / pago", escaparHtml(`${valorContrato("sistema_remuneracion", c.sistema_remuneracion)} · ${valorContrato("periodicidad_pago", c.periodicidad_pago)}`))}
                 ${dato("Comuna de prestación", escaparHtml(valorContrato("comuna_prestacion", c.comuna_prestacion)))}
                 ${dato("Lugar", escaparHtml(c.lugar_prestacion_servicios ?? "—"))}

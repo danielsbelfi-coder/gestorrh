@@ -14,6 +14,7 @@ const ICONOS = {
     variables: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
     conceptos: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.5"/><circle cx="16" cy="12" r="1.5"/><circle cx="10" cy="18" r="1.5"/>',
     parametros: '<path d="M5 20V10M12 20V4M19 20v-7"/><circle cx="5" cy="8" r="2"/><circle cx="12" cy="2.5" r="0.5"/><circle cx="19" cy="11" r="2"/>',
+    jornadas: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
     finiquitos: '<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 15l2 2 4-4"/>',
     legales: '<path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0L7 7ZM17 7l-3 7a3 3 0 0 0 6 0l-3-7ZM8 21h8"/>',
     liquidaciones: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/>',
@@ -52,7 +53,8 @@ function gruposDelMenu(usuario) {
                 ["personas.html", "Personas", "personas"],
                 ["trabajadores.html", "Trabajadores", "trabajadores"],
                 ["contratos.html", "Contratos", "contratos"],
-                ["cargos.html", "Cargos", "cargos"]
+                ["cargos.html", "Cargos", "cargos"],
+                ["jornadas.html", "Jornadas", "jornadas"]
             ]
         },
         {

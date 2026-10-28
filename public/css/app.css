@@ -1579,3 +1579,46 @@ input.campo-corto {
     font-weight: 700;
     background: #f8fafc;
 }
+
+/* Editor de jornadas */
+.contenido form.form-jornada {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.tabla-jornada {
+    box-shadow: none;
+    max-width: 760px;
+}
+
+.tabla-jornada input[type="time"],
+.tabla-jornada input[type="number"] {
+    min-width: 0;
+    width: 120px;
+}
+
+.tabla-jornada tr.dia-libre td {
+    color: var(--texto-suave);
+}
+
+.tabla-jornada td.excedido,
+#totalSemana.excedido {
+    color: var(--peligro);
+    font-weight: 700;
+}
+
+.tabla-jornada tfoot td {
+    background: #f8fafc;
+}
+
+/* Avisos en vivo del editor de jornadas */
+.problemas-jornada { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.problemas-jornada:empty { display: none; }
+.problemas-jornada li { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; border-left: 4px solid; }
+.problemas-jornada li.error { background: var(--peligro-suave); color: var(--peligro); }
+.problemas-jornada li.aviso { background: var(--advertencia-suave); color: var(--advertencia); }
+#botonGuardar:disabled { opacity: 0.55; cursor: not-allowed; }
+.contenido form.form-jornada > * { flex: 0 0 auto; }
+.contenido form.form-jornada > label { max-width: 520px; margin-bottom: 12px; }
+.tabla-jornada input[type="time"] { width: 130px; }

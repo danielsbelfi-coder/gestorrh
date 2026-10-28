@@ -1,4 +1,4 @@
-const { ContratoTrabajo, Trabajador, Cargo, Empresa, Persona, Afp, Isapre, SituacionPrevisional } = require("../shared/associations.js")
+const { ContratoTrabajo, Trabajador, Cargo, Empresa, Persona, Afp, Isapre, SituacionPrevisional, Jornada } = require("../shared/associations.js")
 const { armarContrato } = require("./armar_contrato.js")
 const { situacionDelMes } = require("../remuneraciones/tipo_cotizante.js")
 const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
@@ -39,6 +39,18 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
         throw new ValidationError("La comuna de prestación no está en la tabla de la Dirección del Trabajo")
     }
 
+    if (datos.jornada_id !== undefined && datos.jornada_id !== null) {
+        const jornada = await Jornada.findByPk(datos.jornada_id)
+        if (jornada === null || jornada.empresa_id !== trabajador.empresa_id || !jornada.activo) {
+            throw new NotFoundError("Jornada no encontrada")
+        }
+        if (datos.tipo_jornada === "excluido_limitacion") {
+            throw new ConflictError("Un contrato excluido de la limitación de jornada no lleva plantilla de horario")
+        }
+        datos.horas_semanales = jornada.horas_semanales
+        datos.dias_trabajados = jornada.dias_trabajados
+    }
+
     const campos = [
         "trabajador_id",
         "tipo_contrato",
@@ -52,6 +64,7 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
         "tipo_jornada",
         "horas_semanales",
         "dias_trabajados",
+        "jornada_id",
         "sistema_remuneracion",
         "sueldo_base",
         "periodicidad_pago",
@@ -124,6 +137,7 @@ async function documentoContrato(id, empresasPermitidas) {
     const contrato = await ContratoTrabajo.findByPk(id, {
         include: [
             Cargo,
+            Jornada,
             { model: Trabajador, include: [{ model: Persona, include: [Afp, Isapre, SituacionPrevisional] }] }
         ]
     })
@@ -144,8 +158,8 @@ async function documentoContrato(id, empresasPermitidas) {
         trabajador: contrato.Trabajador,
         afp: persona.Afp,
         isapre: persona.Isapre,
-        // Calidad de cotizante (activo o pensionado) vigente al inicio del contrato.
-        situacion: situacionDelMes(situaciones, contrato.fecha_inicio)
+        situacion: situacionDelMes(situaciones, contrato.fecha_inicio),
+        jornada: contrato.Jornada ? contrato.Jornada.toJSON() : null,
     })
 }
 

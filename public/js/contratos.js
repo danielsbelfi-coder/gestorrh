@@ -64,9 +64,44 @@ async function cargarContratos() {
     llenarBuscador(document.getElementById("comuna"),
         Object.entries(COMUNAS).map(([codigo, nombre]) => ({ id: codigo, texto: `${nombre} (${codigo})` })))
 
+    await cargarJornadas()
+
     llenarSelect(document.getElementById("cargoId"),
         deEmpresaActual(cargos).map((cargo) => ({ id: cargo.id, texto: cargo.nombre })), "Elige un cargo")
 }
+
+// ---------- Jornada: al elegir una plantilla, las horas y los días se toman de ella ----------
+let jornadas = []
+
+async function cargarJornadas() {
+    const resultado = await llamarApi(`/api/jornadas?empresa_id=${empresaActual()}`)
+    jornadas = resultado.status === 200 ? resultado.datos.filter((j) => j.activo) : []
+    llenarSelect(document.getElementById("jornadaId"),
+        jornadas.map((j) => ({ id: j.id, texto: `${j.nombre} (${Number(j.horas_semanales)} h)` })),
+        "Sin plantilla: indicar horas y días a mano")
+    aplicarJornada()
+}
+
+function aplicarJornada() {
+    const excluido = document.getElementById("tipoJornada").value === "excluido_limitacion"
+    const selector = document.getElementById("jornadaId")
+    selector.disabled = excluido
+    if (excluido) {
+        selector.value = ""
+    }
+    const jornada = jornadas.find((j) => String(j.id) === selector.value)
+    const horas = document.getElementById("horasSemanales")
+    const dias = document.getElementById("diasTrabajados")
+    horas.readOnly = Boolean(jornada)
+    dias.readOnly = Boolean(jornada)
+    if (jornada) {
+        horas.value = Number(jornada.horas_semanales)
+        dias.value = jornada.dias_trabajados
+    }
+}
+
+document.getElementById("jornadaId").addEventListener("change", aplicarJornada)
+document.getElementById("tipoJornada").addEventListener("change", aplicarJornada)
 
 const formulario = document.getElementById("formCrearContratos")
 
@@ -97,6 +132,7 @@ formulario.addEventListener("submit", async function (evento) {
         funciones: document.getElementById("funciones").value.trim(),
         lugar_prestacion_servicios: document.getElementById("lugarPrestacionServicios").value.trim(),
         tipo_jornada: document.getElementById("tipoJornada").value,
+        jornada_id: document.getElementById("jornadaId").value ? Number(document.getElementById("jornadaId").value) : null,
         horas_semanales: document.getElementById("horasSemanales").value,
         dias_trabajados: document.getElementById("diasTrabajados").value,
         sistema_remuneracion: document.getElementById("sistemaRemuneracion").value,

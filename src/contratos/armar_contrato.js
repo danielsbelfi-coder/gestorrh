@@ -2,6 +2,7 @@ const { pesosEnPalabras } = require("../shared/numero_en_palabras.js")
 const { formatearRut } = require("../shared/rut.js")
 const { fechaEnTexto } = require("../shared/fechas.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
+const { textoDistribucion } = require("./jornada_legal.js")
 
 const TITULOS = {
     indefinido: "CONTRATO DE TRABAJO INDEFINIDO",
@@ -36,15 +37,19 @@ function textoDuracion(contrato) {
     return "El presente contrato es de duración indefinida, pudiendo cualquiera de las partes ponerle término en las condiciones y por las causales establecidas en la ley."
 }
 
-function textoJornada(contrato) {
+function textoJornada(contrato, jornada) {
     if (contrato.tipo_jornada === "excluido_limitacion") {
         return "El TRABAJADOR queda excluido de la limitación de jornada de trabajo, de conformidad con el inciso segundo del artículo 22 del Código del Trabajo."
     }
     const parcial = contrato.tipo_jornada === "parcial" ? " Se trata de una jornada parcial, regida por los artículos 40 bis y siguientes del Código del Trabajo." : ""
+    // Con jornada asignada se imprime la distribución diaria (art. 10 N° 5 del Código del Trabajo).
+    if (jornada?.dias) {
+        return `La jornada ordinaria de trabajo será de ${Number(contrato.horas_semanales)} horas semanales, distribuidas de la siguiente manera: ${textoDistribucion(jornada.dias)}.${parcial} El tiempo de colación no se considerará trabajado para computar la duración de la jornada, conforme al artículo 34 del Código del Trabajo.`
+    }
     return `La jornada ordinaria de trabajo será de ${Number(contrato.horas_semanales)} horas semanales, distribuidas en ${contrato.dias_trabajados} días a la semana.${parcial} La jornada diaria se interrumpirá por el tiempo destinado a colación, que no se considerará trabajado para computar la duración de la jornada, conforme al artículo 34 del Código del Trabajo.`
 }
 
-function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isapre, situacion }) {
+function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isapre, situacion, jornada = null }) {
     const nombre = [persona.nombres, persona.apellido_paterno, persona.apellido_materno].filter(Boolean).join(" ")
     const rutTrabajador = formatearRut(persona.rut, persona.dv)
     const rutEmpresa = formatearRut(empresa.rut, empresa.dv)
@@ -67,7 +72,7 @@ function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isa
     const cuerpo = [
         `El TRABAJADOR se compromete a desempeñar las funciones de ${cargo.toUpperCase()}${contrato.funciones ? ` (${contrato.funciones})` : ""} y labores complementarias${contrato.tipo_contrato === "obra_faena" && contrato.obra_faena_descripcion ? `, para la ejecución de la obra o faena: ${contrato.obra_faena_descripcion}` : ""}.`,
         `El TRABAJADOR prestará sus servicios en ${contrato.lugar_prestacion_servicios}${comunaPrestacion ? `, comuna de ${comunaPrestacion}` : ""}. Declara conocer las funciones que desempeñará y poseer salud compatible con ellas, y se obliga a cumplir las normas, procedimientos y políticas de la empresa.`,
-        textoJornada(contrato),
+        textoJornada(contrato, jornada),
         [
             `El EMPLEADOR pagará al TRABAJADOR las siguientes remuneraciones:`,
             `a) Sueldo base ${SISTEMAS[contrato.sistema_remuneracion] ?? contrato.sistema_remuneracion}: $${miles(contrato.sueldo_base)} (${pesosEnPalabras(Math.round(Number(contrato.sueldo_base)))}).`,

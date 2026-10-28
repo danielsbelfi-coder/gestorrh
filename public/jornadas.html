@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Jornadas</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Jornadas">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Jornadas de trabajo</h1>
+                <p>Plantillas de horario de la empresa. Se asignan a los contratos y su distribución diaria aparece en el contrato. Máximo legal vigente: <strong id="maximoLegal"></strong> horas semanales, hasta 10 horas diarias, en 4 a 6 días.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary id="tituloPanel">＋ Nueva jornada</summary>
+            <form id="formJornada" class="form-jornada">
+                <label class="campo-ancho">Nombre<input type="text" id="nombre" maxlength="80" placeholder="Ej.: Administrativa lunes a viernes" required></label>
+                <table class="tabla-jornada">
+                    <thead><tr><th>Día</th><th>Trabaja</th><th>Entrada</th><th>Salida</th><th>Colación (min)</th><th class="numero">Horas</th></tr></thead>
+                    <tbody id="filasDias"></tbody>
+                    <tfoot><tr><td colspan="5"><button type="button" class="chico secundario" id="copiarLunes">Copiar el horario del lunes a los días marcados</button></td><td class="numero"><strong id="totalSemana">0</strong> h</td></tr></tfoot>
+                </table>
+                <ul id="problemasJornada" class="problemas-jornada" aria-live="polite"></ul>
+                <div class="acciones-grupo">
+                    <button type="submit" id="botonGuardar">Crear jornada</button>
+                    <button type="button" class="secundario" id="cancelarEdicion" hidden>Cancelar edición</button>
+                </div>
+            </form>
+        </details>
+
+        <div id="tablaJornadas"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/jornadas.js"></script>
+</body>
+
+</html>
