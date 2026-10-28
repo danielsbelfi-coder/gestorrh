@@ -176,6 +176,6 @@ module.exports = {
     rangoDelPeriodo,
     trabajadoresDelPeriodo,
     problemasDeCierre,
-    faltantesDelPeriodo
+    parametrosFaltantes
 }
 

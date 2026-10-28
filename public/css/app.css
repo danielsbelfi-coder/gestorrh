@@ -1495,3 +1495,30 @@ input.campo-corto {
 .tabla-datos th.numero .tabla-orden {
     text-align: right;
 }
+
+.selector-mes {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.selector-mes input {
+    min-width: 0;
+}
+
+.selector-mes button.chico {
+    min-height: 40px;
+    font-size: 1.1rem;
+}
+
+.resultado-apertura {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-chico);
+    background: var(--fondo);
+}
+
+.resultado-apertura p {
+    margin: 0 0 6px;
+}

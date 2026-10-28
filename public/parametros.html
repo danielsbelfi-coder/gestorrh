@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Parámetros legales</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Parámetros legales">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Parámetros legales</h1>
+                <p>Valores legales que usa el cálculo de cada mes: UF, UTM, ingreso mínimo, topes, tasas y tramos del impuesto. Son los mismos para todas las empresas y los mantiene la plataforma.</p>
+            </div>
+            <div class="selector-mes">
+                <button type="button" class="secundario chico" id="mesAnterior" aria-label="Mes anterior">‹</button>
+                <label>Mes<input type="month" id="mes"></label>
+                <button type="button" class="secundario chico" id="mesSiguiente" aria-label="Mes siguiente">›</button>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta" id="estadoMes"></section>
+
+        <section class="tarjeta" id="panelSoporte" hidden>
+            <h2>Soporte: cargar el mes</h2>
+            <p class="texto-suave">"Abrir mes" copia los parámetros y tramos del mes anterior que este mes todavía no tenga. Después corrige la <strong>UF (valor del último día del mes)</strong> y la <strong>UTM del mes</strong> con los valores oficiales, y cualquier valor que haya cambiado por ley.</p>
+            <div class="acciones-grupo">
+                <button type="button" class="secundario" id="btnSimular">Ver qué se copiaría</button>
+                <button type="button" id="btnAbrir">Abrir mes</button>
+            </div>
+            <div id="resultadoApertura"></div>
+        </section>
+
+        <h2>Parámetros vigentes</h2>
+        <div id="tablaParametros"></div>
+
+        <h2>Tramos del impuesto único (en UTM)</h2>
+        <div id="tablaTramos"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/parametros.js"></script>
+</body>
+
+</html>

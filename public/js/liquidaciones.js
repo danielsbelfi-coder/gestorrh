@@ -15,7 +15,7 @@ async function revisarParametros(periodo) {
     const resultado = await llamarApi(`/api/periodos-remuneracion/${periodo.id}/parametros-faltantes`)
     if (resultado.status === 200 && resultado.datos?.faltantes?.length > 0) {
         parametrosFaltantes = resultado.datos.faltantes
-        mensaje("error", `Faltan los parámetros legales de ${nombrePeriodo(periodo)}: ${parametrosFaltantes.join(", ")}. Cárgalos antes de calcular las liquidaciones.`)
+        mensaje("error", `Faltan los parámetros legales de ${nombrePeriodo(periodo)}: ${parametrosFaltantes.join(", ")}. Revísalos en Parámetros legales antes de calcular las liquidaciones.`)
     }
 }
 
