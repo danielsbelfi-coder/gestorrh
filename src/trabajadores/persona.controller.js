@@ -1,4 +1,4 @@
-const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona } = require("./persona.service");
+const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona, importarPersonas } = require("./persona.service");
 
 async function crear(req, res) {
     const nuevaPersona = await crearPersona(req.body, req.empresasPermitidas, req.usuario.id);
@@ -20,9 +20,15 @@ async function actualizar(req, res) {
     res.status(200).json(personaActualizada)
 }
 
+async function importar(req, res) {
+    const resultado = await importarPersonas(req.body ?? {}, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(resultado)
+}
+
 module.exports = {
     crear,
     listar,
     obtenerPorId,
-    actualizar
+    actualizar,
+    importar
 }

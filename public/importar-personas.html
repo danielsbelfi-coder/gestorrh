@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Inscripción masiva</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-menu="personas.html" data-titulo="Inscripción masiva de personas">
+        <a class="volver-lista" href="personas.html">← Volver a Personas</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Inscripción masiva de personas</h1>
+                <p>Carga muchas personas de una vez desde una planilla y, si quieres, créalas como postulantes. Si una sola fila tiene errores, no se carga ninguna.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <div class="rejilla rejilla-ancha">
+            <section class="tarjeta paso-carga">
+                <h2>1. Descarga la plantilla</h2>
+                <p class="texto-suave">Ábrela en Excel, llena una fila por persona y guárdala como CSV. No cambies los títulos de las columnas.</p>
+                <button type="button" class="secundario" id="btnPlantilla">Descargar plantilla</button>
+            </section>
+            <section class="tarjeta paso-carga">
+                <h2>2. Sube la planilla</h2>
+                <p class="texto-suave">El sistema revisa todas las filas y te muestra los errores antes de cargar nada.</p>
+                <input type="file" id="archivo" accept=".csv,text/csv" class="oculto-accesible">
+                <div class="subir-archivo">
+                    <label for="archivo" class="boton secundario">Elegir planilla (CSV)</label>
+                    <span id="nombreArchivo" class="texto-suave">Ningún archivo elegido</span>
+                </div>
+                <button type="button" id="btnRevisar" disabled>Subir y revisar</button>
+            </section>
+        </div>
+
+        <details class="tarjeta">
+            <summary>Cómo llenar cada columna</summary>
+            <table class="tabla-ayuda">
+                <tbody>
+                    <tr><td><strong>rut, dv</strong> *</td><td>RUT sin dígito verificador (con o sin puntos) y el DV aparte.</td></tr>
+                    <tr><td><strong>nombres, apellido_paterno</strong> *</td><td>apellido_materno es opcional.</td></tr>
+                    <tr><td><strong>nacionalidad</strong> *</td><td>chilena o extranjera.</td></tr>
+                    <tr><td><strong>fecha_nacimiento</strong> *</td><td>dd-mm-aaaa (por ejemplo 12-05-1990).</td></tr>
+                    <tr><td><strong>direccion</strong> *</td><td>Domicilio del trabajador.</td></tr>
+                    <tr><td><strong>sexo, estado_civil, telefono, email</strong></td><td>Opcionales. sexo: masculino o femenino.</td></tr>
+                    <tr><td><strong>afp</strong></td><td>Nombre de la AFP tal como aparece en la ficha de la persona (por ejemplo Habitat). Vacío si no tiene.</td></tr>
+                    <tr><td><strong>afiliado_afc</strong></td><td>sí o no (vacío = sí).</td></tr>
+                    <tr><td><strong>sistema_salud, isapre, plan_isapre_uf</strong></td><td>Fonasa o Isapre. Si es Isapre, el nombre de la isapre y el valor del plan en UF (por ejemplo 3,5).</td></tr>
+                    <tr><td><strong>banco, tipo_cuenta, numero_cuenta</strong></td><td>Opcionales. tipo_cuenta: corriente, rut, ahorro o vista.</td></tr>
+                    <tr><td><strong>crear_postulante, fecha_ingreso</strong></td><td>sí para crearla también como postulante, con su fecha de ingreso (dd-mm-aaaa).</td></tr>
+                </tbody>
+            </table>
+        </details>
+
+        <section class="tarjeta" id="panelRevision" hidden>
+            <div class="encabezado-seccion">
+                <h2>3. Revisión</h2>
+                <button type="button" id="btnConfirmar" hidden>Cargar personas</button>
+            </div>
+            <p id="resumenRevision"></p>
+            <div id="tablaRevision"></div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/importar-personas.js"></script>
+</body>
+
+</html>

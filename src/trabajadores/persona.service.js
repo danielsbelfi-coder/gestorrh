@@ -1,4 +1,6 @@
-const { Persona, Usuario } = require("../shared/associations.js")
+const { Persona, Usuario, Trabajador, Afp, Isapre } = require("../shared/associations.js")
+const { sequelize } = require("../shared/database.js")
+const { validarImportacion, MAXIMO_FILAS } = require("./importacion_personas.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
@@ -63,9 +65,63 @@ async function actualizarPersona(id, datos, empresasPermitidas, usuarioId) {
     })
 }
 
+async function importarPersonas(datos, empresasPermitidas, usuarioId) {
+    const empresaId = Number(datos?.empresa_id)
+
+    if (!empresasPermitidas.includes(empresaId)) {
+        throw new NotFoundError("Empresa no encontrada")
+    }
+
+    await exigirRol(usuarioId, empresaId, PERMISOS.GESTIONAR_FICHAS)
+
+    const filas = datos.filas
+    if (!Array.isArray(filas) || filas.length === 0) {
+        throw new ValidationError("La planilla no tiene filas")
+    }
+    if (filas.length > MAXIMO_FILAS) {
+        throw new ValidationError(`La planilla no puede tener más de ${MAXIMO_FILAS} filas`)
+    }
+
+    const [afps, isapres, existentes] = await Promise.all([
+        Afp.findAll(),
+        Isapre.findAll(),
+        Persona.findAll({ where: { empresa_id: empresaId }, attributes: ["rut"] })
+    ])
+
+    const { personas, errores } = validarImportacion(filas, {
+        afps,
+        isapres,
+        rutsExistentes: new Set(existentes.map((p) => p.rut))
+    })
+    const postulantes = personas.filter((p) => p.postulante !== null).length
+
+    if (errores.length > 0 || datos.confirmar !== true) {
+        return { confirmado: false, total: filas.length, postulantes, errores }
+    }
+
+    await sequelize.transaction(async (transaction) => {
+        for (const { persona, postulante } of personas) {
+            const creada = await Persona.create({ ...persona, empresa_id: empresaId }, {
+                fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES],
+                transaction
+            })
+
+            if (postulante !== null) {
+                await Trabajador.create({ persona_id: creada.id, empresa_id: empresaId, fecha_ingreso: postulante.fecha_ingreso }, {
+                    fields: ["persona_id", "empresa_id", "fecha_ingreso"],
+                    transaction
+                })
+            }
+        }
+    })
+
+    return { confirmado: true, creadas: personas.length, postulantes, errores: [] }
+}
+
 module.exports = {
     crearPersona,
     listarPersonas,
     obtenerPersonaPorId,
-    actualizarPersona
+    actualizarPersona,
+    importarPersonas
 }

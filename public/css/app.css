@@ -1376,3 +1376,65 @@ input.campo-corto {
 .barra-acciones > p {
     flex: 1 1 380px;
 }
+
+.paso-carga {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+.paso-carga p {
+    margin: 0 0 8px;
+}
+
+.paso-carga button {
+    align-self: flex-start;
+}
+
+.tabla-ayuda {
+    margin-top: 12px;
+    box-shadow: none;
+}
+
+.celda-larga {
+    white-space: normal;
+}
+
+.rejilla:has(> .paso-carga) {
+    align-items: start;
+    margin-bottom: 20px;
+}
+
+/* Campo de archivo: el input nativo queda oculto y se usa una etiqueta con forma de botón */
+.oculto-accesible {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+}
+
+.subir-archivo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.subir-archivo label.boton {
+    flex-direction: row;
+    font-size: 0.92rem;
+    color: var(--texto);
+    cursor: pointer;
+}
+
+.paso-carga #btnRevisar {
+    align-self: flex-start;
+}

@@ -79,7 +79,7 @@ async function cargarCatalogos() {
         return
     }
     const [afps, isapres] = listas
-    const activas = (lista) => lista.filter((x) => x.estado !== "inactiva").sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+    const activas = (lista) => lista.filter((x) => x.estado !== "inactivo").sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     llenarSelect(document.getElementById("afp_id"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Sin AFP / no informada")
     llenarSelect(document.getElementById("isapre_id"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
 }
