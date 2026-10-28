@@ -21,6 +21,7 @@ const tabla = crearTabla({
         { titulo: "Licencia", valor: (f) => f.resumen?.dias_licencia_medica ?? "", numero: true },
         { titulo: "Permiso s/goce", valor: (f) => f.resumen?.dias_permiso_sin_goce ?? "", numero: true },
         { titulo: "Vacaciones", valor: (f) => f.resumen?.dias_vacaciones ?? "", numero: true },
+        { titulo: "Días trabajados", valor: (f) => f.resumen?.dias_trabajados ?? "", numero: true },
         { titulo: "Atraso (min)", valor: (f) => f.resumen?.minutos_atraso ?? "", numero: true },
         {
             // Informativo: las horas extra se aprueban en Variables del mes.

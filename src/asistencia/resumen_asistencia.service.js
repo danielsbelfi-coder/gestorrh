@@ -7,7 +7,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo, trabajadoresDelPeriodo } = require("../remuneraciones/periodo_remuneracion.service.js")
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
-const { diasLicenciaEnMes } = require("../remuneraciones/dias_pago.js")
+const { diasLicenciaEnMes, anotarDiasTrabajados } = require("../remuneraciones/dias_pago.js")
 const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 
 
@@ -116,10 +116,18 @@ async function guardarResumen(datos, empresasPermitidas, usuarioId) {
 async function listarResumenes(periodoId, empresasPermitidas) {
     const periodo = await obtenerPeriodoPorId(periodoId, empresasPermitidas)
 
-    return await ResumenAsistencia.findAll({
+    const resumenes = await ResumenAsistencia.findAll({
         where: { periodo_id: periodo.id },
         order: [["trabajador_id", "ASC"]]
     })
+
+    const trabajadores = await Trabajador.findAll({
+        where: { id: resumenes.map((r) => r.trabajador_id) },
+        attributes: ["id", "fecha_ingreso", "fecha_termino"],
+        raw: true
+    })
+
+    return anotarDiasTrabajados(resumenes.map((r) => r.toJSON()), trabajadores, periodo.anio, periodo.mes)
 }
 
 async function obtenerResumen(id, empresasPermitidas, usuarioId, permiso) {

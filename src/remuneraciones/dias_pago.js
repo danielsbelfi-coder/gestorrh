@@ -140,8 +140,31 @@ function diasPorTramo({ tramos, anio, mes, diasPagados, fechaIngreso, fechaTermi
     return tramos.map((tramo, i) => ({ ...tramo, dias: dias[i] }))
 }
 
+// Agrega a cada resumen los días trabajados (los mismos días a pago que usará la liquidación).
+// resumenes: objetos con trabajador_id y los días del resumen; trabajadores: { id, fecha_ingreso, fecha_termino }.
+function anotarDiasTrabajados(resumenes, trabajadores, anio, mes) {
+    const porId = new Map(trabajadores.map((t) => [t.id, t]))
+
+    return resumenes.map((resumen) => {
+        const trabajador = porId.get(resumen.trabajador_id)
+        const { diasPagados } = calcularDiasPago({
+            anio,
+            mes,
+            fechaIngreso: trabajador?.fecha_ingreso ?? null,
+            fechaTermino: trabajador?.fecha_termino ?? null,
+            resumen: {
+                dias_inasistencia: Number(resumen.dias_inasistencia) || 0,
+                dias_licencia_medica: Number(resumen.dias_licencia_medica) || 0,
+                dias_permiso_sin_goce: Number(resumen.dias_permiso_sin_goce) || 0
+            }
+        })
+        return { ...resumen, dias_trabajados: diasPagados }
+    })
+}
+
 module.exports = {
     calcularDiasPago,
+    anotarDiasTrabajados,
     DIAS_MES_COMERCIAL,
     diasLicenciaEnMes,
     rimaDelMes,
