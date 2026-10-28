@@ -60,6 +60,39 @@ function mostrarEmpresa(empresa) {
     mostrarSegunTipo()
 }
 
+// Tasas que el sistema ya suma por su cuenta al seguro de accidentes (básica y Ley SANNA vigentes hoy).
+let tasasBaseMutual = null
+
+function formatoTasa(numero) {
+    return numero.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function actualizarResumenTasaMutual() {
+    const elemento = document.getElementById("resumenTasaMutual")
+    if (tasasBaseMutual === null) {
+        elemento.textContent = ""
+        return
+    }
+    const adicional = Number(document.getElementById("tasa_adicional_mutual").value) || 0
+    const total = tasasBaseMutual.basica + tasasBaseMutual.sanna + adicional
+    elemento.textContent = `Se cotizará ${formatoTasa(total)} % = básica ${formatoTasa(tasasBaseMutual.basica)} % + Ley SANNA ${formatoTasa(tasasBaseMutual.sanna)} % + adicional ${formatoTasa(adicional)} %.`
+}
+
+async function cargarTasasBaseMutual() {
+    const hoy = new Date().toISOString().slice(0, 10)
+    const [basica, sanna] = await Promise.all([
+        llamarApi(`/api/parametros-legales/MUTUAL_TASA_BASICA/vigente?fecha=${hoy}`),
+        llamarApi(`/api/parametros-legales/LEY_SANNA/vigente?fecha=${hoy}`)
+    ])
+    // Si el mes todavía no tiene parámetros cargados, simplemente no se muestra el resumen.
+    if (basica.status === 200 && sanna.status === 200) {
+        tasasBaseMutual = { basica: Number(basica.datos.valor), sanna: Number(sanna.datos.valor) }
+    }
+    actualizarResumenTasaMutual()
+}
+
+document.getElementById("tasa_adicional_mutual").addEventListener("input", actualizarResumenTasaMutual)
+
 async function cargarEmpresa() {
     if (!empresaId) {
         mensaje("error", "Falta la empresa. Vuelve a la lista y elige una.")
@@ -72,6 +105,7 @@ async function cargarEmpresa() {
     }
     await cargarMutualidades(resultado.datos.mutualidad_id)
     mostrarEmpresa(resultado.datos)
+    await cargarTasasBaseMutual()
     formulario.hidden = false
 }
 

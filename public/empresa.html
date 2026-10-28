@@ -65,7 +65,9 @@
                     <label class="campo-ancho">Organismo administrador<select id="mutualidad_id"></select></label>
                     <label>Tasa adicional (%)<input type="number" id="tasa_adicional_mutual" min="0" step="0.01"></label>
                 </div>
-                <p class="texto-suave nota-ficha">Si la empresa no está adherida a una mutualidad, cotiza en el Instituto de Seguridad Laboral (ISL). La tasa adicional es la que fija el organismo según la siniestralidad.</p>
+                <p class="texto-suave nota-ficha">Si la empresa no está adherida a una mutualidad, cotiza en el Instituto de Seguridad Laboral (ISL).</p>
+                <p class="texto-suave nota-ficha"><strong>La tasa básica y la Ley SANNA ya se suman automáticamente.</strong> En "Tasa adicional" escribe solo el adicional por siniestralidad que te informó el organismo. Si no te informaron uno, déjala en 0.</p>
+                <p id="resumenTasaMutual" class="nota-ficha" role="status"></p>
             </section>
             <section class="tarjeta">
                 <h2>Caja de compensación (CCAF)</h2>
