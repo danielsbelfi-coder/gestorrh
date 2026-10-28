@@ -9,7 +9,8 @@ const { generarPasswordInicial } = require("../src/shared/password.js")
 const ROLES = ["soporte", "comercial"]
 
 async function main() {
-    const [rol, email, nombre] = process.argv.slice(2)
+    const [rol, email] = process.argv.slice(2)
+    const nombre = process.argv.slice(4).join(" ")
 
     if (!ROLES.includes(rol) || !email || !nombre || !email.includes("@")) {
         console.error('Uso: node scripts/crear-usuario-plataforma.js <soporte|comercial> <correo> "<Nombre>"')

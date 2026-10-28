@@ -6,6 +6,9 @@ require("dotenv").config()
 const fs = require("fs")
 const path = require("path")
 const { execFileSync } = require("child_process")
+
+// Se llama a sequelize-cli con el mismo Node que corre este script. Así no depende de "npx", que en Windows se llama npx.cmd.
+const CLI_SEQUELIZE = path.join(path.dirname(require.resolve("sequelize-cli/package.json")), "lib", "sequelize")
 const { sequelize } = require("../src/shared/database.js")
 
 const EXCLUIDOS = [
@@ -26,7 +29,7 @@ async function main() {
 
     for (const seeder of seeders) {
         console.log(`Cargando ${seeder}`)
-        execFileSync("npx", ["sequelize-cli", "db:seed", "--seed", seeder], { stdio: "inherit", cwd: path.join(__dirname, "..") })
+        execFileSync(process.execPath, [CLI_SEQUELIZE, "db:seed", "--seed", seeder], { stdio: "inherit", cwd: path.join(__dirname, "..") })
     }
     console.log(`Listo: ${seeders.length} seeders cargados (sin usuarios de prueba).`)
 }
