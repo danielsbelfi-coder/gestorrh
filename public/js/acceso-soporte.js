@@ -26,6 +26,9 @@ function accionLegible(fila) {
     if (fila.tipo === "restablecer_password") {
         return "Restableció la contraseña del administrador principal"
     }
+    if (fila.tipo === "restablecer_acceso") {
+        return "Restableció el acceso del administrador principal"
+    }
     const ruta = String(fila.ruta ?? "").split("?")[0]
     const partes = ruta.replace(/^\/api\//, "").split("/").filter(Boolean)
     const recurso = RECURSOS[partes[0]]
@@ -41,8 +44,10 @@ function accionLegible(fila) {
     return `${verbo}: ${objeto}${resto ? ` (${resto})` : ""}`
 }
 
+const esRestablecimiento = (fila) => fila.tipo === "restablecer_password" || fila.tipo === "restablecer_acceso"
+
 function resultadoLegible(fila) {
-    if (fila.tipo === "restablecer_password") {
+    if (esRestablecimiento(fila)) {
         return ["Hecho", "advertencia"]
     }
     const estado = fila.estado_http
@@ -92,7 +97,7 @@ const tablaRegistro = crearTabla({
         { titulo: "Empresa", valor: (f) => f.empresa ?? "" },
         {
             titulo: "Qué hizo", valor: (f) => accionLegible(f),
-            html: (f) => f.tipo === "restablecer_password"
+            html: (f) => esRestablecimiento(f)
                 ? `<strong>${escaparHtml(accionLegible(f))}</strong><div class="texto-suave">${escaparHtml(f.detalle ?? "")}</div>`
                 : escaparHtml(accionLegible(f))
         },

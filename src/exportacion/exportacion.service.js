@@ -32,8 +32,8 @@ const TABLAS = [
     { archivo: "liquidacion_lineas.csv", modelo: LiquidacionLinea, filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { archivo: "finiquitos.csv", modelo: Finiquito, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "accesos_soporte.csv", modelo: AccesoSoporte, filtro: "empresa_id = :empresaId" },
-    // Incluye los restablecimientos de contraseña (van asociados a la cuenta, no a una empresa). Sin la IP del personal de soporte.
-    { archivo: "registro_soporte.csv", modelo: RegistroSoporte, excluir: ["ip"], filtro: "(empresa_id = :empresaId OR (tipo = 'restablecer_password' AND cuenta_id = (SELECT cuenta_id FROM empresas WHERE id = :empresaId)))" },
+    // Incluye los restablecimientos de contraseña o de acceso (van asociados a la cuenta, no a una empresa). Sin la IP del personal de soporte.
+    { archivo: "registro_soporte.csv", modelo: RegistroSoporte, excluir: ["ip"], filtro: "(empresa_id = :empresaId OR (tipo IN ('restablecer_password', 'restablecer_acceso') AND cuenta_id = (SELECT cuenta_id FROM empresas WHERE id = :empresaId)))" },
 ]
 
 async function generarArchivosEmpresa(empresaId) {

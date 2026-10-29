@@ -3,8 +3,7 @@ const { sequelize } = require("../shared/database.js")
 const { AccesoSoporte, RegistroSoporte, Empresa, Usuario, Cuenta } = require("../shared/associations.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
-const { generarPasswordInicial } = require("../shared/password.js")
-const { cerrarTodasLasSesiones } = require("../auth/sesion.service.js")
+const { restablecerAcceso } = require("../auth/restablecer_acceso.js")
 const { HORAS_POR_DEFECTO, validarAutorizacion, validarMotivo, textoMotivo, estadoDeAcceso } = require("./acceso_soporte.js")
 
 function condicionVigente(ahora = new Date()) {
@@ -179,21 +178,18 @@ async function restablecerPrincipal(cuentaId, body, soporte, { metodo, ruta, ip 
         throw new ValidationError(errores.join(". "))
     }
 
-    const { password: passwordInicial, hash } = await generarPasswordInicial()
-
-    await principal.update({ password_hash: hash, debe_cambiar_password: true, password_cambiado_en: new Date() })
-    // Quien tuviera una sesión abierta con la contraseña anterior queda fuera.
-    await cerrarTodasLasSesiones(principal.id)
+    // Contraseña inicial nueva, 2FA desactivado y sesiones cerradas.
+    const passwordInicial = await restablecerAcceso(principal.id)
 
     await RegistroSoporte.create({
-        tipo: "restablecer_password",
+        tipo: "restablecer_acceso",
         usuario_id: soporte.id,
         cuenta_id: cuenta.id,
         metodo,
         ruta: String(ruta).slice(0, 500),
         estado_http: 200,
         ip: ip ? String(ip).slice(0, 64) : null,
-        detalle: `Contraseña de ${principal.nombre} (${principal.email}). Motivo: ${textoMotivo(body.motivo)}`
+        detalle: `Acceso de ${principal.nombre} (${principal.email}): contraseña nueva y verificación en dos pasos desactivada. Motivo: ${textoMotivo(body.motivo)}`
     })
 
     return { usuario: { id: principal.id, nombre: principal.nombre, email: principal.email }, passwordInicial }

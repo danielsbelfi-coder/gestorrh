@@ -7,6 +7,7 @@ const { exigirEmailLibre } = require("./email_usuario.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
 const { verificarCupoUsuarios } = require("../cuentas/consumo.service.js")
 const { cerrarTodasLasSesiones } = require("../auth/sesion.service.js")
+const { restablecerAcceso } = require("../auth/restablecer_acceso.js")
 
 async function obtenerUsuarioCuenta(id, usuario) {
     const objetivo = await Usuario.findByPk(id)
@@ -29,7 +30,7 @@ function exigirNoEsPrincipalAjeno(objetivo, usuario, mensaje) {
 async function listarUsuariosCuenta(usuario) {
     return await Usuario.findAll({
         where: { cuenta_id: usuario.cuenta_id },
-        attributes: ["id", "nombre", "email", "estado", "es_admin_cuenta", "es_admin_principal", "debe_cambiar_password"],
+        attributes: ["id", "nombre", "email", "estado", "es_admin_cuenta", "es_admin_principal", "debe_cambiar_password", "totp_activo"],
         include: [{
             model: UsuarioEmpresaRol,
             attributes: ["empresa_id", "estado"],
@@ -245,26 +246,20 @@ async function quitarRolEmpresa(id, empresaId, usuario) {
     return vinculo
 }
 
-async function restablecerPasswordCuenta(id, usuario) {
+// Para quien olvidó la contraseña o perdió el celular (y sus códigos de recuperación):
+// contraseña inicial nueva, 2FA desactivado y sesiones cerradas (ver src/auth/restablecer_acceso.js).
+async function restablecerAccesoCuenta(id, usuario) {
     await exigirCuentaActiva(usuario.cuenta_id)
 
     const objetivo = await obtenerUsuarioCuenta(id, usuario)
 
     if (objetivo.id === usuario.id) {
-        throw new ForbiddenError("Para cambiar tu propia contraseña usa la opción Cambiar contraseña")
+        throw new ForbiddenError("Para cambiar tu contraseña o tu celular usa «Mi seguridad»")
     }
 
-    exigirNoEsPrincipalAjeno(objetivo, usuario, "Solo soporte puede restablecer la contraseña del administrador principal de la cuenta")
+    exigirNoEsPrincipalAjeno(objetivo, usuario, "Solo soporte puede restablecer el acceso del administrador principal de la cuenta")
 
-    const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
-
-    await objetivo.update({
-        password_hash: passwordHash,
-        debe_cambiar_password: true,
-        password_cambiado_en: new Date()
-    })
-    // Quien tuviera una sesión abierta con la contraseña anterior queda fuera.
-    await cerrarTodasLasSesiones(objetivo.id)
+    const passwordInicial = await restablecerAcceso(objetivo.id)
 
     return {
         usuario: { id: objetivo.id, nombre: objetivo.nombre, email: objetivo.email },
@@ -281,5 +276,5 @@ module.exports = {
     cambiarAdminCuenta,
     asignarRolEmpresa,
     quitarRolEmpresa,
-    restablecerPasswordCuenta
+    restablecerAccesoCuenta
 }

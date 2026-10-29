@@ -96,7 +96,7 @@ async function copiarAlPortapapeles(texto) {
 
 // Entrega de una contraseña inicial: se muestra grande, se puede copiar con un botón y la ventana
 // no se cierra hasta que la persona confirma que la copió. Luego no se vuelve a mostrar.
-function mostrarCredencial({ titulo, email, password, destinatario }) {
+function mostrarCredencial({ titulo, email, password, destinatario, nota }) {
     const avisarCopiado = (boton, textoOriginal, copiado) => {
         boton.textContent = copiado ? "¡Copiada!" : "No se pudo copiar: selecciónala"
         setTimeout(() => { boton.textContent = textoOriginal }, 2000)
@@ -106,7 +106,7 @@ function mostrarCredencial({ titulo, email, password, destinatario }) {
         tipo: "info",
         titulo,
         bloqueante: true,
-        cuerpo: `<div class="modal-aviso"><strong>Se muestra una sola vez.</strong> Cópiala ahora y entrégala ${escaparHtml(destinatario ?? "a la persona")} por un canal seguro. Al entrar, el sistema le pedirá cambiarla.</div>
+        cuerpo: `<div class="modal-aviso"><strong>Se muestra una sola vez.</strong> Cópiala ahora y entrégala ${escaparHtml(destinatario ?? "a la persona")} por un canal seguro. Al entrar, el sistema le pedirá cambiarla.${nota ? ` ${escaparHtml(nota)}` : ""}</div>
             <div class="credencial">
                 <div class="credencial-etiqueta">Correo</div>
                 <div class="credencial-valor">${escaparHtml(email)}</div>

@@ -12,7 +12,7 @@ const tablaCuentas = crearTabla({
         { titulo: "Administrador principal", valor: (c) => c.principal ? `${c.principal.nombre} ${c.principal.email}` : "", html: (c) => c.principal ? `${escaparHtml(c.principal.nombre)}<div class="texto-suave">${escaparHtml(c.principal.email)}</div>` : `<span class="texto-suave">Sin administrador principal</span>` },
         {
             titulo: "", orden: false, valor: () => "",
-            html: (c) => c.principal ? `<button type="button" class="chico secundario" data-restablecer="${c.id}">Restablecer contraseña del principal</button>` : ""
+            html: (c) => c.principal ? `<button type="button" class="chico secundario" data-restablecer="${c.id}">Restablecer acceso del principal</button>` : ""
         }
     ]
 })
@@ -41,7 +41,7 @@ document.getElementById("tablaCuentas").addEventListener("click", async function
     if (!boton) {
         return
     }
-    const motivo = prompt("Restablecer la contraseña del administrador principal de esta cuenta.\n\nEl motivo queda registrado y el cliente lo verá (entre 10 y 500 caracteres):")
+    const motivo = prompt("Restablecer el acceso del administrador principal de esta cuenta: contraseña nueva, verificación en dos pasos desactivada y sesiones cerradas.\n\nAntes, comprueba su identidad contra los datos del titular de la cuenta. El motivo queda registrado y el cliente lo verá (entre 10 y 500 caracteres):")
     if (motivo === null) {
         return
     }
@@ -51,14 +51,15 @@ document.getElementById("tablaCuentas").addEventListener("click", async function
         body: JSON.stringify({ motivo: motivo.trim() })
     })
     if (resultado.status !== 200) {
-        mensaje("error", resultado.datos?.error ?? "No se pudo restablecer la contraseña")
+        mensaje("error", resultado.datos?.error ?? "No se pudo restablecer el acceso")
         return
     }
     mostrarCredencial({
         titulo: `Contraseña inicial de ${resultado.datos.usuario.nombre}`,
         email: resultado.datos.usuario.email,
         password: resultado.datos.passwordInicial,
-        destinatario: `a ${resultado.datos.usuario.nombre}`
+        destinatario: `a ${resultado.datos.usuario.nombre}`,
+        nota: "Su verificación en dos pasos quedó desactivada y se cerraron sus sesiones: al entrar deberá inscribir de nuevo la app del celular."
     })
 })
 
