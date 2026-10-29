@@ -72,3 +72,26 @@
 .contenido select {
     text-overflow: ellipsis;
 }
+
+/* Franja de soporte bajo la barra superior */
+.aviso-soporte {
+    position: sticky;
+    top: var(--alto-barra);
+    z-index: 19;
+    padding: 8px 28px;
+    font-size: 0.85rem;
+    background: var(--advertencia-suave);
+    color: var(--advertencia);
+    border-bottom: 1px solid var(--borde);
+}
+
+.aviso-soporte.con-acceso {
+    background: var(--info-suave, #e8f1fb);
+    color: var(--info, #1d4f91);
+}
+
+@media (max-width: 860px) {
+    .aviso-soporte {
+        padding: 8px 16px;
+    }
+}

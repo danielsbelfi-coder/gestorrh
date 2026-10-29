@@ -5,7 +5,7 @@ Guía para dejar GestorRH en la nube **solo con datos ficticios**, para que una 
 - **Neon**: la base PostgreSQL (gratis, no vence).
 - **Render**: el servidor Node (gratis, se duerme tras 15 minutos sin visitas y tarda cerca de 1 minuto en despertar).
 
-> Esta configuración **no sirve para datos reales**: no hay respaldos garantizados, el servidor se duerme y faltan el registro de accesos de soporte y el segundo factor. Para clientes reales hay que pasar a planes pagados (ver SPEC).
+> Esta configuración **no sirve para datos reales**: no hay respaldos garantizados, el servidor se duerme y falta el segundo factor (2FA). Para clientes reales hay que pasar a planes pagados (ver SPEC).
 
 Las pantallas de Neon y Render cambian de vez en cuando: si un botón tiene otro nombre, busca el equivalente.
 

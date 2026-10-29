@@ -29,6 +29,8 @@ const { SituacionPrevisional } = require("../trabajadores/situacion_previsional.
 const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 const { Jornada } = require("../contratos/jornada.model");
 const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
+const { AccesoSoporte } = require("../soporte/acceso_soporte.model.js");
+const { RegistroSoporte } = require("../soporte/registro_soporte.model.js");
 
 
 Trabajador.belongsTo(Persona, {
@@ -325,7 +327,16 @@ ParametroHistorial.belongsTo(Usuario, {
     as: "usuario"
 })
 
+AccesoSoporte.belongsTo(Empresa, { foreignKey: "empresa_id" })
+AccesoSoporte.belongsTo(Cuenta, { foreignKey: "cuenta_id" })
+AccesoSoporte.belongsTo(Usuario, { foreignKey: "autorizado_por_id", as: "autorizadoPor" })
+AccesoSoporte.belongsTo(Usuario, { foreignKey: "revocado_por_id", as: "revocadoPor" })
+RegistroSoporte.belongsTo(Usuario, { foreignKey: "usuario_id", as: "usuario" })
+RegistroSoporte.belongsTo(Empresa, { foreignKey: "empresa_id" })
+
 module.exports = {
+    AccesoSoporte,
+    RegistroSoporte,
     PeriodoReapertura,
     Empresa,
     Persona,

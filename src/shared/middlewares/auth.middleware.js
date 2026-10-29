@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken")
 const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta, Rol } = require("../associations");
 const { ROLES_ASIGNABLES } = require("../permisos");
 const { AuthenticationError } = require("../errors");
+const { rutaDePlataforma, enmascararCuentas } = require("../../soporte/acceso_soporte.js");
 
 const RUTAS_CUENTA_CANCELADA = [
     "GET /api/auth/usuario",
@@ -82,11 +83,25 @@ const verificarToken = async (req, res, next) => {
         const soporte = usuario.rol_plataforma === "soporte"
 
         if (soporte === true) {
-            const acceso = await Empresa.findAll({
-                attributes: ["id"]
-            })
+            // Soporte solo ve las empresas que un administrador del cliente autorizó y que siguen vigentes.
+            const servicio = require("../../soporte/acceso_soporte.service.js")
+            const accesos = await servicio.accesosVigentes()
 
-            empresasPermitidas = acceso.map((empresa) => empresa.id)
+            req.accesosSoporte = accesos
+            empresasPermitidas = [...new Set(accesos.map((acceso) => acceso.empresa_id))]
+
+            // El número de cuenta bancaria nunca se muestra completo a soporte.
+            const jsonOriginal = res.json.bind(res)
+            res.json = (cuerpo) => jsonOriginal(enmascararCuentas(cuerpo))
+
+            // Todo lo que soporte pide fuera de las rutas de la plataforma queda registrado (aunque termine en error).
+            if (!rutaDePlataforma(req.originalUrl)) {
+                const datos = { usuario, accesos, metodo: req.method, ruta: req.originalUrl, ip: req.ip }
+                res.on("finish", () => {
+                    servicio.registrarConsulta({ ...datos, estadoHttp: res.statusCode })
+                        .catch((error) => console.error("No se pudo registrar la consulta de soporte:", error.message))
+                })
+            }
         }
 
         req.empresasPermitidas = empresasPermitidas

@@ -35,6 +35,18 @@ function icono(nombre) {
 }
 
 function gruposDelMenu(usuario) {
+    if (usuario.rol_plataforma === "soporte") {
+        // Soporte administra lo común de la plataforma; las empresas de los clientes solo aparecen si un administrador las autorizó.
+        const grupos = [
+            { titulo: "Soporte", enlaces: [["soporte.html", "Cuentas y accesos", "cuentas"]] },
+            { titulo: "Parámetros", enlaces: [["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] }
+        ]
+        if ((usuario.accesos_soporte ?? []).length > 0) {
+            grupos.push(...gruposDeEmpresa(usuario, false))
+        }
+        return grupos
+    }
+
     if (usuario.rol_plataforma === "comercial") {
         return [{ titulo: "Comercial", enlaces: [["cuentas.html", "Cuentas", "cuentas"]] }]
     }
@@ -46,11 +58,16 @@ function gruposDelMenu(usuario) {
     // Orden del proceso: primero la empresa y sus usuarios, luego las personas, el periodo y la asistencia, y al final las liquidaciones.
     const empresa = [["empresas.html", "Empresas", "empresas"]]
     if (usuario.es_admin_cuenta === true) {
-        empresa.push(["usuarios.html", "Usuarios", "usuarios"], ["consumo.html", "Consumo del plan", "consumo"])
+        empresa.push(["usuarios.html", "Usuarios", "usuarios"], ["acceso-soporte.html", "Acceso de soporte", "clave"], ["consumo.html", "Consumo del plan", "consumo"])
     }
 
+    return gruposDeEmpresa(usuario, true, empresa)
+}
+
+// Menú de trabajo con una empresa. Para soporte (con acceso autorizado) no incluye Inicio ni la administración de la cuenta.
+function gruposDeEmpresa(usuario, conInicio, empresa = [["empresas.html", "Empresas", "empresas"]]) {
     return [
-        { titulo: "", enlaces: [["index.html", "Inicio", "inicio"]] },
+        ...(conInicio ? [{ titulo: "", enlaces: [["index.html", "Inicio", "inicio"]] }] : []),
         { titulo: "Empresa", enlaces: empresa },
         {
             titulo: "Personas",
@@ -82,8 +99,23 @@ function gruposDelMenu(usuario) {
                 ["legales.html", "Previred y LRE", "legales"]
             ]
         },
-        { titulo: "Parámetros", enlaces: [["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] }
+        ...(conInicio ? [{ titulo: "Parámetros", enlaces: [["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] }] : [])
     ]
+}
+
+// Franja fija bajo la barra superior: recuerda a soporte qué empresas puede ver y que todo queda registrado.
+function avisoDeSoporte(accesos) {
+    const aviso = document.createElement("div")
+    aviso.className = "aviso-soporte"
+    if (accesos.length === 0) {
+        aviso.textContent = "Sin acceso a empresas cliente: el cliente debe autorizarlo."
+        return aviso
+    }
+    const hora = (texto) => new Date(texto).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })
+    const detalle = accesos.map((acceso) => `${acceso.razon_social} hasta ${hora(acceso.hasta)}`).join(" · ")
+    aviso.classList.add("con-acceso")
+    aviso.textContent = `Acceso de soporte autorizado a ${detalle} · solo lectura · todo queda registrado`
+    return aviso
 }
 
 function iniciales(nombre) {
@@ -187,6 +219,12 @@ async function iniciarLayout() {
     const resultado = await llamarApi("/api/auth/usuario")
     const usuario = resultado.status === 200 ? resultado.datos : {}
 
+    // La pantalla de inicio de soporte es su panel de cuentas y accesos.
+    if (usuario.rol_plataforma === "soporte" && (location.pathname.endsWith("/") || location.pathname.endsWith("index.html"))) {
+        window.location.href = "soporte.html"
+        return
+    }
+
     document.body.classList.add("app")
 
     const estilos = document.createElement("link")
@@ -217,6 +255,9 @@ async function iniciarLayout() {
 
     contenido.parentNode.insertBefore(principal, contenido)
     principal.appendChild(barra)
+    if (usuario.rol_plataforma === "soporte") {
+        principal.appendChild(avisoDeSoporte(usuario.accesos_soporte ?? []))
+    }
     principal.appendChild(contenido)
     document.body.prepend(velo)
     document.body.prepend(lateral)

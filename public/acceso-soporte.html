@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Acceso de soporte</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Acceso de soporte">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Acceso de soporte</h1>
+                <p>Por defecto el equipo de soporte no puede ver los datos de tus empresas. Si necesitas ayuda, puedes autorizarlo por un tiempo limitado.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta">
+            <h2>Autorizar a soporte</h2>
+            <form id="formAcceso">
+                <label class="campo-ancho">Empresa<select id="empresa" required></select></label>
+                <label>Duración
+                    <select id="horas">
+                        <option value="1">1 hora</option>
+                        <option value="4" selected>4 horas</option>
+                        <option value="8">8 horas</option>
+                        <option value="24">24 horas</option>
+                    </select>
+                </label>
+                <label class="campo-ancho">Motivo (entre 10 y 500 caracteres)
+                    <textarea id="motivo" rows="2" maxlength="500" required placeholder="Ejemplo: revisar por qué no cuadra una liquidación de septiembre"></textarea>
+                </label>
+                <button type="submit">Autorizar acceso</button>
+            </form>
+            <p class="texto-suave">Soporte solo puede <strong>mirar</strong>: no puede crear, editar ni borrar nada. No ve el número de cuenta bancaria completo de las personas (solo los últimos 4 dígitos). El acceso vence solo al terminar el plazo, y puedes quitarlo antes con <strong>Revocar</strong>. Todo lo que soporte consulta queda anotado más abajo y se conserva 2 años.</p>
+        </section>
+
+        <h2>Autorizaciones</h2>
+        <div id="tablaAccesos"></div>
+
+        <h2>Lo que consultó soporte</h2>
+        <p class="texto-suave">Las más recientes primero (hasta 500). Incluye las consultas que fueron bloqueadas.</p>
+        <div id="tablaRegistro"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/acceso-soporte.js"></script>
+</body>
+
+</html>

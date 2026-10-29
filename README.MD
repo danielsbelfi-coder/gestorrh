@@ -62,7 +62,7 @@ Al iniciar, el servidor revisa la configuración y **no arranca** si falta algo 
 | Rol | Qué hace |
 |---|---|
 | Comercial (plataforma) | Crea cuentas de clientes con su administrador y gestiona planes |
-| Soporte (plataforma) | Mantiene parámetros globales (UF, UTM, topes, feriados) y asiste a los clientes |
+| Soporte (plataforma) | Mantiene parámetros globales (UF, UTM, topes, feriados). Solo ve empresas de clientes si un administrador de la cuenta lo autoriza por 1, 4, 8 o 24 h (solo lectura, sin número de cuenta completo); todo queda registrado 2 años y el cliente lo ve. Puede restablecer la contraseña del administrador principal, con motivo |
 | ADMIN de empresa | Control total de su empresa. Firma contratos y anexos, aprueba asistencia, variables y resúmenes |
 | JEFE_RRHH | Igual que RRHH, y además firma y aprueba |
 | RRHH | Ingresa y prepara la información; no firma ni aprueba |
@@ -113,7 +113,7 @@ docs/            tutorial de uso
 ## Seguridad y datos personales
 
 - Límite de intentos de login: 5 fallos por correo en 15 minutos bloquean 15 minutos; además hay un límite por IP.
-- Los datos de trabajadores son datos personales (Ley 21.719, vigente desde el 01-12-2026). Soporte puede leer los datos de todas las empresas; el registro de accesos de soporte está pendiente antes de operar con datos reales.
+- Los datos de trabajadores son datos personales (Ley 21.719, vigente desde el 01-12-2026). Soporte solo accede a una empresa con autorización vigente de un administrador de la cuenta, y cada consulta queda registrada (2 años). Antes de operar con datos reales siguen pendientes el segundo factor (2FA) y la sesión en cookie.
 - Reporte de problemas de seguridad: por mensaje directo al responsable, no en issues públicos.
 
 ## Limitaciones conocidas

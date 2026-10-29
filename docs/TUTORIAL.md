@@ -56,6 +56,9 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 
 ## 6. Cada mes
 
+### Acceso de soporte (administradores de la cuenta)
+Soporte **no ve** tus empresas por defecto. Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas) y cualquier restablecimiento de contraseña del administrador principal; se guarda 2 años.
+
 ### 6.1 Parámetros (soporte, una vez por mes)
 En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**. Después corrige con valores oficiales la **UF del último día del mes**, la **UTM** y cualquier valor que haya cambiado por ley (**Corregir**). Sin esto no se pueden calcular liquidaciones.
 

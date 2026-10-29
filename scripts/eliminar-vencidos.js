@@ -1,8 +1,8 @@
 const { Op } = require("sequelize")
 const { sequelize } = require("../src/shared/database.js")
-const { Empresa, Cuenta } = require("../src/shared/associations.js")
+const { Empresa, Cuenta, AccesoSoporte, RegistroSoporte } = require("../src/shared/associations.js")
 const { eliminarEmpresa, eliminarCuenta } = require("../src/eliminacion/eliminacion.service.js")
-const { DIAS_CONSERVACION_DATOS } = require("../src/shared/constantes.js")
+const { DIAS_CONSERVACION_DATOS, DIAS_CONSERVACION_REGISTRO_SOPORTE } = require("../src/shared/constantes.js")
 
 function fechaLimite() {
     const fecha = new Date()
@@ -59,7 +59,27 @@ async function main() {
         }
     }
 
-    if (cuentas.length === 0 && empresas.length === 0) {
+    // Registro de accesos de soporte: se conserva 2 años.
+    const limiteRegistro = new Date(Date.now() - DIAS_CONSERVACION_REGISTRO_SOPORTE * 86400000)
+    let hayRegistroVencido = false
+    try {
+        const vencidosRegistro = await RegistroSoporte.count({ where: { createdAt: { [Op.lt]: limiteRegistro } } })
+        const vencidosAccesos = await AccesoSoporte.count({ where: { hasta: { [Op.lt]: limiteRegistro } } })
+
+        if (vencidosRegistro > 0 || vencidosAccesos > 0) {
+            console.log(`Registro de soporte vencido (más de ${DIAS_CONSERVACION_REGISTRO_SOPORTE} días): ${vencidosRegistro} consultas y ${vencidosAccesos} autorizaciones`)
+            if (!simular) {
+                await RegistroSoporte.destroy({ where: { createdAt: { [Op.lt]: limiteRegistro } } })
+                await AccesoSoporte.destroy({ where: { hasta: { [Op.lt]: limiteRegistro } } })
+            }
+        }
+        hayRegistroVencido = vencidosRegistro > 0 || vencidosAccesos > 0
+    } catch (error) {
+        errores++
+        console.error(`Error al depurar el registro de soporte: ${error.message}`)
+    }
+
+    if (cuentas.length === 0 && empresas.length === 0 && !hayRegistroVencido) {
         console.log("No hay datos vencidos.")
     }
 

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Soporte</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Soporte">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Soporte</h1>
+                <p>Las empresas de los clientes solo se ven si un administrador de la cuenta las autoriza por un tiempo limitado. Todo lo que consultes queda registrado y el cliente lo puede ver.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta">
+            <h2>Accesos autorizados ahora</h2>
+            <div id="accesosVigentes"></div>
+        </section>
+
+        <h2>Cuentas</h2>
+        <p class="texto-suave">Solo puedes restablecer la contraseña del administrador principal, con un motivo. Queda registrado y el cliente lo ve.</p>
+        <div id="tablaCuentas"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/soporte.js"></script>
+</body>
+
+</html>

@@ -38,7 +38,18 @@ function usuarioEnUso(req, res) {
         ? sumarDias(req.cuentaFechaCancelacion, DIAS_CONSERVACION_DATOS)
         : null
 
-    res.status(200).json({ id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma, cuenta_estado: req.cuentaEstado ?? null, cuenta_fecha_eliminacion: cuentaFechaEliminacion })
+    const respuesta = { id, nombre, email, cuenta_id, es_admin_cuenta, rol_plataforma, cuenta_estado: req.cuentaEstado ?? null, cuenta_fecha_eliminacion: cuentaFechaEliminacion }
+
+    // Para el aviso de la barra superior: qué empresas puede consultar soporte ahora y hasta cuándo.
+    if (rol_plataforma === "soporte") {
+        respuesta.accesos_soporte = (req.accesosSoporte ?? []).map((acceso) => ({
+            empresa_id: acceso.empresa_id,
+            razon_social: acceso.Empresa.razon_social,
+            hasta: acceso.hasta
+        }))
+    }
+
+    res.status(200).json(respuesta)
 }
 
 module.exports = {
