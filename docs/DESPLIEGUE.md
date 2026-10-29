@@ -89,7 +89,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 Cópiala a tu bloc de notas. Va solo en Render. **No la pierdas ni la cambies**: sin ella, hay que restablecer el acceso de todos los usuarios que tienen 2FA.
 
-(Las sesiones ya no usan `JWT_SECRET` ni `JWT_EXPIRES_IN`: si estaban en Render, se pueden borrar.)
+(Las sesiones ya no usan `JWT_SECRET` ni `JWT_EXPIRES_IN`. En un despliegue nuevo no se agregan; si ya estaban en Render, se borran al final de la actualización del paso 8.1.)
 
 ---
 
@@ -161,9 +161,9 @@ Anota el valor final en el SPEC.
 
 ### 5.3 Recorrido mínimo
 
-1. `.../login.html` con el usuario **soporte** → te pide cambiar la contraseña (mínimo 15 caracteres; sirve una frase).
+1. `.../login.html` con el usuario **soporte** → te pide cambiar la contraseña (mínimo 15 caracteres; sirve una frase) y después **activar la verificación en dos pasos**: ten a mano el celular con una app de autenticación y guarda los códigos de recuperación fuera del celular.
 2. Parámetros legales: revisa el mes actual. Si faltan UF/UTM, ábrelo y corrígelos.
-3. Cierra sesión y entra con **comercial** → cambia la contraseña → crea la cuenta del tester (ver paso 6).
+3. Cierra sesión y entra con **comercial** → cambia la contraseña → activa su verificación en dos pasos → crea la cuenta del tester (ver paso 6).
 4. Revisa los Logs de Render: no deberían aparecer errores 500.
 
 ---
@@ -179,7 +179,8 @@ Anota el valor final en el SPEC.
    - Estas reglas:
      - **Solo datos inventados.** Nada de RUT, nombres, sueldos ni cuentas bancarias reales.
      - La primera carga del día tarda cerca de un minuto: es normal.
-     - Al entrar pedirá cambiar la contraseña: mínimo 15 caracteres; lo más fácil es una frase.
+     - Al entrar pedirá cambiar la contraseña (mínimo 15 caracteres; lo más fácil es una frase) y **activar la verificación en dos pasos**: necesita Google Authenticator o Microsoft Authenticator en el celular, y guardar los códigos de recuperación.
+     - Si pierde el celular y los códigos, tú (soporte) le restableces el acceso desde el panel de soporte.
      - Cómo reportar: qué hizo, qué esperaba y qué pasó, con captura de pantalla.
 
 ---
@@ -206,6 +207,35 @@ Si algo se rompe, puedes revisar o recuperar datos desde esa rama. Borra las ram
 
 ---
 
+### 8.1 Pasar a la nube la seguridad de acceso (rama `seguridad-acceso`)
+
+Este cambio reemplaza la forma de iniciar sesión (cookie en el servidor, 2FA y soporte por empresa). Todos tendrán que volver a ingresar, y soporte, comercial y los administradores deberán inscribir el 2FA. Avísale antes al tester. En este orden:
+
+1. **Respaldo:** rama nueva en Neon (paso 7).
+2. **Variables en Render** (Environment), antes del merge, porque sin ellas el servidor no arranca:
+   - `TOTP_CLAVE_CIFRADO`: una clave nueva del paso 3 (distinta de la de tu PC). Guárdala en tu bloc de notas.
+   - `APP_ORIGEN`: la URL del servicio, sin barra final (por ejemplo `https://gestorrh-prueba.onrender.com`).
+   - Deja por ahora `JWT_SECRET` y `JWT_EXPIRES_IN`: la versión actual de `main` todavía los usa. Se borran después del paso 5.
+
+   Guardar las variables redespliega `main`: no importa, la versión actual ignora las nuevas.
+3. **Migración contra Neon** (agrega tablas y columnas; la versión actual sigue funcionando con ellas):
+   ```
+   node --env-file=.env.nube node_modules/sequelize-cli/lib/sequelize db:migrate
+   ```
+4. **Merge y push** a `main`:
+   ```
+   git checkout main
+   git merge seguridad-acceso
+   npm install
+   npm test
+   git push
+   ```
+5. Revisa los Logs de Render (`Server running on ...`), `/api/salud`, y haz el recorrido del paso 5.3 (con el 2FA de soporte y comercial). Si todo está bien, borra `JWT_SECRET` y `JWT_EXPIRES_IN` en Render.
+
+Si algo sale mal: vuelve a desplegar el commit anterior desde Render (**Manual Deploy → Deploy a specific commit**). La migración no estorba a la versión anterior, y como todavía no borraste `JWT_SECRET`, vuelve a funcionar tal como estaba.
+
+---
+
 ## 9. Problemas comunes
 
 | Síntoma | Causa probable |
@@ -218,4 +248,7 @@ Si algo se rompe, puedes revisar o recuperar datos desde esa rama. Borra las ram
 | Logs: `unable to verify the first certificate`, `self-signed certificate` o `does not match certificate's altnames` | No se pudo comprobar el certificado de la base. Revisa que `DB_HOST` sea exactamente el host de Neon. Con Neon no hace falta `DB_SSL_CA`; si persiste, avisa: **no** desactives la comprobación |
 | Logs: `relation "..." does not exist` | No corriste las migraciones contra Neon (paso 2.2 u 8) |
 | "Demasiados intentos fallidos" para todos a la vez | `TRUST_PROXY` mal ajustado (paso 5.2) |
+| Al iniciar sesión o guardar: "La solicitud no es válida. Recarga la página" | `APP_ORIGEN` no coincide exactamente con la URL que se ve en el navegador (https, sin barra final ni ruta) |
+| Logs: "TOTP_CLAVE_CIFRADO debe ser una clave de 32 bytes" | Falta la variable o se copió incompleta (paso 3) |
+| Un usuario de soporte o comercial perdió el celular y sus códigos | Desde tu PC: `node --env-file=.env.nube scripts/reiniciar-acceso.js <correo>` (contraseña nueva, 2FA desactivado y sesiones cerradas) |
 | A mitad de mes Render suspende el servicio | Se agotaron las horas gratis del mes (750): no debería pasar con un solo servicio |

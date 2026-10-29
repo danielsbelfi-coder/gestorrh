@@ -21,18 +21,22 @@ Los roles SUPERVISOR (ver solo a su equipo) y LECTURA (portal del trabajador) qu
 
 **Contraseñas:** al menos 15 caracteres, sin exigir mayúsculas, números ni símbolos. Lo más fácil es una frase de tres o cuatro palabras. Se rechazan las secuencias, repeticiones, contraseñas conocidas y las que contienen el nombre o el correo de la persona.
 
+**Verificación en dos pasos (2FA):** además de la contraseña, al ingresar se pide un código de 6 dígitos que muestra una app del celular (Google Authenticator, Microsoft Authenticator u otra). Es **obligatoria** para los administradores de la cuenta, soporte y comercial, porque pueden ver datos de muchas personas; para los demás usuarios es voluntaria. La primera vez, el sistema muestra un código QR para escanear con la app y entrega **10 códigos de recuperación**: cada uno sirve para entrar una vez si no tienes el celular. Guárdalos fuera del celular.
+
+**Sesión:** dura 8 horas como máximo y se cierra sola tras 60 minutos sin uso (30 minutos para soporte y comercial). **Cerrar sesión** la termina de verdad: aunque alguien vuelva atrás en el navegador, tendrá que ingresar de nuevo.
+
 Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de permiso insuficiente: es un comportamiento esperado.
 
 ## 2. Entrega de la cuenta (Comercial)
 
-1. El comercial inicia sesión con su correo y contraseña inicial. La primera vez el sistema obliga a **cambiar la contraseña** (mínimo 15 caracteres; sirve una frase de varias palabras).
+1. El comercial inicia sesión con su correo y contraseña inicial. La primera vez el sistema obliga a **cambiar la contraseña** (mínimo 15 caracteres; sirve una frase de varias palabras) y luego a **activar la verificación en dos pasos** con la app del celular.
 2. En **Cuentas** → **Crear cuenta**: nombre, RUT del titular con su DV, razón social, correo de contacto, plan, y nombre y correo del administrador.
 3. El sistema muestra **una sola vez** la contraseña inicial del administrador. El comercial se la entrega al cliente por un canal seguro.
 4. Desde **Cuentas** también puede **Cambiar plan**, **Suspender**, **Cancelar** (con confirmación) y **Reactivar**, y **Ver consumo**.
 
 ## 3. Primeros pasos del administrador
 
-1. Iniciar sesión con la contraseña recibida y cambiarla cuando el sistema lo pida.
+1. Iniciar sesión con la contraseña recibida, cambiarla cuando el sistema lo pida y **activar la verificación en dos pasos**: instala la app de autenticación, escanea el QR, escribe el código y guarda los códigos de recuperación (botón **Descargar .txt**).
 2. **Administración → Empresas → Crear empresa**: RUT sin DV, DV, razón social, representante legal, RUT del representante y dirección.
 3. Entrar a la empresa y completar la ficha: tipo de empleador, giro, código de actividad SII, comuna, **organismo administrador (mutual) y tasa adicional**, caja de compensación. Guardar cambios. Estos datos alimentan Previred y las liquidaciones.
 4. **Administración → Usuarios → Crear usuario**: nombre y correo. El sistema genera la contraseña inicial. Luego **Asignar rol** (ADMIN, JEFE_RRHH, RRHH...) por empresa. Crea al menos un usuario RRHH y uno JEFE_RRHH para probar la separación de funciones.
@@ -57,7 +61,18 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 ## 6. Cada mes
 
 ### Acceso de soporte (administradores de la cuenta)
-Soporte **no ve** tus empresas por defecto. Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas) y cualquier restablecimiento de contraseña del administrador principal; se guarda 2 años.
+Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **una empresa a la vez** (la que elige en su barra superior). Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas) también los intentos de entrar a una empresa que no autorizaste, y cualquier restablecimiento de acceso del administrador principal; se guarda 2 años.
+
+### Mi seguridad (todos los usuarios)
+En el pie del menú, **Mi seguridad** reúne:
+- **Cambiar contraseña** (cierra tus sesiones en otros navegadores).
+- **Verificación en dos pasos**: activarla (si es voluntaria para ti), **generar códigos de recuperación nuevos** (los anteriores dejan de servir) y **Cambiar de celular** o **Desactivar** (pide tu contraseña y un código).
+- **Sesiones abiertas**: cada navegador donde iniciaste sesión, con **Cerrar las demás sesiones**.
+
+### Si alguien olvida la contraseña o pierde el celular
+- **Perdió el celular pero tiene sus códigos de recuperación:** entra con un código («No tengo el celular: usar un código de recuperación») y en **Mi seguridad → Cambiar de celular** inscribe la app en el celular nuevo.
+- **Sin códigos, o olvidó la contraseña:** un administrador de la cuenta usa **Usuarios → Restablecer acceso**. Eso le da una contraseña inicial nueva, desactiva su verificación en dos pasos y cierra sus sesiones. Al entrar deberá cambiar la contraseña y, si su perfil lo requiere, inscribir de nuevo la app.
+- **El administrador principal** solo lo restablece soporte, después de comprobar su identidad; queda en el registro que ve la cuenta.
 
 ### 6.1 Parámetros (soporte, una vez por mes)
 En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**. Después corrige con valores oficiales la **UF del último día del mes**, la **UTM** y cualquier valor que haya cambiado por ley (**Corregir**). Sin esto no se pueden calcular liquidaciones.
@@ -110,9 +125,10 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 - Usa **solo datos ficticios**. No ingreses personas, RUT ni sueldos reales.
 - Los datos pueden borrarse entre rondas de prueba.
 - Si recibes un acceso, cambia la contraseña de inmediato.
+- Necesitas una **app de autenticación** en el celular (Google Authenticator o Microsoft Authenticator, gratis): el administrador debe activar la verificación en dos pasos al primer ingreso. Guarda los códigos de recuperación.
 
 ## Qué recorrer (en este orden)
-1. Entrar como administrador, cambiar contraseña, crear empresa y completar su ficha.
+1. Entrar como administrador, cambiar contraseña, activar la verificación en dos pasos, crear empresa y completar su ficha.
 2. Crear usuarios RRHH y JEFE_RRHH con sus roles.
 3. Crear un cargo y una jornada. Intenta crear una jornada inválida (11 horas diarias, 7 días, colación de 10 minutos) y observa los avisos.
 4. Crear personas (una a mano, varias con la planilla CSV) y contratos de distinto tipo.
@@ -123,10 +139,14 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 9. Registrar el término de un trabajador y calcular su finiquito.
 
 ## Intenta romperlo
-- Entrar con la contraseña mal 6 veces: debe bloquearte unos minutos.
+- Entrar con la contraseña mal 6 veces: debe bloquearte unos minutos. Lo mismo con 5 códigos de verificación incorrectos.
+- Usar el mismo código de la app dos veces seguidas, o un código de recuperación ya usado: deben rechazarse.
+- Cerrar sesión y presionar **Atrás** en el navegador: no debe mostrar datos.
+- Iniciar sesión en dos navegadores y usar **Mi seguridad → Cerrar las demás sesiones**: el otro debe quedar fuera.
+- Dejar la sesión sin usar más de una hora: debe pedir ingresar de nuevo.
 - Usar un enlace o pantalla de otra empresa, o de otro rol, cambiando el contexto.
 - Dejar campos vacíos, fechas absurdas (término antes del inicio), montos negativos, RUT inválidos.
-- Cerrar el navegador y volver: la sesión dura 8 horas.
+- Cerrar el navegador y volver: normalmente tendrás que ingresar de nuevo (la sesión vive mientras el navegador esté abierto, con un máximo de 8 horas).
 - Probar en el celular.
 
 ## Cómo reportar

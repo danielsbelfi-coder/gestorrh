@@ -53,7 +53,7 @@ Cada usuario de plataforma recibe una contraseña inicial aleatoria que se muest
 | `TOTP_CLAVE_CIFRADO` | Clave de 32 bytes para cifrar los secretos del 2FA. `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
 | `APP_ORIGEN` | Dirección de la app sin ruta (`https://...`). Obligatoria en producción; en local se usa `http://localhost:PORT` |
 
-Al iniciar, el servidor revisa la configuración y **no arranca** si falta algo grave (clave débil, sin vencimiento de sesión, sin contraseña de BD en producción).
+Al iniciar, el servidor revisa la configuración y **no arranca** si falta algo grave (sin `TOTP_CLAVE_CIFRADO` válida, sin `APP_ORIGEN` con https en producción, sin contraseña de BD en producción).
 
 > **Nunca ejecutes `npx sequelize-cli db:seed:all`.** Incluye usuarios de prueba con contraseñas conocidas. Para cargar los datos base usa siempre `npm run sembrar-base`. Para un seeder puntual: `npx sequelize-cli db:seed --seed archivo.js`.
 
@@ -62,7 +62,7 @@ Al iniciar, el servidor revisa la configuración y **no arranca** si falta algo 
 | Rol | Qué hace |
 |---|---|
 | Comercial (plataforma) | Crea cuentas de clientes con su administrador y gestiona planes |
-| Soporte (plataforma) | Mantiene parámetros globales (UF, UTM, topes, feriados). Solo ve empresas de clientes si un administrador de la cuenta lo autoriza por 1, 4, 8 o 24 h (solo lectura, sin número de cuenta completo); todo queda registrado 2 años y el cliente lo ve. Puede restablecer la contraseña del administrador principal, con motivo |
+| Soporte (plataforma) | Mantiene parámetros globales (UF, UTM, topes, feriados). Solo ve empresas de clientes si un administrador de la cuenta lo autoriza por 1, 4, 8 o 24 h, y de a una (la que elige, cabecera `X-Empresa`); solo lectura, sin número de cuenta completo; todo queda registrado 2 años y el cliente lo ve. Puede restablecer el acceso del administrador principal (contraseña y 2FA), con motivo |
 | ADMIN de empresa | Control total de su empresa. Firma contratos y anexos, aprueba asistencia, variables y resúmenes |
 | JEFE_RRHH | Igual que RRHH, y además firma y aprueba |
 | RRHH | Ingresa y prepara la información; no firma ni aprueba |
@@ -85,7 +85,7 @@ Guía paso a paso para la prueba cerrada (Render + Neon, gratis): [`docs/DESPLIE
 npm test
 ```
 
-Las pruebas cubren las reglas de cálculo (remuneraciones, jornadas, libro de asistencia, feriados, configuración y límite de intentos).
+Las pruebas cubren las reglas de cálculo (remuneraciones, jornadas, libro de asistencia, feriados, configuración y límite de intentos) y las de seguridad de acceso (TOTP con los vectores del RFC 6238, cifrado, códigos de recuperación, reglas de sesión y CSRF, empresa de soporte).
 
 ## Scripts
 
@@ -94,7 +94,8 @@ Las pruebas cubren las reglas de cálculo (remuneraciones, jornadas, libro de as
 | `npm run sembrar-base` | Datos base en una base nueva y vacía |
 | `npm run crear-usuario-plataforma -- <soporte\|comercial> <correo> "<nombre>"` | Crea usuarios de plataforma |
 | `npm run abrir-parametros` | Abre los parámetros del mes siguiente |
-| `npm run eliminar-vencidos` | Simula la eliminación de datos vencidos (con `--confirmar` borra de verdad) |
+| `npm run eliminar-vencidos` | Simula la eliminación de datos vencidos y sesiones vencidas (con `--confirmar` borra de verdad) |
+| `node scripts/reiniciar-acceso.js <correo>` | Restablece el acceso de un usuario: contraseña inicial nueva, 2FA desactivado y sesiones cerradas (para soporte y comercial, que no tienen a quién pedírselo) |
 
 ## Estructura
 
@@ -112,8 +113,11 @@ docs/            tutorial de uso
 
 ## Seguridad y datos personales
 
-- Límite de intentos de login: 5 fallos por correo en 15 minutos bloquean 15 minutos; además hay un límite por IP.
-- Los datos de trabajadores son datos personales (Ley 21.719, vigente desde el 01-12-2026). Soporte solo accede a una empresa con autorización vigente de un administrador de la cuenta, y cada consulta queda registrada (2 años). Antes de operar con datos reales siguen pendientes el segundo factor (2FA) y la sesión en cookie.
+- Límite de intentos de login: 5 fallos por correo en 15 minutos bloquean 15 minutos; además hay un límite por IP. Lo mismo para los códigos de verificación (por usuario).
+- Sesiones guardadas en el servidor: la cookie (`HttpOnly`, `SameSite=Strict`, `Secure` y prefijo `__Host-` en producción) lleva un identificador aleatorio y la base guarda solo su hash. Máximo 8 h; cierre por inactividad a los 60 min (30 para soporte y comercial). Cerrar sesión la borra en el servidor.
+- Protección CSRF: toda petición que escribe debe traer el token de la sesión (`X-CSRF-Token`) y venir del origen de la app (`APP_ORIGEN`).
+- Verificación en dos pasos (TOTP, RFC 6238), obligatoria para soporte, comercial y administradores de cuenta; secreto cifrado con AES-256-GCM (`TOTP_CLAVE_CIFRADO`) y 10 códigos de recuperación guardados como hash.
+- Los datos de trabajadores son datos personales (Ley 21.719, vigente desde el 01-12-2026). Soporte solo accede a una empresa con autorización vigente de un administrador de la cuenta, de a una por vez, y cada consulta queda registrada (2 años). Antes de operar con datos reales: plan pagado del hosting, contrato de tratamiento de datos (DPA) y revisión legal.
 - Reporte de problemas de seguridad: por mensaje directo al responsable, no en issues públicos.
 
 ## Limitaciones conocidas
