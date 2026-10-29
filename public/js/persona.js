@@ -31,11 +31,16 @@ function datosFormulario() {
         datos[campo] = textoONulo(campo)
     }
     datos.fecha_nacimiento = valor("fecha_nacimiento")
-    datos.afp_id = numeroONulo("afp_id")
     datos.afiliado_afc = valor("afiliado_afc") === "true"
     const esIsapre = datos.sistema_salud === "Isapre"
-    datos.isapre_id = esIsapre ? numeroONulo("isapre_id") : null
     datos.plan_isapre_codigo = esIsapre ? datos.plan_isapre_codigo : null
+    // En una persona existente, la AFP y la salud cambian solo con el historial de previsión.
+    if (persona) {
+        delete datos.sistema_salud
+        return datos
+    }
+    datos.afp_id = numeroONulo("afp_id")
+    datos.isapre_id = esIsapre ? numeroONulo("isapre_id") : null
     datos.plan_isapre_uf = esIsapre ? numeroONulo("plan_isapre_uf") : null
     return datos
 }
@@ -82,6 +87,8 @@ async function cargarCatalogos() {
     const activas = (lista) => lista.filter((x) => x.estado !== "inactivo").sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     llenarSelect(document.getElementById("afp_id"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Sin AFP / no informada")
     llenarSelect(document.getElementById("isapre_id"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
+    llenarSelect(document.getElementById("prevAfp"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Elige la AFP")
+    llenarSelect(document.getElementById("prevIsapre"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
 }
 
 // ---------- Modo edición ----------
@@ -103,9 +110,16 @@ async function cargarPersona() {
     document.getElementById("botonGuardar").textContent = "Guardar cambios"
     document.title = `GestorRH - ${nombreCompleto(persona)}`
 
+    // La previsión vigente se muestra, pero se cambia en el historial.
+    for (const id of ["afp_id", "sistema_salud", "isapre_id", "plan_isapre_uf"]) {
+        document.getElementById(id).disabled = true
+    }
+    document.getElementById("notaPrevision").hidden = false
+
     document.getElementById("seccionRelaciones").hidden = false
     document.getElementById("seccionSituacion").hidden = false
-    await Promise.all([cargarRelaciones(), cargarSituaciones()])
+    document.getElementById("seccionPrevision").hidden = false
+    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones()])
 }
 
 async function cargarRelaciones() {
@@ -196,6 +210,95 @@ document.getElementById("situaciones").addEventListener("click", async function 
     }
     mensaje("info", "Registro eliminado.")
     cargarSituaciones()
+})
+
+// ---------- Historial de previsión ----------
+
+const DESDE_SIEMPRE = "1900-01-01"
+
+function textoDesde(desde) {
+    const texto = String(desde).slice(0, 10)
+    return texto === DESDE_SIEMPRE ? "Desde siempre" : texto.slice(0, 7).split("-").reverse().join("-")
+}
+
+async function cargarPrevisiones() {
+    const resultado = await llamarApi(`/api/personas/${personaId}/previsiones`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo cargar el historial de previsión")
+        return
+    }
+    document.getElementById("previsiones").innerHTML = `<table>
+        <thead><tr><th>Desde</th><th>AFP</th><th>Salud</th><th>Plan (UF)</th><th></th></tr></thead>
+        <tbody>${resultado.datos.map((p) => `
+            <tr>
+                <td>${escaparHtml(textoDesde(p.desde))}</td>
+                <td>${escaparHtml(p.Afp?.nombre ?? "Sin AFP")}</td>
+                <td>${escaparHtml(p.sistema_salud === "Isapre" ? (p.Isapre?.nombre ?? "Isapre") : (p.sistema_salud ?? "Sin informar"))}</td>
+                <td class="numero">${p.sistema_salud === "Isapre" ? escaparHtml(Number(p.plan_isapre_uf).toLocaleString("es-CL", { maximumFractionDigits: 4 })) : ""}</td>
+                <td>${String(p.desde).slice(0, 10) === DESDE_SIEMPRE ? "" : `<button type="button" class="chico secundario" data-eliminar-prevision="${p.id}">Eliminar</button>`}</td>
+            </tr>`).join("")}
+        </tbody>
+    </table>`
+}
+
+// Después de un cambio, la ficha muestra la previsión que quedó vigente hoy.
+async function refrescarVigente() {
+    const resultado = await llamarApi(`/api/personas/${personaId}`)
+    if (resultado.status === 200) {
+        persona = resultado.datos
+        llenarFormulario(persona)
+    }
+}
+
+function mostrarCamposIsaprePrevision() {
+    const esIsapre = valor("prevSistema") === "Isapre"
+    document.querySelectorAll(".solo-isapre-prev").forEach((campo) => { campo.hidden = !esIsapre })
+    document.getElementById("prevIsapre").required = esIsapre
+    document.getElementById("prevPlan").required = esIsapre
+}
+document.getElementById("prevSistema").addEventListener("change", mostrarCamposIsaprePrevision)
+
+document.getElementById("prevInicial").addEventListener("change", function () {
+    const desde = document.getElementById("prevDesde")
+    desde.disabled = this.checked
+    desde.required = !this.checked
+})
+
+document.getElementById("formPrevision").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const esIsapre = valor("prevSistema") === "Isapre"
+    const inicial = document.getElementById("prevInicial").checked
+
+    const creada = await crearRegistro(`/api/personas/${personaId}/previsiones`, {
+        desde: inicial ? "siempre" : valor("prevDesde"),
+        afp_id: numeroONulo("prevAfp"),
+        sistema_salud: valor("prevSistema"),
+        isapre_id: esIsapre ? numeroONulo("prevIsapre") : null,
+        plan_isapre_uf: esIsapre ? valor("prevPlan") : null
+    }, inicial ? "Previsión inicial corregida." : "Cambio de previsión registrado.")
+
+    if (creada) {
+        this.reset()
+        document.getElementById("prevDesde").disabled = false
+        mostrarCamposIsaprePrevision()
+        await Promise.all([cargarPrevisiones(), refrescarVigente()])
+    }
+})
+
+document.getElementById("previsiones").addEventListener("click", async function (evento) {
+    const id = evento.target.closest("[data-eliminar-prevision]")?.dataset.eliminarPrevision
+    if (!id || !confirm("¿Eliminar este cambio de previsión? Desde ese mes volverá a regir el registro anterior.")) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/personas/${personaId}/previsiones/${id}`, { method: "DELETE" })
+    if (resultado.status !== 204) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo eliminar")
+        return
+    }
+    mensaje("info", "Cambio de previsión eliminado.")
+    await Promise.all([cargarPrevisiones(), refrescarVigente()])
 })
 
 // ---------- Guardar ----------

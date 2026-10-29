@@ -19,6 +19,7 @@ const PASOS_EMPRESA = [
     { tabla: "finiquitos", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "trabajadores", filtro: "empresa_id = :empresaId" },
     { tabla: "situaciones_previsionales", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
+    { tabla: "previsiones_persona", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "personas", filtro: "empresa_id = :empresaId" },
     { tabla: "jornadas", filtro: "empresa_id = :empresaId" },
     { tabla: "cargos", filtro: "empresa_id = :empresaId" },

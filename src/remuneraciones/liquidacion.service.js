@@ -303,17 +303,21 @@ async function prepararCalculo(periodo, trabajador) {
 
     const persona = trabajador.Persona
 
-    if (persona.Afp === null) {
-        throw new ConflictError("El trabajador no tiene una AFP asignada")
+    // La previsión (AFP y salud) que regía en el mes del periodo, no la de hoy.
+    const { previsionEnMes } = require("../trabajadores/prevision_persona.service.js")
+    const prevision = await previsionEnMes(persona, periodo.anio, periodo.mes)
+
+    if (!prevision.afp) {
+        throw new ConflictError("El trabajador no tiene una AFP asignada para este mes")
     }
-    if (persona.Afp.comision === null) {
+    if (prevision.afp.comision === null) {
         throw new ConflictError("La AFP del trabajador no tiene comisión registrada")
     }
-    if (persona.sistema_salud === null) {
-        throw new ConflictError("El trabajador no tiene un sistema de salud asignado")
+    if (!prevision.sistema_salud) {
+        throw new ConflictError("El trabajador no tiene un sistema de salud asignado para este mes")
     }
-    if (persona.sistema_salud === "Isapre" && persona.plan_isapre_uf === null) {
-        throw new ConflictError("El trabajador no tiene un valor de plan de isapre")
+    if (prevision.sistema_salud === "Isapre" && prevision.plan_isapre_uf === null) {
+        throw new ConflictError("El trabajador no tiene un valor de plan de isapre para este mes")
     }
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
@@ -371,9 +375,9 @@ async function prepararCalculo(periodo, trabajador) {
         variables: aprobadas,
         minutosAtraso: resumen.minutos_atraso,
         ingresoMinimoMensual: parametros.ingresoMinimoMensual,
-        tasaAfp: reglas.afp ? parametros.cotizacionAfp + Number(persona.Afp.comision) : 0,
+        tasaAfp: reglas.afp ? parametros.cotizacionAfp + Number(prevision.afp.comision) : 0,
         tasaSalud: parametros.tasaSalud,
-        planSaludUF: persona.sistema_salud === "Isapre" ? Number(persona.plan_isapre_uf) : 0,
+        planSaludUF: prevision.sistema_salud === "Isapre" ? Number(prevision.plan_isapre_uf) : 0,
         topeImponibleUF: parametros.topeImponibleUF,
         valorUF: parametros.valorUF,
         valorUTM: parametros.valorUTM,
@@ -425,8 +429,9 @@ async function prepararCalculo(periodo, trabajador) {
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
-        afp: { codigo: persona.Afp.codigo, tasa: datos.tasaAfp },
-        salud: { sistema: persona.sistema_salud, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
+        // Los identificadores permiten que el PDF, el LRE y Previred usen la previsión de este mes aunque la persona cambie después.
+        afp: { id: prevision.afp.id, codigo: prevision.afp.codigo, tasa: datos.tasaAfp },
+        salud: { sistema: prevision.sistema_salud, isapre_id: prevision.sistema_salud === "Isapre" ? prevision.isapre?.id ?? null : null, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         saldoAnterior: saldoPendiente,

@@ -69,6 +69,7 @@
 
             <section class="tarjeta">
                 <h2>Previsión y salud</h2>
+                <p class="texto-suave" id="notaPrevision" hidden>Es la previsión <strong>vigente hoy</strong>. Para cambiar la AFP, la salud o el plan, registra el cambio en <a href="#seccionPrevision">Historial de previsión</a>, indicando desde qué mes rige.</p>
                 <div class="campos">
                     <label>AFP<select id="afp_id"></select></label>
                     <label>Afiliado al seguro de cesantía
@@ -116,6 +117,26 @@
         <section class="tarjeta" id="seccionRelaciones" hidden>
             <h2>Relaciones con la empresa</h2>
             <div id="relaciones"></div>
+        </section>
+
+        <section class="tarjeta" id="seccionPrevision" hidden>
+            <h2>Historial de previsión</h2>
+            <p class="texto-suave">AFP y salud por mes. Cada registro rige desde su mes hasta el siguiente; el cálculo de cada liquidación usa el que regía ese mes. No se aceptan cambios que alcancen meses ya cerrados.</p>
+            <div id="previsiones"></div>
+            <form id="formPrevision">
+                <label>Desde (mes)<input type="month" id="prevDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
+                <label>AFP<select id="prevAfp" required></select></label>
+                <label>Sistema de salud
+                    <select id="prevSistema" required>
+                        <option value="Fonasa">Fonasa</option>
+                        <option value="Isapre">Isapre</option>
+                    </select>
+                </label>
+                <label class="solo-isapre-prev" hidden>Isapre<select id="prevIsapre"></select></label>
+                <label class="solo-isapre-prev" hidden>Valor del plan (UF)<input type="number" id="prevPlan" min="0" step="0.0001"></label>
+                <label class="credencial-confirma"><input type="checkbox" id="prevInicial"> Corregir la previsión inicial («desde siempre»)</label>
+                <button type="submit">Registrar cambio</button>
+            </form>
         </section>
 
         <section class="tarjeta" id="seccionSituacion" hidden>

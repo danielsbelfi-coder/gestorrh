@@ -1,4 +1,5 @@
-const { Persona, Usuario, Trabajador, Afp, Isapre } = require("../shared/associations.js")
+const { Persona, Usuario, Trabajador, Afp, Isapre, PrevisionPersona } = require("../shared/associations.js")
+const { DESDE_SIEMPRE } = require("./prevision_del_mes.js")
 const { sequelize } = require("../shared/database.js")
 const { validarImportacion, MAXIMO_FILAS } = require("./importacion_personas.js")
 const { Op } = require("sequelize")
@@ -8,7 +9,22 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 
 
-const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco", "tipo_cuenta", "numero_cuenta", "afp_id", "sistema_salud", "isapre_id", "plan_isapre_codigo", "plan_isapre_uf", "afiliado_afc"]
+const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco", "tipo_cuenta", "numero_cuenta", "plan_isapre_codigo", "afiliado_afc"]
+
+// La AFP y la salud se indican al crear la persona (quedan como su previsión «desde siempre»).
+// Después solo cambian con el historial de previsión (prevision_persona.service.js), que mantiene estos campos al día.
+const CAMPOS_PREVISION = ["afp_id", "sistema_salud", "isapre_id", "plan_isapre_uf"]
+
+async function crearPrevisionInicial(persona, transaction) {
+    await PrevisionPersona.create({
+        persona_id: persona.id,
+        desde: DESDE_SIEMPRE,
+        afp_id: persona.afp_id ?? null,
+        sistema_salud: persona.sistema_salud ?? null,
+        isapre_id: persona.isapre_id ?? null,
+        plan_isapre_uf: persona.plan_isapre_uf ?? null
+    }, { transaction })
+}
 
 async function crearPersona(datos, empresasPermitidas, usuarioId) {
     if (!empresasPermitidas.includes(Number(datos.empresa_id))) {
@@ -25,8 +41,13 @@ async function crearPersona(datos, empresasPermitidas, usuarioId) {
     }
 
     try {
-        return await Persona.create({ ...datos, rut, dv }, {
-            fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES]
+        return await sequelize.transaction(async (transaction) => {
+            const persona = await Persona.create({ ...datos, rut, dv }, {
+                fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES, ...CAMPOS_PREVISION],
+                transaction
+            })
+            await crearPrevisionInicial(persona, transaction)
+            return persona
         })
     } catch (error) {
         if (error.name === "SequelizeUniqueConstraintError") {
@@ -102,9 +123,10 @@ async function importarPersonas(datos, empresasPermitidas, usuarioId) {
     await sequelize.transaction(async (transaction) => {
         for (const { persona, postulante } of personas) {
             const creada = await Persona.create({ ...persona, empresa_id: empresaId }, {
-                fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES],
+                fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES, ...CAMPOS_PREVISION],
                 transaction
             })
+            await crearPrevisionInicial(creada, transaction)
 
             if (postulante !== null) {
                 await Trabajador.create({ persona_id: creada.id, empresa_id: empresaId, fecha_ingreso: postulante.fecha_ingreso }, {

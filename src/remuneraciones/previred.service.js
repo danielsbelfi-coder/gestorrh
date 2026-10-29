@@ -1,3 +1,4 @@
+const { aplicarPrevisionGuardada } = require("./prevision_liquidacion.js")
 const { Asistencia, Liquidacion, LiquidacionLinea, Trabajador, Persona, Afp, Isapre,
     Empresa, Mutualidad, ContratoTrabajo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
@@ -57,6 +58,8 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
     if (liquidaciones.length === 0) {
         throw new NotFoundError("No hay liquidaciones en este periodo")
     }
+    // La AFP y la salud con que se calculó cada liquidación (no las actuales de la persona).
+    await aplicarPrevisionGuardada(liquidaciones)
 
     const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
     const limitesTramo = await obtenerLimitesTramo(primerDia)

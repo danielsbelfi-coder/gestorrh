@@ -3,6 +3,7 @@ const { Liquidacion, LiquidacionLinea, PeriodoRemuneracion, Empresa, Trabajador,
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { NotFoundError } = require("../shared/errors.js")
 const { armarDocumento } = require("./armar_documento.js")
+const { aplicarPrevisionGuardada } = require("./prevision_liquidacion.js")
 
 
 async function obtenerLiquidacionCompleta(liquidacionId) {
@@ -15,6 +16,7 @@ async function obtenerLiquidacionCompleta(liquidacionId) {
         order: [[LiquidacionLinea, "orden", "ASC"]]
     })
 
+    await aplicarPrevisionGuardada(liquidacion)
     const cargo = await Cargo.findByPk(liquidacion.snapshot_contrato.cargo_id)
 
     return { liquidacion, cargo }

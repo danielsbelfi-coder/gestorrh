@@ -64,6 +64,9 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 ### Acceso de soporte (administradores de la cuenta)
 Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **una empresa a la vez** (la que elige en su barra superior). Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas) también los intentos de entrar a una empresa que no autorizaste, y cualquier restablecimiento de acceso del administrador principal; se guarda 2 años.
 
+### Historial de previsión (ficha de la persona)
+La AFP, el sistema de salud y el plan de isapre se registran **por mes** en la ficha de la persona, sección **Historial de previsión**: «Registrar cambio» indicando desde qué mes rige. Cada liquidación se calcula con la previsión que regía en su mes, y el PDF, el LRE y Previred de meses anteriores siguen mostrando la de ese mes aunque la persona cambie después. Arriba, en «Previsión y salud», se ve la vigente hoy. No se aceptan cambios que alcancen meses ya cerrados: en ese caso se reabre el periodo o se regulariza en Previred o con la isapre.
+
 ### Mi seguridad (todos los usuarios)
 En el pie del menú, **Mi seguridad** reúne:
 - **Cambiar contraseña** (cierra tus sesiones en otros navegadores).
