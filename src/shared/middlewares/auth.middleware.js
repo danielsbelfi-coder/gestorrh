@@ -16,6 +16,14 @@ const RUTAS_CUENTA_CANCELADA = [
     "GET /api/auth/usuario",
     "PATCH /api/auth/cambiar-password",
     "POST /api/auth/logout",
+    "POST /api/auth/2fa/verificar",
+    "POST /api/auth/2fa/inscripcion/iniciar",
+    "POST /api/auth/2fa/inscripcion/confirmar",
+    "GET /api/auth/2fa",
+    "POST /api/auth/2fa/codigos",
+    "POST /api/auth/2fa/desactivar",
+    "GET /api/auth/sesiones",
+    "POST /api/auth/sesiones/cerrar-otras",
     "GET /api/cuenta/empresas"
 ]
 
@@ -82,11 +90,7 @@ const verificarSesion = async (req, res, next) => {
         }
 
         // Pasos obligatorios pendientes (código del 2FA, cambiar la contraseña, inscribir el 2FA).
-        let estado = estadoDeAcceso(sesion, usuario)
-        // TEMPORAL hasta S4: todavía no existen las pantallas para inscribir el 2FA, así que no se exige.
-        if (estado === "activar_2fa") {
-            estado = "normal"
-        }
+        const estado = estadoDeAcceso(sesion, usuario)
         if (!rutaPermitida(estado, req.method, req.originalUrl)) {
             return res.status(403).json({ error: mensajeDeEstado(estado), paso: estado })
         }

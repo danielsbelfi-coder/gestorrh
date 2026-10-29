@@ -200,7 +200,7 @@ function armarLateral(usuario) {
                     <div class="lateral-usuario-email">${escaparHtml(usuario.email ?? "")}</div>
                 </div>
             </div>
-            <a class="lateral-enlace" href="cambiar-password.html">${icono("clave")}<span>Cambiar contraseña</span></a>
+            <a class="lateral-enlace${paginaActual === "seguridad.html" ? " activo" : ""}" href="seguridad.html">${icono("clave")}<span>Mi seguridad</span></a>
             <button type="button" class="lateral-enlace lateral-boton" id="botonSalir">${icono("salir")}<span>Cerrar sesión</span></button>
         </div>`
 }
@@ -223,6 +223,11 @@ async function iniciarLayout() {
         window.location.href = "cambiar-password.html"
         return
     }
+    // Soporte, comercial y admins de cuenta deben tener la verificación en dos pasos antes de seguir.
+    if (usuario.requiere_2fa === true && usuario.totp_activo !== true) {
+        window.location.href = "activar-2fa.html"
+        return
+    }
 
     // La pantalla de inicio de soporte es su panel de cuentas y accesos.
     if (usuario.rol_plataforma === "soporte" && (location.pathname.endsWith("/") || location.pathname.endsWith("index.html"))) {
@@ -233,7 +238,7 @@ async function iniciarLayout() {
     document.body.classList.add("app")
 
     // Soporte solo mira las pantallas de clientes: se ocultan los botones de crear y guardar (el servidor igual los rechazaría).
-    const PAGINAS_DE_SOPORTE = ["soporte.html", "parametros.html", "feriados.html", "cambiar-password.html"]
+    const PAGINAS_DE_SOPORTE = ["soporte.html", "parametros.html", "feriados.html", "cambiar-password.html", "seguridad.html"]
     if (usuario.rol_plataforma === "soporte" && !PAGINAS_DE_SOPORTE.includes(location.pathname.split("/").pop())) {
         document.body.classList.add("solo-lectura")
     }

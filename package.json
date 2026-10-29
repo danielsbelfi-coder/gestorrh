@@ -23,6 +23,7 @@
     "pdfkit": "^0.20.2",
     "pg": "^8.23.0",
     "pg-hstore": "^2.3.4",
+    "qrcode": "^1.5.4",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

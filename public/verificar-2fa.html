@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Verificación en dos pasos</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+
+<body>
+    <div class="acceso-centrado">
+        <div class="acceso-tarjeta">
+            <a class="lateral-marca marca-oscura" href="login.html"><span class="marca-logo">RH</span><span>GestorRH</span></a>
+            <h2>Verificación en dos pasos</h2>
+            <p id="explicacion">Abre la app de autenticación de tu celular y escribe el código de 6 dígitos de GestorRH.</p>
+            <p id="mensajeError" role="alert"></p>
+            <p id="mensaje" role="status"></p>
+            <form id="formCodigo">
+                <label><span id="etiquetaCodigo">Código de la app</span>
+                    <input type="text" id="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
+                </label>
+                <button type="submit" id="botonVerificar">Verificar</button>
+            </form>
+            <button type="button" class="boton secundario" id="botonContinuar" hidden>Continuar</button>
+            <p class="enlace-2fa"><a href="#" id="cambiarTipo">No tengo el celular: usar un código de recuperación</a></p>
+            <a class="volver" href="#" id="volverLogin">Volver al inicio de sesión</a>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/verificar-2fa.js"></script>
+</body>
+
+</html>

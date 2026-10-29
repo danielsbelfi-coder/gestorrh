@@ -1656,3 +1656,36 @@ button.chico.peligro:hover { background: var(--peligro); color: #fff; border-col
 .form-marca label { display: grid; gap: 4px; }
 .form-marca .campo-ancho { flex: 1 1 260px; }
 .form-marca p { flex-basis: 100%; margin: 0; }
+
+/* Inscripción de la verificación en dos pasos. */
+.tarjeta-2fa {
+    max-width: 480px;
+}
+
+.pasos-2fa {
+    padding-left: 20px;
+    display: grid;
+    gap: 10px;
+}
+
+.qr-2fa {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.qr-2fa img {
+    background: #fff;
+    padding: 6px;
+    border-radius: var(--radio-chico);
+}
+
+.pasos-2fa code {
+    font-size: 0.95em;
+    letter-spacing: 0.04em;
+    word-break: break-all;
+}
+
+.enlace-2fa {
+    margin-top: 14px;
+}

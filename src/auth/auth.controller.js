@@ -2,8 +2,9 @@ const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
 const { sumarDias } = require("../shared/fechas.js")
 const { autenticarUsuario, cambiarPassword } = require("./auth.service.js")
 const { limiteLogin } = require("./limite_login.js")
-const { AuthenticationError } = require("../shared/errors.js")
+const { AuthenticationError, ConflictError } = require("../shared/errors.js")
 const sesiones = require("./sesion.service.js")
+const dosPasos = require("./dos_pasos.service.js")
 const { origenDeLaApp } = require("../shared/configuracion.js")
 const { opcionesCookie, leerCookie, origenPermitido, requiere2fa } = require("./reglas_sesion.js")
 const { NOMBRE_COOKIE, PRODUCCION } = require("../shared/middlewares/auth.middleware.js")
@@ -41,6 +42,13 @@ async function login(req, res) {
     // Si el navegador ya tenía una sesión, se cierra: no quedan sesiones huérfanas.
     await sesiones.buscarYCerrarPorToken(leerCookie(req.headers.cookie, NOMBRE_COOKIE))
 
+    // Con 2FA activo, la sesión nace "pendiente": solo sirve para escribir el código (5 minutos).
+    if (resultado.usuario.totp_activo === true) {
+        const pendiente = await sesiones.crearSesion(resultado.usuario, { estado: "pendiente_2fa", ...datosDeLaPeticion(req) })
+        fijarCookie(res, pendiente.token)
+        return res.status(200).json({ paso: "2fa", csrfToken: pendiente.csrfToken })
+    }
+
     const { token, csrfToken } = await sesiones.crearSesion(resultado.usuario, { estado: "activa", ...datosDeLaPeticion(req) })
     fijarCookie(res, token)
 
@@ -50,6 +58,64 @@ async function login(req, res) {
         cuentaCancelada: resultado.cuentaCancelada,
         csrfToken
     })
+}
+
+// Segundo paso del ingreso: código de la app o de recuperación. Si sirve, la sesión pendiente se cambia por una
+// completa con un identificador nuevo (el de la sesión pendiente deja de servir).
+async function verificarSegundoPaso(req, res) {
+    if (req.sesion.estado !== "pendiente_2fa") {
+        throw new ConflictError("La sesión ya está verificada")
+    }
+
+    let resultado
+    try {
+        resultado = await dosPasos.consumirCodigo(req.usuario, req.body?.codigo)
+    } catch (error) {
+        if (error.bloqueado === true) {
+            await sesiones.cerrarSesion(req.sesion.id)
+            res.clearCookie(NOMBRE_COOKIE, opcionesCookie(PRODUCCION))
+            return res.status(429).json({ error: error.message })
+        }
+        throw error
+    }
+
+    await sesiones.cerrarSesion(req.sesion.id)
+    const { token, csrfToken } = await sesiones.crearSesion(req.usuario, { estado: "activa", ...datosDeLaPeticion(req) })
+    fijarCookie(res, token)
+
+    res.status(200).json({
+        paso: "listo",
+        debeCambiarPassword: req.usuario.debe_cambiar_password === true,
+        cuentaCancelada: req.cuentaEstado === "cancelada",
+        csrfToken,
+        tipoCodigo: resultado.tipo,
+        codigosRestantes: resultado.codigosRestantes
+    })
+}
+
+async function estadoDosPasos(req, res) {
+    res.status(200).json(await dosPasos.estado(req.usuario.id))
+}
+
+async function iniciarInscripcion(req, res) {
+    res.status(200).json(await dosPasos.iniciarInscripcion(req.usuario.id))
+}
+
+// Al activar el 2FA se cierran las demás sesiones: las abiertas antes no pasaron por el segundo paso.
+async function confirmarInscripcion(req, res) {
+    const codigos = await dosPasos.confirmarInscripcion(req.usuario.id, req.body?.codigo)
+    await sesiones.cerrarOtrasSesiones(req.usuario.id, req.sesion.id)
+    res.status(200).json({ codigos })
+}
+
+async function regenerarCodigos(req, res) {
+    res.status(200).json({ codigos: await dosPasos.regenerarCodigos(req.usuario, req.body?.codigo) })
+}
+
+async function desactivarDosPasos(req, res) {
+    const { password, codigo } = req.body ?? {}
+    await dosPasos.desactivar(req.usuario.id, password, codigo)
+    res.status(200).json({ mensaje: "Verificación en dos pasos desactivada", requiere_2fa: requiere2fa(req.usuario) })
 }
 
 async function logout(req, res) {
@@ -110,6 +176,12 @@ function usuarioEnUso(req, res) {
 }
 
 module.exports = {
+    verificarSegundoPaso,
+    estadoDosPasos,
+    iniciarInscripcion,
+    confirmarInscripcion,
+    regenerarCodigos,
+    desactivarDosPasos,
     login,
     logout,
     cambiar,

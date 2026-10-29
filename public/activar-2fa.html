@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Activar verificación en dos pasos</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+
+<body>
+    <div class="acceso-centrado">
+        <div class="acceso-tarjeta tarjeta-2fa">
+            <a class="lateral-marca marca-oscura" href="index.html"><span class="marca-logo">RH</span><span>GestorRH</span></a>
+            <h2>Activar verificación en dos pasos</h2>
+            <p id="obligatorio" hidden><strong>Tu perfil la requiere:</strong> puede ver datos de muchas personas, así que además de la contraseña se pide un código de tu celular.</p>
+            <ol class="pasos-2fa">
+                <li>Instala en tu celular una app de autenticación, por ejemplo <strong>Google Authenticator</strong> o <strong>Microsoft Authenticator</strong>.</li>
+                <li>En la app, agrega una cuenta y escanea este código:
+                    <div class="qr-2fa"><img id="qr" alt="Código QR para la app de autenticación" width="220" height="220"></div>
+                    <p class="texto-suave">¿No puedes escanear? Ingresa esta clave a mano (tipo «basada en tiempo»):<br><code id="secreto"></code></p>
+                </li>
+                <li>Escribe el código de 6 dígitos que muestra la app:</li>
+            </ol>
+            <p id="mensajeError" role="alert"></p>
+            <form id="formConfirmar">
+                <label>Código de la app
+                    <input type="text" id="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required>
+                </label>
+                <button type="submit" id="botonConfirmar">Activar</button>
+            </form>
+            <a class="volver" href="#" id="enlaceSalida">Cerrar sesión</a>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/dos-pasos.js"></script>
+    <script src="js/activar-2fa.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Mi seguridad</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/modal.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Mi seguridad">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Mi seguridad</h1>
+                <p>Tu contraseña, la verificación en dos pasos y los lugares donde tienes la sesión abierta.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta">
+            <h2>Contraseña</h2>
+            <p class="texto-suave">Al cambiarla se cierran tus sesiones en otros navegadores.</p>
+            <div class="acciones"><a class="boton secundario" href="cambiar-password.html">Cambiar contraseña</a></div>
+        </section>
+
+        <section class="tarjeta">
+            <h2>Verificación en dos pasos</h2>
+            <p id="estado2fa" class="texto-suave">Cargando…</p>
+            <div class="acciones" id="acciones2fa"></div>
+        </section>
+
+        <section class="tarjeta">
+            <h2>Sesiones abiertas</h2>
+            <p class="texto-suave">Cada navegador donde iniciaste sesión. Si ves uno que no reconoces, ciérralo y cambia tu contraseña.</p>
+            <div class="tabla-marco">
+                <table>
+                    <thead><tr><th>Navegador</th><th>IP</th><th>Inicio</th><th>Último uso</th></tr></thead>
+                    <tbody id="tablaSesiones"></tbody>
+                </table>
+            </div>
+            <div class="acciones"><button type="button" class="boton secundario" id="cerrarOtras">Cerrar las demás sesiones</button></div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/dos-pasos.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/seguridad.js"></script>
+</body>
+
+</html>

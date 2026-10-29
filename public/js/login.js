@@ -4,15 +4,7 @@
 const ACCESOS = {
     usuario: {
         ruta: "/api/auth/login",
-        destino(datos) {
-            if (datos.debeCambiarPassword === true) {
-                return "cambiar-password.html"
-            }
-            if (datos.cuentaCancelada === true) {
-                return "empresas.html"
-            }
-            return "index.html"
-        }
+        destino: destinoTrasIngreso
     }
 }
 

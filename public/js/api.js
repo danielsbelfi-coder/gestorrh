@@ -68,6 +68,20 @@ async function llamarApi(ruta, opciones = {}, reintento = false) {
     return { status: respuesta.status, datos }
 }
 
+// A dónde ir después de ingresar (login o código del 2FA), según los pasos pendientes.
+function destinoTrasIngreso(datos) {
+    if (datos.paso === "2fa") {
+        return "verificar-2fa.html"
+    }
+    if (datos.debeCambiarPassword === true) {
+        return "cambiar-password.html"
+    }
+    if (datos.cuentaCancelada === true) {
+        return "empresas.html"
+    }
+    return "index.html"
+}
+
 // Sesión terminada (vencida, cerrada en otro lado o inexistente): se vuelve al login.
 function sesionVencida() {
     guardarCsrf(null)
