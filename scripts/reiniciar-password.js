@@ -25,7 +25,7 @@ async function main() {
 
     const { password, hash } = await generarPasswordInicial()
     await Usuario.update(
-        { password_hash: hash, debe_cambiar_password: true, estado: "activo" },
+        { password_hash: hash, debe_cambiar_password: true, estado: "activo", password_cambiado_en: new Date() },
         { where: { id: usuarios[0].id } }
     )
 

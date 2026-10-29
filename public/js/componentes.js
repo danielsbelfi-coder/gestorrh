@@ -417,7 +417,11 @@ function recordarPeriodo(id) {
 
 function descargarCsv(nombreArchivo, columnas, registros) {
     const celda = (valor) => {
-        const texto = String(valor ?? "")
+        let texto = String(valor ?? "")
+        // Un texto que empieza con = + - @ Excel lo trata como fórmula: se antepone un apóstrofo (los números negativos quedan igual).
+        if (typeof valor !== "number" && /^[=+\-@\t\r]/.test(texto) && Number.isNaN(Number(texto))) {
+            texto = "'" + texto
+        }
         return /[";\r\n]/.test(texto) ? `"${texto.replaceAll('"', '""')}"` : texto
     }
     const lineas = [

@@ -1,9 +1,9 @@
-const { ParametroLegal, TramoImpuesto } = require("../shared/associations.js")
+const { ParametroLegal, TramoImpuesto, ParametroHistorial, Usuario } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { ValidationError, NotFoundError } = require("../shared/errors.js")
 const { sequelize } = require("../shared/database.js")
 
-async function corregirValorParametro(id, datos) {
+async function corregirValorParametro(id, datos, usuarioId) {
     const parametro = await ParametroLegal.findByPk(id)
 
     if (parametro === null) {
@@ -17,9 +17,40 @@ async function corregirValorParametro(id, datos) {
         throw new ValidationError("El valor debe ser un número mayor o igual a 0")
     }
 
-    return await parametro.update(datos, {
-        fields: ["valor", "descripcion", "fuente"]
+    return await sequelize.transaction(async (transaction) => {
+        const valorAnterior = parametro.valor
+        const actualizado = await parametro.update(datos, {
+            fields: ["valor", "descripcion", "fuente"],
+            transaction
+        })
+
+        await ParametroHistorial.create({
+            accion: "correccion",
+            parametro_id: parametro.id,
+            codigo: parametro.codigo,
+            vigencia_desde: parametro.vigencia_desde,
+            valor_anterior: valorAnterior,
+            valor_nuevo: actualizado.valor,
+            detalle: typeof datos.fuente === "string" && datos.fuente.trim() !== "" ? `Fuente: ${datos.fuente.trim()}` : null,
+            usuario_id: usuarioId
+        }, { transaction })
+
+        return actualizado
     })
+}
+
+// Últimos cambios de parámetros (solo soporte). "tardio": se cargó o corrigió después de que empezó a regir.
+async function historialParametros(limite = 200) {
+    const filas = await ParametroHistorial.findAll({
+        include: [{ model: Usuario, as: "usuario", attributes: ["id", "nombre", "email"] }],
+        order: [["createdAt", "DESC"], ["id", "DESC"]],
+        limit: limite
+    })
+
+    return filas.map((fila) => ({
+        ...fila.toJSON(),
+        tardio: fila.createdAt.toISOString().slice(0, 10) > fila.vigencia_desde
+    }))
 }
 
 async function obtenerParametroVigente(codigo, fecha) {
@@ -99,7 +130,7 @@ async function parametrosDelMes(mesTexto) {
 
 // Copia al mes de destino los parámetros y tramos vigentes en el mes de origen (por defecto, el anterior)
 // que el destino todavía no tiene. Con simular = true hace todo y deshace al final (devuelve el mismo resumen).
-async function abrirMesParametros(destinoTexto, origenTexto, simular = true) {
+async function abrirMesParametros(destinoTexto, origenTexto, simular = true, usuarioId = null) {
     const destino = leerMes(destinoTexto)
     const origen = origenTexto ? leerMes(origenTexto) : destino && mesAnterior(destino)
 
@@ -121,7 +152,7 @@ async function abrirMesParametros(destinoTexto, origenTexto, simular = true) {
         const tramosDestino = (await vigentesEn(TramoImpuesto, primerDia, transaction)).length
         const copiarTramos = tramosDestino === 0 && tramos.length > 0
 
-        await ParametroLegal.bulkCreate(aCopiar.map((p) => ({
+        const creados = await ParametroLegal.bulkCreate(aCopiar.map((p) => ({
             codigo: p.codigo,
             nombre: p.nombre,
             valor: p.valor,
@@ -129,7 +160,19 @@ async function abrirMesParametros(destinoTexto, origenTexto, simular = true) {
             descripcion: p.descripcion,
             fuente: p.fuente,
             ...vigencia
-        })), { transaction })
+        })), { transaction, returning: true })
+
+        const detalleOrigen = `Copiado desde ${desdeOrigen.slice(0, 7)}`
+        await ParametroHistorial.bulkCreate([
+            ...creados.map((p) => ({
+                accion: "apertura_mes", parametro_id: p.id, codigo: p.codigo, vigencia_desde: primerDia,
+                valor_anterior: null, valor_nuevo: p.valor, detalle: detalleOrigen, usuario_id: usuarioId
+            })),
+            ...(copiarTramos ? [{
+                accion: "apertura_mes", parametro_id: null, codigo: "TRAMOS_IMPUESTO_UNICO", vigencia_desde: primerDia,
+                valor_anterior: null, valor_nuevo: null, detalle: `${detalleOrigen} (${tramos.length} tramos)`, usuario_id: usuarioId
+            }] : [])
+        ], { transaction })
 
         if (copiarTramos) {
             await TramoImpuesto.bulkCreate(tramos.map((t) => ({
@@ -177,5 +220,6 @@ module.exports = {
     obtenerParametroVigente,
     listarVersionesPorCodigo,
     parametrosDelMes,
-    abrirMesParametros
+    abrirMesParametros,
+    historialParametros
 }

@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken")
-const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta } = require("../associations");
+const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta, Rol } = require("../associations");
+const { ROLES_ASIGNABLES } = require("../permisos");
 const { AuthenticationError } = require("../errors");
 
 const RUTAS_CUENTA_CANCELADA = [
@@ -70,8 +71,10 @@ const verificarToken = async (req, res, next) => {
 
         req.usuario = usuario
 
+        // Solo los roles en uso dan acceso: un vínculo antiguo como SUPERVISOR o LECTURA no abre la empresa.
         const vinculos = await UsuarioEmpresaRol.findAll({
-            where: { usuario_id: usuario.id, estado: "activo" }
+            where: { usuario_id: usuario.id, estado: "activo" },
+            include: [{ model: Rol, attributes: ["codigo"], where: { codigo: ROLES_ASIGNABLES }, required: true }]
         })
 
         let empresasPermitidas = vinculos.map((vinculo) => vinculo.empresa_id)

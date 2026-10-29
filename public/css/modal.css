@@ -147,3 +147,14 @@
     width: auto;
     margin: 0;
 }
+
+/* Casilla "Mostrar las contraseñas" en la tarjeta de cambio de contraseña */
+.acceso-tarjeta .credencial-confirma {
+    flex-direction: row;
+    justify-content: flex-start;
+    font-weight: 500;
+}
+
+.acceso-tarjeta .credencial-confirma input {
+    width: auto;
+}

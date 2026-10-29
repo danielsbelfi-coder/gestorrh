@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const { AuthenticationError, ValidationError, ForbiddenError } = require("../shared/errors")
 const { condicionEmail } = require("../usuarios/email_usuario.js")
+const { problemasDePassword } = require("../shared/politica_password.js")
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
@@ -55,10 +56,6 @@ async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
         throw new ValidationError("Debe ingresar la contraseña actual y la nueva")
     }
 
-    if (passwordNueva.length < 8) {
-        throw new ValidationError("La contraseña debe tener al menos 8 caracteres")
-    }
-
     if (passwordNueva === passwordActual) {
         throw new ValidationError("La contraseña nueva no debe ser igual a la anterior")
     }
@@ -69,6 +66,11 @@ async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
 
     if (comparacion === false) {
         throw new ValidationError("La contraseña actual no es correcta")
+    }
+
+    const problemas = problemasDePassword(passwordNueva, { email: usuario.email, nombre: usuario.nombre })
+    if (problemas.length > 0) {
+        throw new ValidationError(problemas.join(". "))
     }
 
     const passwordHash = await bcrypt.hash(passwordNueva, 10)

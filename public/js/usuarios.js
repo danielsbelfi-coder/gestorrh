@@ -14,7 +14,12 @@ const tabla = crearTabla({
         { titulo: "Nombre", valor: (u) => u.nombre },
         { titulo: "Correo", valor: (u) => u.email },
         { titulo: "Estado", valor: (u) => textoEstado("usuario", u.estado), html: (u) => insignia("usuario", u.estado) },
-        { titulo: "Admin de cuenta", valor: (u) => (u.es_admin_cuenta ? "Sí" : "No") },
+        {
+            titulo: "Admin de cuenta", valor: (u) => (u.es_admin_principal ? "Principal" : u.es_admin_cuenta ? "Sí" : "No"),
+            html: (u) => u.es_admin_principal
+                ? `<span class="insignia info" title="Solo él mismo o soporte pueden cambiar su contraseña, su correo o desactivarlo">Principal</span>`
+                : (u.es_admin_cuenta ? "Sí" : "No")
+        },
         {
             titulo: "Roles por empresa",
             valor: (u) => rolesActivos(u).map((v) => `${v.Empresa.razon_social} ${v.Rol.codigo}`).join(" "),
@@ -24,7 +29,7 @@ const tabla = crearTabla({
         },
         {
             titulo: "", orden: false, valor: () => "",
-            html: (u) => [
+            html: (u) => u.es_admin_principal ? `<span class="texto-suave">Protegido (solo soporte)</span>` : [
                 u.estado === "activo"
                     ? `<button type="button" class="chico secundario" data-accion="desactivar" data-id="${u.id}">Desactivar</button>`
                     : `<button type="button" class="chico" data-accion="reactivar" data-id="${u.id}">Reactivar</button>`,

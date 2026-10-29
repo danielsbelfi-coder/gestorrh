@@ -1,9 +1,9 @@
 const { ValidationError, NotFoundError } = require("../shared/errors");
 const { corregirValorParametro, obtenerParametroVigente, listarVersionesPorCodigo,
-    parametrosDelMes, abrirMesParametros } = require("./parametro_legal.service");
+    parametrosDelMes, abrirMesParametros, historialParametros } = require("./parametro_legal.service");
 
 async function corregir(req, res) {
-    const parametro = await corregirValorParametro(req.params.id, req.body)
+    const parametro = await corregirValorParametro(req.params.id, req.body, req.usuario.id)
     res.status(200).json(parametro)
 }
 
@@ -33,11 +33,17 @@ async function delMes(req, res) {
 
 // Solo soporte. Sin confirmar: true, simula y devuelve lo que copiaría.
 async function abrirMes(req, res) {
-    const resultado = await abrirMesParametros(req.body?.mes, req.body?.desde, req.body?.confirmar !== true)
+    const resultado = await abrirMesParametros(req.body?.mes, req.body?.desde, req.body?.confirmar !== true, req.usuario.id)
     res.status(200).json(resultado)
 }
 
+// Solo soporte.
+async function historial(req, res) {
+    res.status(200).json(await historialParametros())
+}
+
 module.exports = {
+    historial,
     corregir,
     obtenerVigente,
     listarPorCodigo,

@@ -15,6 +15,11 @@ const USUARIOS = [
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Usuarios con contraseña conocida: jamás en la nube.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Este seeder crea usuarios de prueba con contraseña conocida y no se ejecuta con NODE_ENV=production")
+    }
+
     const passwordHash = await bcrypt.hash(PASSWORD_PRUEBA, 10)
     const ahora = new Date()
 

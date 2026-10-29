@@ -14,13 +14,18 @@ Está pensada para la **prueba cerrada**: usa solo datos ficticios (RUT de prueb
 | ADMIN | Todo en su empresa. Firma contratos y anexos; aprueba asistencia, variables y resúmenes |
 | JEFE_RRHH | Lo de RRHH, más firmar y aprobar |
 | RRHH | Ingresar y preparar información. No firma ni aprueba |
-| SUPERVISOR, LECTURA | Roles de consulta |
+
+Los roles SUPERVISOR (ver solo a su equipo) y LECTURA (portal del trabajador) quedan para más adelante y hoy no se pueden asignar.
+
+**Administrador principal:** es el que crea el comercial al entregar la cuenta. Los demás administradores pueden hacer lo mismo que él, salvo cambiar su contraseña o su correo, quitarle el permiso de administrador o desactivarlo; eso solo lo hace soporte.
+
+**Contraseñas:** al menos 15 caracteres, sin exigir mayúsculas, números ni símbolos. Lo más fácil es una frase de tres o cuatro palabras. Se rechazan las secuencias, repeticiones, contraseñas conocidas y las que contienen el nombre o el correo de la persona.
 
 Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de permiso insuficiente: es un comportamiento esperado.
 
 ## 2. Entrega de la cuenta (Comercial)
 
-1. El comercial inicia sesión con su correo y contraseña inicial. La primera vez el sistema obliga a **cambiar la contraseña** (mínimo 8 caracteres).
+1. El comercial inicia sesión con su correo y contraseña inicial. La primera vez el sistema obliga a **cambiar la contraseña** (mínimo 15 caracteres; sirve una frase de varias palabras).
 2. En **Cuentas** → **Crear cuenta**: nombre, RUT del titular con su DV, razón social, correo de contacto, plan, y nombre y correo del administrador.
 3. El sistema muestra **una sola vez** la contraseña inicial del administrador. El comercial se la entrega al cliente por un canal seguro.
 4. Desde **Cuentas** también puede **Cambiar plan**, **Suspender**, **Cancelar** (con confirmación) y **Reactivar**, y **Ver consumo**.

@@ -1,9 +1,14 @@
 const { UsuarioEmpresaRol, Rol, Empresa, Cuenta } = require("./associations");
 const { ForbiddenError } = require("./errors");
 
+// Roles que hoy se pueden asignar y que dan acceso a una empresa. SUPERVISOR (ver solo a su equipo) y
+// LECTURA (portal del trabajador: su asistencia, sus liquidaciones y sus contratos) quedan para más adelante:
+// existen en la tabla de roles, pero no se asignan y un vínculo antiguo con ellos no da acceso.
+const ROLES_ASIGNABLES = ["ADMIN", "JEFE_RRHH", "RRHH"]
+
 const PERMISOS = {
     REGISTRAR_ASISTENCIA: ["ADMIN", "JEFE_RRHH", "RRHH"],
-    SOLICITAR_CORRECCION: ["ADMIN", "JEFE_RRHH", "RRHH", "SUPERVISOR"],
+    SOLICITAR_CORRECCION: ["ADMIN", "JEFE_RRHH", "RRHH"],
     APROBAR_CORRECCION: ["ADMIN", "JEFE_RRHH"],
     GESTIONAR_FICHAS: ["ADMIN", "JEFE_RRHH", "RRHH"],
     CREAR_ANEXO: ["ADMIN", "JEFE_RRHH", "RRHH"],
@@ -55,6 +60,7 @@ async function exigirCuentaActiva(cuentaId) {
 }
 
 module.exports = {
+    ROLES_ASIGNABLES,
     PERMISOS,
     exigirRol,
     exigirCuentaActiva

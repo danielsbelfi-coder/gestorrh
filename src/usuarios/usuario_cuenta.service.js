@@ -1,6 +1,6 @@
 const { Usuario, UsuarioEmpresaRol, Empresa, Rol } = require("../shared/associations.js")
 const { ValidationError, ConflictError, NotFoundError, ForbiddenError } = require("../shared/errors.js")
-const { exigirCuentaActiva } = require("../shared/permisos.js")
+const { exigirCuentaActiva, ROLES_ASIGNABLES } = require("../shared/permisos.js")
 const { generarPasswordInicial } = require("../shared/password.js")
 const { normalizarEmail, emailValido } = require("../shared/email.js")
 const { exigirEmailLibre } = require("./email_usuario.js")
@@ -17,10 +17,18 @@ async function obtenerUsuarioCuenta(id, usuario) {
     return objetivo
 }
 
+// El administrador principal (el que creó el comercial) solo lo modifica él mismo o soporte:
+// otro administrador de la cuenta no puede cambiar su contraseña ni su correo, quitarle el permiso ni desactivarlo.
+function exigirNoEsPrincipalAjeno(objetivo, usuario, mensaje) {
+    if (objetivo.es_admin_principal === true && objetivo.id !== usuario.id) {
+        throw new ForbiddenError(mensaje)
+    }
+}
+
 async function listarUsuariosCuenta(usuario) {
     return await Usuario.findAll({
         where: { cuenta_id: usuario.cuenta_id },
-        attributes: ["id", "nombre", "email", "estado", "es_admin_cuenta", "debe_cambiar_password"],
+        attributes: ["id", "nombre", "email", "estado", "es_admin_cuenta", "es_admin_principal", "debe_cambiar_password"],
         include: [{
             model: UsuarioEmpresaRol,
             attributes: ["empresa_id", "estado"],
@@ -82,6 +90,8 @@ async function desactivarUsuarioCuenta(id, usuario) {
         throw new ForbiddenError("No puedes desactivar tu propio usuario")
     }
 
+    exigirNoEsPrincipalAjeno(objetivo, usuario, "El administrador principal de la cuenta no se puede desactivar. Si es necesario, escribe a soporte")
+
     if (objetivo.estado === "inactivo") {
         throw new ConflictError("El usuario ya está inactivo")
     }
@@ -116,6 +126,9 @@ async function editarUsuarioCuenta(id, datos, usuario) {
     const objetivo = await obtenerUsuarioCuenta(id, usuario)
 
     datos = { ...datos }
+    if ("email" in datos && normalizarEmail(datos.email) !== objetivo.email) {
+        exigirNoEsPrincipalAjeno(objetivo, usuario, "Solo el administrador principal o soporte pueden cambiar el correo del administrador principal")
+    }
     if ("email" in datos) {
         datos.email = normalizarEmail(datos.email)
         if (!emailValido(datos.email)) {
@@ -156,6 +169,10 @@ async function cambiarAdminCuenta(id, esAdmin, usuario) {
         throw new ForbiddenError("No puedes quitarte tu propio permiso de administrador")
     }
 
+    if (esAdmin === false) {
+        exigirNoEsPrincipalAjeno(objetivo, usuario, "Al administrador principal de la cuenta no se le puede quitar el permiso de administrador")
+    }
+
     if (objetivo.es_admin_cuenta === esAdmin) {
         throw new ConflictError(esAdmin ? "El usuario ya es administrador de la cuenta" : "El usuario no es administrador de la cuenta")
     }
@@ -172,6 +189,10 @@ async function asignarRolEmpresa(id, empresaId, codigoRol, usuario) {
 
     if (!codigoRol) {
         throw new ValidationError("Debe indicar el rol")
+    }
+
+    if (!ROLES_ASIGNABLES.includes(codigoRol)) {
+        throw new ValidationError(`Por ahora solo se pueden asignar los roles ${ROLES_ASIGNABLES.join(", ")}`)
     }
 
     const objetivo = await obtenerUsuarioCuenta(id, usuario)
@@ -230,6 +251,8 @@ async function restablecerPasswordCuenta(id, usuario) {
     if (objetivo.id === usuario.id) {
         throw new ForbiddenError("Para cambiar tu propia contraseña usa la opción Cambiar contraseña")
     }
+
+    exigirNoEsPrincipalAjeno(objetivo, usuario, "Solo soporte puede restablecer la contraseña del administrador principal de la cuenta")
 
     const { password: passwordInicial, hash: passwordHash } = await generarPasswordInicial()
 

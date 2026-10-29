@@ -58,6 +58,7 @@ async function crearCuenta(datos) {
                 password_hash: passwordHash,
                 cuenta_id: cuenta.id,
                 es_admin_cuenta: true,
+                es_admin_principal: true,
                 debe_cambiar_password: true
             }, { transaction: t })
 
@@ -85,8 +86,7 @@ async function corregirAdminInicial(cuentaId, datos) {
     }
 
     const admin = await Usuario.unscoped().findOne({
-        where: { cuenta_id: cuenta.id, es_admin_cuenta: true, debe_cambiar_password: true, password_cambiado_en: null },
-        order: [["id", "ASC"]]
+        where: { cuenta_id: cuenta.id, es_admin_principal: true, debe_cambiar_password: true, password_cambiado_en: null }
     })
 
     const email = datos?.email === undefined ? null : normalizarEmail(datos.email)
@@ -116,9 +116,8 @@ async function listarCuentas() {
 
     // Administrador que todavía no ingresó (no cambió su contraseña inicial): el comercial aún puede corregir su acceso.
     const pendientes = await Usuario.findAll({
-        where: { es_admin_cuenta: true, debe_cambiar_password: true, password_cambiado_en: null, cuenta_id: cuentas.map((c) => c.id) },
-        attributes: ["id", "cuenta_id", "email"],
-        order: [["id", "ASC"]]
+        where: { es_admin_principal: true, debe_cambiar_password: true, password_cambiado_en: null, cuenta_id: cuentas.map((c) => c.id) },
+        attributes: ["id", "cuenta_id", "email"]
     })
     const adminInicialPorCuenta = new Map()
     for (const admin of pendientes) {

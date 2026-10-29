@@ -28,6 +28,7 @@ const { LicenciaMedica } = require("../asistencia/licencia_medica.model.js");
 const { SituacionPrevisional } = require("../trabajadores/situacion_previsional.model.js");
 const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 const { Jornada } = require("../contratos/jornada.model");
+const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
 
 
 Trabajador.belongsTo(Persona, {
@@ -319,6 +320,10 @@ Finiquito.belongsTo(Trabajador, {
 Trabajador.hasOne(Finiquito, {
     foreignKey: "trabajador_id"
 })
+ParametroHistorial.belongsTo(Usuario, {
+    foreignKey: "usuario_id",
+    as: "usuario"
+})
 
 module.exports = {
     PeriodoReapertura,
@@ -350,5 +355,6 @@ module.exports = {
     LicenciaMedica,
     SituacionPrevisional,
     Finiquito,
-    Jornada
+    Jornada,
+    ParametroHistorial
 }

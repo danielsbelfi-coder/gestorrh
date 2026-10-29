@@ -106,6 +106,7 @@ async function abrirMes(confirmar) {
         const aviso = document.getElementById("resultadoApertura").innerHTML
         await cargarMes()
         document.getElementById("resultadoApertura").innerHTML = aviso
+        cargarCambios()
     }
 }
 
@@ -137,12 +138,47 @@ document.getElementById("tablaParametros").addEventListener("click", async funct
         return
     }
     await cargarMes()
+    cargarCambios()
     mensaje("info", `${parametro.codigo} actualizado.`)
 })
+
+// ---------- Historial de cambios (solo soporte) ----------
+const ACCIONES_HISTORIAL = { correccion: "Corrección", apertura_mes: "Apertura de mes" }
+
+const tablaCambios = crearTabla({
+    contenedor: "tablaCambios",
+    textoBuscar: "Buscar por código, usuario o detalle…",
+    vacio: "Todavía no hay cambios registrados.",
+    columnas: [
+        { titulo: "Fecha", valor: (c) => c.createdAt, html: (c) => escaparHtml(new Date(c.createdAt).toLocaleString("es-CL")) },
+        { titulo: "Acción", valor: (c) => ACCIONES_HISTORIAL[c.accion] ?? c.accion },
+        { titulo: "Código", valor: (c) => c.codigo },
+        { titulo: "Rige desde", valor: (c) => c.vigencia_desde, html: (c) => escaparHtml(fechaCorta(c.vigencia_desde)) },
+        { titulo: "Antes", valor: (c) => c.valor_anterior ?? "" },
+        { titulo: "Después", valor: (c) => c.valor_nuevo ?? "" },
+        { titulo: "Usuario", valor: (c) => c.usuario ? `${c.usuario.nombre} (${c.usuario.email})` : "—" },
+        {
+            titulo: "Oportunidad", valor: (c) => (c.tardio ? "Después del inicio" : "A tiempo"),
+            html: (c) => c.tardio ? `<span class="insignia advertencia">Después del inicio</span>` : `<span class="insignia exito">A tiempo</span>`
+        },
+        { titulo: "Detalle", valor: (c) => c.detalle ?? "" }
+    ]
+})
+
+async function cargarCambios() {
+    const resultado = await llamarApi("/api/parametros-legales/cambios")
+    if (resultado.status === 200) {
+        tablaCambios.mostrar(resultado.datos)
+    }
+}
 
 document.addEventListener("usuario-listo", function (evento) {
     esSoporte = evento.detail.rol_plataforma === "soporte"
     document.getElementById("panelSoporte").hidden = !esSoporte
+    document.getElementById("panelCambios").hidden = !esSoporte
+    if (esSoporte) {
+        cargarCambios()
+    }
     const hoy = new Date()
     campoMes.value = new URLSearchParams(location.search).get("mes")
         ?? `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`

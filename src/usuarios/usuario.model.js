@@ -32,6 +32,12 @@ const Usuario = sequelize.define("Usuario", {
         allowNull: false,
         defaultValue: false
     },
+    // El administrador que creó el comercial al dar de alta la cuenta. Solo él mismo o soporte lo modifican.
+    es_admin_principal: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     debe_cambiar_password: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
