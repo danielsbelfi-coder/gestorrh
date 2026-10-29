@@ -29,6 +29,8 @@ formulario.addEventListener("submit", async function (evento) {
     })
 
     if (resultado.status === 200) {
+        // Las contraseñas no quedan en la página: el navegador podría guardarla en memoria al irse de ella.
+        formulario.reset()
         mensaje.textContent = "Contraseña actualizada"
         // La sesión se renovó: el servidor envió una cookie nueva y este es el token CSRF nuevo.
         guardarCsrf(resultado.datos.csrfToken)
@@ -37,5 +39,13 @@ formulario.addEventListener("submit", async function (evento) {
         }, 1500)
     } else {
         mensaje.textContent = resultado.datos.error
+    }
+})
+
+// Al volver con "Atrás", el navegador puede mostrar la página tal como quedó, con las contraseñas escritas.
+window.addEventListener("pageshow", (evento) => {
+    if (evento.persisted) {
+        formulario.reset()
+        mensaje.textContent = ""
     }
 })

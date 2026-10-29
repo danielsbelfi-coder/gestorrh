@@ -48,6 +48,8 @@ formulario.addEventListener("submit", async function (evento) {
         })
 
         if (resultado.status === 200) {
+            // La contraseña no queda en la página: el navegador podría guardarla en memoria al irse de ella.
+            document.getElementById("password").value = ""
             guardarCsrf(resultado.datos.csrfToken)
             window.location.href = acceso.destino(resultado.datos)
             return
@@ -60,4 +62,16 @@ formulario.addEventListener("submit", async function (evento) {
 
     boton.disabled = false
     boton.textContent = "Entrar"
+})
+
+// Al volver con "Atrás", el navegador puede mostrar la página tal como quedó (con la contraseña escrita
+// y el botón en "Ingresando…"). Se deja limpia, como recién abierta.
+window.addEventListener("pageshow", (evento) => {
+    if (evento.persisted) {
+        formulario.reset()
+        document.getElementById("password").value = ""
+        mensajeError.textContent = ""
+        boton.disabled = false
+        boton.textContent = "Entrar"
+    }
 })
