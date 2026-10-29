@@ -1,6 +1,9 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 
+// Campos que no se leen por defecto ni se envían al navegador.
+const CAMPOS_PRIVADOS = ["password_hash", "totp_secreto_cifrado", "totp_ultimo_paso"]
+
 const Usuario = sequelize.define("Usuario", {
     nombre: {
         type: DataTypes.STRING,
@@ -47,19 +50,42 @@ const Usuario = sequelize.define("Usuario", {
         type: DataTypes.DATE,
         allowNull: true
     },
+    // Verificación en dos pasos (TOTP). El secreto va cifrado (src/auth/cifrado.js) y nunca sale en una respuesta.
+    totp_secreto_cifrado: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    totp_activo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    totp_activado_en: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    // Último intervalo de 30 s usado, para que un código no sirva dos veces.
+    totp_ultimo_paso: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+    },
 }, {
     tableName: "usuarios",
     defaultScope: {
-        attributes: { exclude: ["password_hash"] }
+        attributes: { exclude: CAMPOS_PRIVADOS }
     }
 },
 )
+// Nunca se envían al navegador, aunque se haya leído el usuario con unscoped().
 Usuario.prototype.toJSON = function () {
     const valores = { ...this.get() }
-    delete valores.password_hash
+    for (const campo of CAMPOS_PRIVADOS) {
+        delete valores[campo]
+    }
     return valores
 }
 
 module.exports = {
-    Usuario
+    Usuario,
+    CAMPOS_PRIVADOS
 }

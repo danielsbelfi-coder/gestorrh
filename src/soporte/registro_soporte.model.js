@@ -1,9 +1,9 @@
 const { DataTypes } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 
-// Una fila por cada petición de soporte a datos de clientes (aunque termine en error) y por cada restablecimiento de contraseña.
+// Una fila por cada petición de soporte a datos de clientes (aunque termine en error) y por cada restablecimiento de contraseña o de acceso.
 const RegistroSoporte = sequelize.define("RegistroSoporte", {
-    tipo: { type: DataTypes.ENUM("consulta", "restablecer_password"), allowNull: false },
+    tipo: { type: DataTypes.ENUM("consulta", "restablecer_password", "restablecer_acceso"), allowNull: false },
     usuario_id: { type: DataTypes.INTEGER, allowNull: true },
     acceso_id: { type: DataTypes.INTEGER, allowNull: true },
     cuenta_id: { type: DataTypes.INTEGER, allowNull: true },

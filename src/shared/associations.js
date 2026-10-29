@@ -7,6 +7,8 @@ const { Empresa } = require("../empresas/empresa.model");
 const { Persona } = require("../trabajadores/persona.model");
 const { Trabajador } = require("../trabajadores/trabajador.model");
 const { Usuario } = require("../usuarios/usuario.model");
+const { Sesion } = require("../auth/sesion.model.js")
+const { CodigoRecuperacion } = require("../auth/codigo_recuperacion.model.js")
 const { ParametroLegal } = require("../remuneraciones/parametro_legal.model");
 const { PeriodoRemuneracion } = require("../remuneraciones/periodo_remuneracion.model");
 const { PeriodoReapertura } = require("../remuneraciones/periodo_reapertura.model.js");
@@ -334,7 +336,14 @@ AccesoSoporte.belongsTo(Usuario, { foreignKey: "revocado_por_id", as: "revocadoP
 RegistroSoporte.belongsTo(Usuario, { foreignKey: "usuario_id", as: "usuario" })
 RegistroSoporte.belongsTo(Empresa, { foreignKey: "empresa_id" })
 
+Sesion.belongsTo(Usuario, { foreignKey: "usuario_id", onDelete: "CASCADE" })
+Usuario.hasMany(Sesion, { foreignKey: "usuario_id" })
+CodigoRecuperacion.belongsTo(Usuario, { foreignKey: "usuario_id", onDelete: "CASCADE" })
+Usuario.hasMany(CodigoRecuperacion, { foreignKey: "usuario_id" })
+
 module.exports = {
+    Sesion,
+    CodigoRecuperacion,
     AccesoSoporte,
     RegistroSoporte,
     PeriodoReapertura,

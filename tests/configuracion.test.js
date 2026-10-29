@@ -1,10 +1,11 @@
 const test = require("node:test")
 const assert = require("node:assert/strict")
-const { validarConfiguracion, aHoras } = require("../src/shared/configuracion.js")
+const { validarConfiguracion, aHoras, origenDeLaApp } = require("../src/shared/configuracion.js")
 
 const buena = {
     NODE_ENV: "production", DB_NAME: "g", DB_USER: "u", DB_HOST: "h", DB_DIALECT: "postgres", DB_PASSWORD: "x",
-    JWT_SECRET: "q8Zr2xLm9TgV4bNc7YdKp1WsE5hJu3AaFo6XiRt0BvCn8MlQ", JWT_EXPIRES_IN: "8h", TRUST_PROXY: "1", DB_SSL: "true"
+    JWT_SECRET: "q8Zr2xLm9TgV4bNc7YdKp1WsE5hJu3AaFo6XiRt0BvCn8MlQ", JWT_EXPIRES_IN: "8h", TRUST_PROXY: "1", DB_SSL: "true",
+    TOTP_CLAVE_CIFRADO: "u6Hn0sQ3vW8xY1zA4bC7dE9fG2hJ5kL8mN0pQ3rS6tU", APP_ORIGEN: "https://gestorrh.onrender.com"
 }
 
 test("configuración correcta no da errores ni avisos", () => {
@@ -81,4 +82,31 @@ test("avisa si la base remota en producción no usa SSL y si DB_SSL_CA apunta a 
     assert.ok(validarConfiguracion({ ...base, DB_SSL: "false" }).advertencias.some((a) => a.includes("sin cifrar")))
     assert.ok(!validarConfiguracion({ ...base, DB_SSL: "false", DB_HOST: "localhost" }).advertencias.some((a) => a.includes("sin cifrar")))
     assert.ok(validarConfiguracion({ ...base, DB_SSL: "true", DB_SSL_CA: "no/existe.pem" }, () => false).errores.some((e) => e.includes("no existe")))
+})
+
+test("TOTP_CLAVE_CIFRADO es obligatoria y debe ser de 32 bytes", () => {
+    assert.match(validarConfiguracion({ ...buena, TOTP_CLAVE_CIFRADO: undefined }).errores[0], /32 bytes/)
+    assert.match(validarConfiguracion({ ...buena, TOTP_CLAVE_CIFRADO: "corta" }).errores[0], /32 bytes/)
+    // También en desarrollo: sin ella no se puede inscribir ni verificar el 2FA.
+    assert.match(validarConfiguracion({ ...buena, NODE_ENV: "development", TOTP_CLAVE_CIFRADO: "" }).errores[0], /32 bytes/)
+})
+
+test("APP_ORIGEN: obligatoria y con https en producción, solo origen", () => {
+    assert.match(validarConfiguracion({ ...buena, APP_ORIGEN: undefined }).errores[0], /Falta APP_ORIGEN/)
+    assert.match(validarConfiguracion({ ...buena, APP_ORIGEN: "http://gestorrh.onrender.com" }).errores[0], /https/)
+    assert.match(validarConfiguracion({ ...buena, APP_ORIGEN: "https://gestorrh.onrender.com/login" }).errores[0], /solo el origen/)
+    assert.match(validarConfiguracion({ ...buena, APP_ORIGEN: "gestorrh.onrender.com" }).errores[0], /no es una dirección/)
+    // Barra final se tolera.
+    assert.deepEqual(validarConfiguracion({ ...buena, APP_ORIGEN: "https://gestorrh.onrender.com/" }).errores, [])
+    // En desarrollo puede faltar, y http está permitido.
+    const desarrollo = { ...buena, NODE_ENV: "development" }
+    assert.deepEqual(validarConfiguracion({ ...desarrollo, APP_ORIGEN: undefined }).errores, [])
+    assert.deepEqual(validarConfiguracion({ ...desarrollo, APP_ORIGEN: "http://localhost:3000" }).errores, [])
+})
+
+test("origenDeLaApp: el configurado, o localhost con el puerto en desarrollo", () => {
+    assert.equal(origenDeLaApp({ APP_ORIGEN: "https://GestorRH.onrender.com/" }), "https://gestorrh.onrender.com")
+    assert.equal(origenDeLaApp({ NODE_ENV: "development" }), "http://localhost:3000")
+    assert.equal(origenDeLaApp({ NODE_ENV: "development", PORT: "4000" }), "http://localhost:4000")
+    assert.equal(origenDeLaApp({ NODE_ENV: "production" }), "")
 })
