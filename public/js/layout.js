@@ -27,7 +27,8 @@ const ICONOS = {
     clave: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
     salir: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
-    chevron: '<path d="m6 9 6 6 6-6"/>'
+    chevron: '<path d="m6 9 6 6 6-6"/>',
+    pendientes: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/>'
 }
 
 function icono(nombre) {
@@ -67,7 +68,7 @@ function gruposDelMenu(usuario) {
 // Menú de trabajo con una empresa. Para soporte (con acceso autorizado) no incluye Inicio ni la administración de la cuenta.
 function gruposDeEmpresa(usuario, conInicio, empresa = [["empresas.html", "Empresas", "empresas"]]) {
     return [
-        ...(conInicio ? [{ titulo: "", enlaces: [["index.html", "Inicio", "inicio"]] }] : []),
+        ...(conInicio ? [{ titulo: "", enlaces: [["index.html", "Inicio", "inicio"], ["pendientes.html", "Pendientes", "pendientes"]] }] : []),
         { titulo: "Empresa", enlaces: empresa },
         {
             titulo: "Personas",
@@ -172,7 +173,9 @@ function armarLateral(usuario) {
         const tieneActivo = grupo.enlaces.some(([href]) => href === paginaActual)
         const enlaces = grupo.enlaces.map(([href, texto, nombreIcono]) => {
             const activo = href === paginaActual ? " activo" : ""
-            return `<a class="lateral-enlace${activo}" href="${href}">${icono(nombreIcono)}<span>${escaparHtml(texto)}</span></a>`
+            // Pendientes lleva un contador (se llena después de dibujar el menú, sin demorar la página).
+            const contador = href === "pendientes.html" ? `<span class="contador-menu" id="contadorPendientes" hidden></span>` : ""
+            return `<a class="lateral-enlace${activo}" href="${href}">${icono(nombreIcono)}<span>${escaparHtml(texto)}</span>${contador}</a>`
         }).join("")
 
         if (!grupo.titulo) {
@@ -300,6 +303,13 @@ async function iniciarLayout() {
     })
     velo.addEventListener("click", () => document.body.classList.remove("menu-abierto"))
 
+    // Un enlace puede pedir la empresa de trabajo (por ejemplo, desde Pendientes): pagina.html?empresa=ID.
+    // Si no es una de las del usuario, el selector la reemplaza por la primera.
+    const empresaPedida = Number(new URLSearchParams(location.search).get("empresa"))
+    if (Number.isInteger(empresaPedida) && empresaPedida > 0) {
+        guardarEmpresaActual(empresaPedida)
+    }
+
     // Soporte: la empresa recordada en el navegador debe ser una de las autorizadas ahora (si no, se cambia o se olvida),
     // antes de que la pantalla pida datos. Así no se envía una empresa cuyo acceso ya terminó.
     if (usuario.rol_plataforma === "soporte") {
@@ -314,6 +324,10 @@ async function iniciarLayout() {
     }
 
     document.dispatchEvent(new CustomEvent("usuario-listo", { detail: usuario }))
+
+    if (document.getElementById("contadorPendientes")) {
+        actualizarContadorPendientes()
+    }
 
     if (contenido.hasAttribute("data-empresa")) {
         await iniciarSelectorEmpresa(barra, usuario)
@@ -370,6 +384,24 @@ async function iniciarSelectorEmpresa(barra, usuario) {
 
 function nombreEmpresa(empresa) {
     return empresa.nombre_fantasia || empresa.razon_social || `Empresa ${empresa.id}`
+}
+
+// Número del menú «Pendientes»: lo que el usuario puede firmar o aprobar; si no puede (RRHH), todo lo que espera a la jefatura.
+async function actualizarContadorPendientes() {
+    const contador = document.getElementById("contadorPendientes")
+    if (!contador) {
+        return
+    }
+    const resultado = await llamarApi("/api/pendientes")
+    if (resultado.status !== 200) {
+        return
+    }
+    const { total, accionables } = resultado.datos
+    const numero = accionables > 0 ? accionables : total
+    contador.textContent = numero > 99 ? "99+" : String(numero)
+    contador.classList.toggle("solo-ver", accionables === 0)
+    contador.title = accionables > 0 ? "Esperan tu firma o aprobación" : "Esperan la firma o aprobación de la jefatura"
+    contador.hidden = numero === 0
 }
 
 // Al volver con "Atrás", el navegador puede mostrar una copia de la página guardada en memoria, sin preguntar

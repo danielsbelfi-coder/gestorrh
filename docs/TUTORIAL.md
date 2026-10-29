@@ -41,6 +41,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 3. Entrar a la empresa y completar la ficha: tipo de empleador, giro, código de actividad SII, comuna, **organismo administrador (mutual) y tasa adicional**, caja de compensación. Guardar cambios. Estos datos alimentan Previred y las liquidaciones.
 4. **Administración → Usuarios → Crear usuario**: nombre y correo. El sistema genera la contraseña inicial. Luego **Asignar rol** (ADMIN, JEFE_RRHH, RRHH...) por empresa. Crea al menos un usuario RRHH y uno JEFE_RRHH para probar la separación de funciones.
 5. **Consumo del plan** muestra cuántos trabajadores y usuarios quedan.
+6. **Pendientes** (junto a Inicio, con un número en el menú) reúne todo lo que espera firma o aprobación en tus empresas: contratos y anexos por firmar, marcas y correcciones de asistencia, variables del mes y resúmenes de asistencia por aprobar. ADMIN y JEFE_RRHH pueden firmar o aprobar ahí mismo, de a uno o seleccionando varios; RRHH ve la misma lista sin botones, para saber qué falta. **Ver** abre la pantalla de cada registro para revisarlo antes.
 
 ## 4. Preparar la empresa (RRHH)
 
@@ -132,7 +133,7 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 2. Crear usuarios RRHH y JEFE_RRHH con sus roles.
 3. Crear un cargo y una jornada. Intenta crear una jornada inválida (11 horas diarias, 7 días, colación de 10 minutos) y observa los avisos.
 4. Crear personas (una a mano, varias con la planilla CSV) y contratos de distinto tipo.
-5. Como RRHH intentar firmar un contrato (debe rechazarse) y como JEFE_RRHH firmarlo. Probar Corregir y Anular.
+5. Como RRHH intentar firmar un contrato (debe rechazarse) y como JEFE_RRHH firmarlo. Probar Corregir y Anular. Revisar **Pendientes** con ambos usuarios: el número del menú, los filtros y aprobar varios a la vez.
 6. Registrar marcas de asistencia con atrasos, horas extra, un día libre y un feriado; revisar el libro.
 7. Generar resumen, cargar variables, aprobar, calcular y cerrar liquidaciones; bajar los PDF.
 8. Descargar los archivos de Previred y LRE.
@@ -153,4 +154,4 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 Para cada observación anota: pantalla, qué hiciste, qué esperabas y qué pasó (con captura si puedes). Envíalo por el canal acordado con el responsable. Los problemas de seguridad, solo por mensaje directo.
 
 ## Lo que todavía no existe
-Módulo de pendientes por firmar, carga masiva de marcas, informes y estadísticas, Declaración Jurada 1887, nómina bancaria, carga automática de UF y UTM, pensiones alimenticias y re-finiquito. No los reportes como errores.
+Carga masiva de marcas, informes y estadísticas, Declaración Jurada 1887, nómina bancaria, carga automática de UF y UTM, pensiones alimenticias y re-finiquito. No los reportes como errores.

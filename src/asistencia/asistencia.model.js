@@ -64,6 +64,8 @@ const Asistencia = sequelize.define("Asistencia", {
     }
 }, {
     tableName: "asistencias",
+    // Sin esto, Sequelize singulariza "Asistencia" como "Asistencium" (regla de plurales latinos del inglés).
+    name: { singular: "Asistencia", plural: "Asistencias" },
     indexes: [
         {
             unique: true,

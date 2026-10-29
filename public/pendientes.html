@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Pendientes</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-titulo="Pendientes">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Pendientes</h1>
+                <p id="resumen">Lo que espera firma o aprobación en tus empresas.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <div class="acciones" id="accionesMasivas" hidden>
+            <button type="button" class="boton secundario" id="seleccionarVisibles">Seleccionar todo lo que se ve</button>
+            <button type="button" class="boton" id="actuarSeleccionados" disabled>Firmar o aprobar los seleccionados</button>
+        </div>
+        <div id="tablaPendientes"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/pendientes.js"></script>
+</body>
+
+</html>

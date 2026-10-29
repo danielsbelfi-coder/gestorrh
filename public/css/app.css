@@ -1689,3 +1689,9 @@ button.chico.peligro:hover { background: var(--peligro); color: #fff; border-col
 .enlace-2fa {
     margin-top: 14px;
 }
+
+/* Pendientes: los botones de cada fila y la fecha en una sola línea. */
+#tablaPendientes td.col-acciones,
+.sin-corte {
+    white-space: nowrap;
+}

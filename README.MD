@@ -122,4 +122,4 @@ docs/            tutorial de uso
 
 ## Limitaciones conocidas
 
-Módulo de pendientes por rol, carga masiva de marcas, informes, DJ 1887, nómina bancaria, carga automática de UF/UTM y documentación de la API (OpenAPI).
+Carga masiva de marcas, informes, DJ 1887, nómina bancaria, carga automática de UF/UTM y documentación de la API (OpenAPI).

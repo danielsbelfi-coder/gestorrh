@@ -101,3 +101,24 @@ body.solo-lectura .contenido form button[type="submit"],
 body.solo-lectura .contenido details.plegable {
     display: none;
 }
+
+
+/* Contador de Pendientes en el menú. */
+.contador-menu {
+    margin-left: auto;
+    min-width: 20px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #1f2937;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* Cuando el usuario no puede actuar (RRHH), el número es solo informativo. */
+.contador-menu.solo-ver {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
