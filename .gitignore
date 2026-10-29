@@ -4,3 +4,4 @@ prueba-liquidacion.pdf
 .env.*
 !.env.example
 spec.md
+DESPLIEGUE.md

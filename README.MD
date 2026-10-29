@@ -44,7 +44,7 @@ Cada usuario de plataforma recibe una contraseña inicial aleatoria que se muest
 |---|---|
 | `PORT` | Puerto del servidor (3000 por defecto) |
 | `NODE_ENV` | `production` en la nube |
-| `TRUST_PROXY` | Cantidad de proxies delante del servidor (1 en Render, Railway, Fly o Heroku). Necesaria para que el límite de intentos use la IP real |
+| `TRUST_PROXY` | Cantidad de proxies delante del servidor. Depende del proveedor: se comprueba con `GET /api/salud` (ver `docs/DESPLIEGUE.md`). Necesaria para que el límite de intentos use la IP real |
 | `DB_DIALECT` | `postgres` |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL |
 | `DB_SSL` | `true` si la base administrada exige conexión cifrada |
@@ -69,8 +69,10 @@ Los botones se ven igual para todos los roles; si falta permiso, el sistema resp
 
 ## Despliegue en la nube (resumen)
 
+Guía paso a paso para la prueba cerrada (Render + Neon, gratis): [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+
 1. Base PostgreSQL administrada, con respaldos automáticos activados.
-2. Servicio web Node con `npm install` como build y `node server.js` como arranque. Variables según la tabla anterior, con `NODE_ENV=production` y `TRUST_PROXY=1`.
+2. Servicio web Node con `npm ci` como build y `node server.js` como arranque. Variables según la tabla anterior, con `NODE_ENV=production` y `TRUST_PROXY` comprobado con `/api/salud`.
 3. HTTPS lo entrega el proveedor. Comprobación de salud: `GET /api/salud`.
 4. Primera vez: `npx sequelize-cli db:migrate`, `npm run sembrar-base` y crear los usuarios de plataforma.
 5. Cada mes, soporte abre el período de parámetros (UF del último día del mes, UTM) y mantiene los feriados.

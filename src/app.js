@@ -43,8 +43,9 @@ app.use(helmet())
 app.use(express.json({ limit: "1mb" }));
 
 // Para que el hosting compruebe que el servidor está vivo. No requiere sesión ni toca la base de datos.
+// "ip" es la IP con que el servidor ve a quien consulta (la suya propia): sirve para comprobar TRUST_PROXY al desplegar.
 app.get("/api/salud", (req, res) => {
-    res.status(200).json({ estado: "ok" })
+    res.status(200).json({ estado: "ok", ip: req.ip })
 })
 
 app.use("/api/empresas", verificarToken, empresaRoutes)
