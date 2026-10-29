@@ -1,10 +1,10 @@
 require("dotenv").config()
 const Sequelize = require("sequelize")
 
-// En la nube la base de datos administrada casi siempre exige conexión cifrada: DB_SSL=true la activa.
-const opcionesSsl = process.env.DB_SSL === "true"
-    ? { ssl: { require: true, rejectUnauthorized: false } }
-    : {}
+const { opcionesSslBaseDatos } = require("./ssl_base_datos.js")
+
+// En la nube la base de datos administrada exige conexión cifrada: DB_SSL=true la activa y comprueba el certificado.
+const opcionesSsl = opcionesSslBaseDatos(process.env)
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,

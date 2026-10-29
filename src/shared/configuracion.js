@@ -1,5 +1,6 @@
 // Revisa la configuración (variables de entorno) antes de arrancar el servidor.
 // Devuelve { errores, advertencias }: con errores el servidor no parte.
+const fs = require("fs")
 
 const CLAVES_DEBILES = ["secret", "secreto", "changeme", "cambiar", "password", "contraseña", "jwt_secret", "mi_clave_secreta", "clave_secreta"]
 const REQUERIDAS_BD = ["DB_NAME", "DB_USER", "DB_HOST", "DB_DIALECT"]
@@ -18,7 +19,9 @@ function aHoras(duracion) {
     return Number(coincidencia[1]) * factor
 }
 
-function validarConfiguracion(env) {
+const HOSTS_LOCALES = ["localhost", "127.0.0.1", "::1"]
+
+function validarConfiguracion(env, existeArchivo = fs.existsSync) {
     const errores = []
     const advertencias = []
     const produccion = env.NODE_ENV === "production"
@@ -30,6 +33,23 @@ function validarConfiguracion(env) {
     }
     if (produccion && !env.DB_PASSWORD) {
         errores.push("En producción la base de datos debe tener contraseña (DB_PASSWORD)")
+    }
+
+    // Conexión cifrada a la base y comprobación del certificado del servidor.
+    const conSsl = env.DB_SSL === "true"
+    if (!conSsl && produccion && !HOSTS_LOCALES.includes(String(env.DB_HOST ?? "").trim())) {
+        advertencias.push("DB_SSL no está en true: la conexión a una base de datos remota viajaría sin cifrar")
+    }
+    if (conSsl && env.DB_SSL_VERIFICAR === "false") {
+        if (produccion) {
+            errores.push("DB_SSL_VERIFICAR=false no se permite en producción: sin comprobar el certificado, alguien podría hacerse pasar por la base de datos. Si el proveedor usa una autoridad propia, indica su certificado en DB_SSL_CA")
+        } else {
+            advertencias.push("DB_SSL_VERIFICAR=false: la conexión va cifrada pero no se comprueba el certificado del servidor (solo para pruebas)")
+        }
+    }
+    const ca = String(env.DB_SSL_CA ?? "").trim()
+    if (ca !== "" && !ca.startsWith("-----BEGIN") && !existeArchivo(ca)) {
+        errores.push(`DB_SSL_CA indica un archivo que no existe: ${ca}`)
     }
 
     const secreto = env.JWT_SECRET ?? ""

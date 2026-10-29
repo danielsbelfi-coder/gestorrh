@@ -47,7 +47,9 @@ Cada usuario de plataforma recibe una contraseña inicial aleatoria que se muest
 | `TRUST_PROXY` | Cantidad de proxies delante del servidor. Depende del proveedor: se comprueba con `GET /api/salud` (ver `docs/DESPLIEGUE.md`). Necesaria para que el límite de intentos use la IP real |
 | `DB_DIALECT` | `postgres` |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL |
-| `DB_SSL` | `true` si la base administrada exige conexión cifrada |
+| `DB_SSL` | `true` en la nube: cifra la conexión y **comprueba el certificado** de la base (que sea de una autoridad confiable y del host indicado) |
+| `DB_SSL_CA` | Solo si el proveedor usa una autoridad propia (por ejemplo AWS RDS): ruta del certificado `.pem` o su contenido. Neon no lo necesita |
+| `DB_SSL_VERIFICAR` | `false` desactiva la comprobación del certificado. Solo para pruebas locales; en producción el servidor no arranca |
 | `JWT_SECRET` | Mínimo 32 caracteres aleatorios. `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
 | `JWT_EXPIRES_IN` | Duración de la sesión, por ejemplo `8h` |
 
