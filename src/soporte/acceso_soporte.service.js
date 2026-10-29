@@ -127,21 +127,27 @@ async function listarRegistroCuenta(usuario) {
 }
 
 // Guarda una fila por acceso vigente (o una sin acceso si no había ninguno). Nunca debe romper la respuesta.
-async function registrarConsulta({ usuario, accesos, metodo, ruta, estadoHttp, ip }) {
-    const base = {
+// Una fila por petición, con la empresa elegida (X-Empresa) cuando calza con un acceso vigente.
+// Si soporte intentó una empresa sin autorización y esa empresa existe, el intento queda asociado a ella y a su cuenta
+// (su cliente lo ve en «Acceso de soporte»). El valor recibido queda siempre en "detalle".
+async function registrarConsulta({ usuario, acceso, detalle, empresaIntentada, metodo, ruta, estadoHttp, ip }) {
+    let empresa = acceso ? { id: acceso.empresa_id, cuenta_id: acceso.cuenta_id } : null
+    if (empresa === null && empresaIntentada) {
+        empresa = await Empresa.findByPk(empresaIntentada, { attributes: ["id", "cuenta_id"] })
+    }
+
+    await RegistroSoporte.create({
         tipo: "consulta",
         usuario_id: usuario.id,
+        acceso_id: acceso?.id ?? null,
+        cuenta_id: empresa?.cuenta_id ?? null,
+        empresa_id: empresa?.id ?? null,
         metodo: String(metodo).slice(0, 10),
         ruta: String(ruta).slice(0, 500),
         estado_http: estadoHttp,
-        ip: ip ? String(ip).slice(0, 64) : null
-    }
-
-    const filas = accesos.length === 0
-        ? [{ ...base, acceso_id: null, cuenta_id: null, empresa_id: null }]
-        : accesos.map((acceso) => ({ ...base, acceso_id: acceso.id, cuenta_id: acceso.cuenta_id, empresa_id: acceso.empresa_id }))
-
-    await RegistroSoporte.bulkCreate(filas)
+        ip: ip ? String(ip).slice(0, 64) : null,
+        detalle: detalle ?? null
+    })
 }
 
 async function listarCuentasSoporte() {

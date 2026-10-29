@@ -43,6 +43,7 @@ async function llamarApi(ruta, opciones = {}, reintento = false) {
     if (METODOS_QUE_ESCRIBEN.includes(metodo) && ruta !== "/api/auth/login") {
         headers["X-CSRF-Token"] = leerCsrf() ?? await renovarCsrf() ?? ""
     }
+    agregarEmpresa(headers)
 
     const respuesta = await fetch(ruta, {
         ...opciones,
@@ -65,6 +66,10 @@ async function llamarApi(ruta, opciones = {}, reintento = false) {
         guardarCsrf(datos.csrf_token)
     }
 
+    if (respuesta.status === 403 && datos?.codigo === "acceso_soporte") {
+        accesoDeSoporteTerminado(datos.error)
+    }
+
     return { status: respuesta.status, datos }
 }
 
@@ -80,6 +85,24 @@ function destinoTrasIngreso(datos) {
         return "empresas.html"
     }
     return "index.html"
+}
+
+// Empresa de trabajo en la cabecera X-Empresa. El servidor la usa para limitar a soporte a la empresa elegida
+// (y a una que el cliente haya autorizado); para los demás usuarios hoy no cambia nada.
+function agregarEmpresa(headers) {
+    const id = empresaActual()
+    if (id !== null) {
+        headers["X-Empresa"] = String(id)
+    }
+    return headers
+}
+
+// El acceso de soporte a la empresa elegida venció o fue revocado: se avisa y se vuelve al panel de soporte,
+// que muestra los accesos vigentes. No se recarga la misma página para no repetir el error.
+function accesoDeSoporteTerminado(texto) {
+    olvidarEmpresaActual()
+    alert(`${texto}. El acceso pudo vencer o el cliente lo revocó.`)
+    window.location.href = "soporte.html"
 }
 
 // Sesión terminada (vencida, cerrada en otro lado o inexistente): se vuelve al login.
@@ -117,7 +140,7 @@ function escaparHtml(texto) {
 }
 
 async function descargarArchivo(ruta) {
-    const respuesta = await fetch(ruta)
+    const respuesta = await fetch(ruta, { headers: agregarEmpresa({}) })
 
     if (respuesta.status === 401) {
         sesionVencida()
@@ -125,6 +148,9 @@ async function descargarArchivo(ruta) {
 
     if (!respuesta.ok) {
         const datos = await respuesta.json()
+        if (respuesta.status === 403 && datos?.codigo === "acceso_soporte") {
+            accesoDeSoporteTerminado(datos.error)
+        }
         return { status: respuesta.status, datos }
     }
 
@@ -173,6 +199,14 @@ function guardarEmpresaActual(id) {
         localStorage.setItem("empresa_id", String(id))
     } catch {
         // Sin almacenamiento disponible: la elección dura hasta recargar la página.
+    }
+}
+
+function olvidarEmpresaActual() {
+    try {
+        localStorage.removeItem("empresa_id")
+    } catch {
+        // Sin almacenamiento: no hay nada que borrar.
     }
 }
 

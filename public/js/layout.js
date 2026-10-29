@@ -300,18 +300,37 @@ async function iniciarLayout() {
     })
     velo.addEventListener("click", () => document.body.classList.remove("menu-abierto"))
 
+    // Soporte: la empresa recordada en el navegador debe ser una de las autorizadas ahora (si no, se cambia o se olvida),
+    // antes de que la pantalla pida datos. Así no se envía una empresa cuyo acceso ya terminó.
+    if (usuario.rol_plataforma === "soporte") {
+        const autorizadas = (usuario.accesos_soporte ?? []).map((acceso) => acceso.empresa_id)
+        if (!autorizadas.includes(empresaActual())) {
+            if (autorizadas.length > 0) {
+                guardarEmpresaActual(autorizadas[0])
+            } else {
+                olvidarEmpresaActual()
+            }
+        }
+    }
+
     document.dispatchEvent(new CustomEvent("usuario-listo", { detail: usuario }))
 
     if (contenido.hasAttribute("data-empresa")) {
-        await iniciarSelectorEmpresa(barra)
+        await iniciarSelectorEmpresa(barra, usuario)
     }
 }
 
 // Selector de empresa de trabajo. Solo aparece en las pantallas marcadas con data-empresa.
 // Al elegir una empresa se avisa con el evento "empresa-lista" y cada pantalla recarga sus datos.
-async function iniciarSelectorEmpresa(barra) {
-    const resultado = await llamarApi("/api/empresas")
-    const empresas = resultado.status === 200 ? resultado.datos : []
+// Para soporte, las opciones son las empresas que el cliente autorizó y siguen vigentes.
+async function iniciarSelectorEmpresa(barra, usuario) {
+    let empresas
+    if (usuario.rol_plataforma === "soporte") {
+        empresas = (usuario.accesos_soporte ?? []).map((acceso) => ({ id: acceso.empresa_id, razon_social: acceso.razon_social, estado: "activa" }))
+    } else {
+        const resultado = await llamarApi("/api/empresas")
+        empresas = resultado.status === 200 ? resultado.datos : []
+    }
 
     empresas.sort((a, b) => (a.estado === "inactiva") - (b.estado === "inactiva")
         || nombreEmpresa(a).localeCompare(nombreEmpresa(b), "es"))

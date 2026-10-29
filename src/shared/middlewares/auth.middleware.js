@@ -1,7 +1,7 @@
 // Revisa la sesión de cada petición (cookie + sesión guardada en el servidor). Ver "Seguridad de acceso" en el SPEC.
 const { UsuarioEmpresaRol, Cuenta, Rol } = require("../associations");
 const { ROLES_ASIGNABLES } = require("../permisos");
-const { rutaDePlataforma, enmascararCuentas } = require("../../soporte/acceso_soporte.js");
+const { rutaDePlataforma, enmascararCuentas, resolverEmpresaSoporte } = require("../../soporte/acceso_soporte.js");
 const { origenDeLaApp } = require("../configuracion.js")
 const {
     nombreCookie, opcionesCookie, leerCookie, motivoInvalidez, estadoDeAcceso, rutaPermitida, mensajeDeEstado,
@@ -111,25 +111,38 @@ const verificarSesion = async (req, res, next) => {
         const soporte = usuario.rol_plataforma === "soporte"
 
         if (soporte === true) {
-            // Soporte solo ve las empresas que un administrador del cliente autorizó y que siguen vigentes.
+            // Soporte solo ve empresas que un administrador del cliente autorizó y que siguen vigentes,
+            // y de a una: la que eligió en la barra (cabecera X-Empresa). Sin cabecera no ve ninguna.
             const servicio = require("../../soporte/acceso_soporte.service.js")
             const accesos = await servicio.accesosVigentes()
 
+            // Para la barra superior: todas las empresas que podría elegir.
             req.accesosSoporte = accesos
-            empresasPermitidas = [...new Set(accesos.map((acceso) => acceso.empresa_id))]
+            empresasPermitidas = []
 
             // El número de cuenta bancaria nunca se muestra completo a soporte.
             const jsonOriginal = res.json.bind(res)
             res.json = (cuerpo) => jsonOriginal(enmascararCuentas(cuerpo))
 
-            // Todo lo que soporte pide fuera de las rutas de la plataforma queda registrado (aunque termine en error).
+            // Las rutas de la plataforma (parámetros, feriados, su propia sesión...) no usan empresas ni se registran.
             if (!rutaDePlataforma(req.originalUrl)) {
-                const datos = { usuario, accesos, metodo: req.method, ruta: req.originalUrl, ip: req.ip }
+                const { permitido, acceso, detalle, empresaIntentada } = resolverEmpresaSoporte(req.get("x-empresa"), accesos)
+
+                // Todo lo que soporte pide queda registrado, una fila por petición (aunque termine en error).
                 // "close" ocurre siempre (también si el navegador corta la conexión antes de recibir la respuesta).
+                const datos = { usuario, acceso, detalle, empresaIntentada, metodo: req.method, ruta: req.originalUrl, ip: req.ip }
                 res.once("close", () => {
                     servicio.registrarConsulta({ ...datos, estadoHttp: res.statusCode })
                         .catch((error) => console.error("No se pudo registrar la consulta de soporte:", error.message))
                 })
+
+                if (!permitido) {
+                    return res.status(403).json({ error: "No tienes un acceso autorizado vigente a esa empresa", codigo: "acceso_soporte" })
+                }
+                if (acceso !== null) {
+                    empresasPermitidas = [acceso.empresa_id]
+                    req.accesoSoporte = acceso
+                }
             }
         }
 

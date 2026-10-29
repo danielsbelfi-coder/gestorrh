@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert/strict")
-const { validarAutorizacion, estaVigente, estadoDeAcceso, rutaDePlataforma, enmascararCuenta, enmascararCuentas } = require("../src/soporte/acceso_soporte.js")
+const { validarAutorizacion, estaVigente, estadoDeAcceso, rutaDePlataforma, enmascararCuenta, enmascararCuentas, resolverEmpresaSoporte } = require("../src/soporte/acceso_soporte.js")
 
 const MOTIVO = "Revisar una liquidación"
 
@@ -57,4 +57,22 @@ test("enmascarar en cualquier nivel de la respuesta, sin tocar lo demás", () =>
     assert.equal(salida.otro.Persona.numero_cuenta, "****6666")
     assert.ok(salida.fecha instanceof Date)
     assert.equal(entrada.numero_cuenta, "12345678", "no modifica el original")
+})
+
+test("X-Empresa: soporte trabaja con una sola empresa autorizada a la vez", () => {
+    const accesos = [{ id: 1, empresa_id: 7, cuenta_id: 3 }, { id: 2, empresa_id: 9, cuenta_id: 4 }]
+
+    assert.deepEqual(resolverEmpresaSoporte(undefined, accesos), { permitido: true, acceso: null, detalle: "Sin X-Empresa", empresaIntentada: null })
+    assert.deepEqual(resolverEmpresaSoporte(" ", accesos), { permitido: true, acceso: null, detalle: "Sin X-Empresa", empresaIntentada: null })
+    assert.deepEqual(resolverEmpresaSoporte("7", accesos), { permitido: true, acceso: accesos[0], detalle: null, empresaIntentada: null })
+    assert.equal(resolverEmpresaSoporte(" 9 ", accesos).acceso, accesos[1])
+    // Sin acceso vigente a esa empresa, o valores raros: no permitido, y el valor (recortado) queda en el registro.
+    assert.deepEqual(resolverEmpresaSoporte("8", accesos), { permitido: false, acceso: null, detalle: "X-Empresa: 8", empresaIntentada: 8 })
+    assert.equal(resolverEmpresaSoporte("abc", accesos).empresaIntentada, null)
+    assert.equal(resolverEmpresaSoporte("9999999999", accesos).empresaIntentada, null)
+    assert.equal(resolverEmpresaSoporte("7,9", accesos).permitido, false)
+    assert.equal(resolverEmpresaSoporte("7 OR 1=1", accesos).permitido, false)
+    assert.equal(resolverEmpresaSoporte("-7", accesos).permitido, false)
+    assert.equal(resolverEmpresaSoporte("x".repeat(100), accesos).detalle.length, "X-Empresa: ".length + 20)
+    assert.equal(resolverEmpresaSoporte("7", []).permitido, false)
 })

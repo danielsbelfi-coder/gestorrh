@@ -83,7 +83,27 @@ function enmascararCuentas(valor) {
     return valor
 }
 
+// Soporte trabaja con UNA empresa a la vez: la que elige en la barra superior, enviada en la cabecera X-Empresa.
+// Devuelve { permitido, acceso, detalle, empresaIntentada }:
+//  - sin cabecera: permitido, sin acceso (no ve ninguna empresa) y detalle "Sin X-Empresa";
+//  - con una empresa que tiene un acceso vigente: permitido, con ese acceso;
+//  - cualquier otro valor: no permitido (403), con el valor recortado en el detalle para el registro.
+//    Si era un número, "empresaIntentada" lo trae para asociar el intento a esa empresa (si existe): así su cliente lo ve.
+function resolverEmpresaSoporte(cabecera, accesos) {
+    const valor = cabecera === undefined || cabecera === null ? "" : String(cabecera).trim()
+    if (valor === "") {
+        return { permitido: true, acceso: null, detalle: "Sin X-Empresa", empresaIntentada: null }
+    }
+    const numero = /^\d{1,9}$/.test(valor) ? Number(valor) : null
+    const acceso = numero === null ? null : accesos.find((candidato) => candidato.empresa_id === numero) ?? null
+    if (acceso === null) {
+        return { permitido: false, acceso: null, detalle: `X-Empresa: ${valor.slice(0, 20)}`, empresaIntentada: numero }
+    }
+    return { permitido: true, acceso, detalle: null, empresaIntentada: null }
+}
+
 module.exports = {
+    resolverEmpresaSoporte,
     HORAS_PERMITIDAS,
     HORAS_POR_DEFECTO,
     MOTIVO_MINIMO,
