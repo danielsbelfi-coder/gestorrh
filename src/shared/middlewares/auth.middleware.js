@@ -97,7 +97,8 @@ const verificarToken = async (req, res, next) => {
             // Todo lo que soporte pide fuera de las rutas de la plataforma queda registrado (aunque termine en error).
             if (!rutaDePlataforma(req.originalUrl)) {
                 const datos = { usuario, accesos, metodo: req.method, ruta: req.originalUrl, ip: req.ip }
-                res.on("finish", () => {
+                // "close" ocurre siempre (también si el navegador corta la conexión antes de recibir la respuesta).
+                res.once("close", () => {
                     servicio.registrarConsulta({ ...datos, estadoHttp: res.statusCode })
                         .catch((error) => console.error("No se pudo registrar la consulta de soporte:", error.message))
                 })

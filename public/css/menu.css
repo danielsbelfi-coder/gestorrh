@@ -95,3 +95,9 @@
         padding: 8px 16px;
     }
 }
+
+/* Soporte en pantallas de clientes: solo lectura */
+body.solo-lectura .contenido form button[type="submit"],
+body.solo-lectura .contenido details.plegable {
+    display: none;
+}

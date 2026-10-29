@@ -227,6 +227,12 @@ async function iniciarLayout() {
 
     document.body.classList.add("app")
 
+    // Soporte solo mira las pantallas de clientes: se ocultan los botones de crear y guardar (el servidor igual los rechazaría).
+    const PAGINAS_DE_SOPORTE = ["soporte.html", "parametros.html", "feriados.html", "cambiar-password.html"]
+    if (usuario.rol_plataforma === "soporte" && !PAGINAS_DE_SOPORTE.includes(location.pathname.split("/").pop())) {
+        document.body.classList.add("solo-lectura")
+    }
+
     const estilos = document.createElement("link")
     estilos.rel = "stylesheet"
     estilos.href = "css/menu.css"

@@ -1,4 +1,5 @@
 const { Op } = require("sequelize")
+const { sequelize } = require("../shared/database.js")
 const { AccesoSoporte, RegistroSoporte, Empresa, Usuario, Cuenta } = require("../shared/associations.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
@@ -19,6 +20,10 @@ async function accesosVigentes() {
 }
 
 async function autorizarAcceso(body, usuario) {
+    if (!Number.isInteger(Number(body.empresa_id)) || Number(body.empresa_id) <= 0) {
+        throw new ValidationError("Debe indicar la empresa")
+    }
+
     const empresa = await obtenerEmpresaDeCuenta(body.empresa_id, usuario)
 
     const errores = validarAutorizacion({ horas: body.horas, motivo: body.motivo })
@@ -26,22 +31,28 @@ async function autorizarAcceso(body, usuario) {
         throw new ValidationError(errores.join(". "))
     }
 
-    const vigente = await AccesoSoporte.findOne({ where: { empresa_id: empresa.id, ...condicionVigente() } })
-    if (vigente !== null) {
-        throw new ConflictError("Ya hay un acceso vigente para esta empresa: revócalo o espera que venza")
-    }
-
     const horas = body.horas === undefined || body.horas === null ? HORAS_POR_DEFECTO : Number(body.horas)
-    const desde = new Date()
-    const hasta = new Date(desde.getTime() + horas * 3600 * 1000)
 
-    return await AccesoSoporte.create({
-        cuenta_id: usuario.cuenta_id,
-        empresa_id: empresa.id,
-        autorizado_por_id: usuario.id,
-        motivo: textoMotivo(body.motivo),
-        desde,
-        hasta
+    // Se bloquea la fila de la empresa para que dos autorizaciones simultáneas no dejen dos accesos vigentes.
+    return await sequelize.transaction(async (transaction) => {
+        await Empresa.findByPk(empresa.id, { transaction, lock: transaction.LOCK.UPDATE })
+
+        const vigente = await AccesoSoporte.findOne({ where: { empresa_id: empresa.id, ...condicionVigente() }, transaction })
+        if (vigente !== null) {
+            throw new ConflictError("Ya hay un acceso vigente para esta empresa: revócalo o espera que venza")
+        }
+
+        const desde = new Date()
+        const hasta = new Date(desde.getTime() + horas * 3600 * 1000)
+
+        return await AccesoSoporte.create({
+            cuenta_id: usuario.cuenta_id,
+            empresa_id: empresa.id,
+            autorizado_por_id: usuario.id,
+            motivo: textoMotivo(body.motivo),
+            desde,
+            hasta
+        }, { transaction })
     })
 }
 
