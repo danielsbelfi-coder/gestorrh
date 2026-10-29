@@ -23,6 +23,7 @@ const CONCEPTOS = {
     DESCUENTO_PAGO_EXCESO: concepto("DESCUENTO_PAGO_EXCESO", "descuento"),
     AJUSTE_PAGO_EXCESO: concepto("AJUSTE_PAGO_EXCESO", "haber"),
     SALUD_ADICIONAL_ISAPRE: concepto("SALUD_ADICIONAL_ISAPRE", "descuento"),
+    ASIGNACION_FAMILIAR: concepto("ASIGNACION_FAMILIAR", "haber"),
 }
 
 function calcular(datos) {
@@ -220,4 +221,13 @@ test("aumento a mitad de mes: sueldo por tramos y horas extra al valor hora del 
     assert.strictEqual(resultado.valorHora, 5000)
     assert.strictEqual(monto(resultado, "HORAS_EXTRA_50"), 30000)
     assert.strictEqual(monto(resultado, "GRATIFICACION"), 220833)
+})
+test("asignación familiar: línea de haber con el número de cargas, fuera de la gratificación y de las bases", () => {
+    const sin = calcular({ sueldoBase: 900000 })
+    const con = calcular({ sueldoBase: 900000, asignacionFamiliar: { monto: 45202, cargas: 2 } })
+    const linea = con.lineas.find((l) => l.concepto.codigo === "ASIGNACION_FAMILIAR")
+
+    assert.deepStrictEqual({ cantidad: linea.cantidad, monto: linea.monto }, { cantidad: 2, monto: 45202 })
+    assert.strictEqual(con.baseGratificacion, sin.baseGratificacion)
+    assert.strictEqual(monto(calcular({ sueldoBase: 900000, asignacionFamiliar: { monto: 0, cargas: 1 } }), "ASIGNACION_FAMILIAR"), 0)
 })

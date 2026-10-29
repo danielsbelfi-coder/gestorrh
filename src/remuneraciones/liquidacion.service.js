@@ -50,7 +50,7 @@ function tasaCesantiaEmpleador(contrato, trabajador, parametros, primerDia) {
 }
 
 const CODIGOS_SISTEMA = [
-    "SUELDO_BASE", "GRATIFICACION", "DESCUENTO_ATRASOS", "AFP", "SALUD",
+    "SUELDO_BASE", "GRATIFICACION", "DESCUENTO_ATRASOS", "ASIGNACION_FAMILIAR", "AFP", "SALUD",
     "SALUD_ADICIONAL_ISAPRE", "CESANTIA", "IMPUESTO_UNICO",
     "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
@@ -229,6 +229,20 @@ async function obtenerParametrosDelMes(fecha) {
     return parametros
 }
 
+// Valor unitario por carga de los tramos A, B y C vigente en la fecha. Un tramo sin parámetro queda sin monto
+// (el cálculo solo falla si la persona tiene cargas en ese tramo).
+async function montosAsignacionFamiliar(fecha) {
+    const { CODIGOS_MONTOS } = require("./montos_asignacion_familiar.js")
+    const montos = {}
+    for (const [tramo, codigo] of Object.entries(CODIGOS_MONTOS)) {
+        const parametro = await obtenerParametroVigente(codigo, fecha)
+        if (parametro !== null) {
+            montos[tramo] = Number(parametro.valor)
+        }
+    }
+    return montos
+}
+
 async function obtenerTramos(fecha) {
     const tramos = await TramoImpuesto.findAll({
         where: {
@@ -320,6 +334,21 @@ async function prepararCalculo(periodo, trabajador) {
         throw new ConflictError("El trabajador no tiene un valor de plan de isapre para este mes")
     }
 
+    // Tramo y cargas familiares del mes (ver «Cargas familiares y asignación familiar» en el SPEC).
+    const { asignacionEnMes } = require("../trabajadores/carga_familiar.service.js")
+    const { calcularAsignacion } = require("./asignacion_familiar.js")
+    const delMes = await asignacionEnMes(persona.id, periodo.anio, periodo.mes)
+    let asignacionFamiliar
+    try {
+        asignacionFamiliar = calcularAsignacion({
+            tramo: delMes.tramo,
+            cargas: delMes.cargas,
+            montos: await montosAsignacionFamiliar(`${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`)
+        })
+    } catch (error) {
+        throw new ConflictError(error.message)
+    }
+
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)
     const conceptos = await obtenerConceptosSistema()
@@ -375,6 +404,10 @@ async function prepararCalculo(periodo, trabajador) {
         variables: aprobadas,
         minutosAtraso: resumen.minutos_atraso,
         ingresoMinimoMensual: parametros.ingresoMinimoMensual,
+        asignacionFamiliar: {
+            monto: asignacionFamiliar.monto,
+            cargas: asignacionFamiliar.simples + asignacionFamiliar.maternales + asignacionFamiliar.invalidez
+        },
         tasaAfp: reglas.afp ? parametros.cotizacionAfp + Number(prevision.afp.comision) : 0,
         tasaSalud: parametros.tasaSalud,
         planSaludUF: prevision.sistema_salud === "Isapre" ? Number(prevision.plan_isapre_uf) : 0,
@@ -432,6 +465,8 @@ async function prepararCalculo(periodo, trabajador) {
         // Los identificadores permiten que el PDF, el LRE y Previred usen la previsión de este mes aunque la persona cambie después.
         afp: { id: prevision.afp.id, codigo: prevision.afp.codigo, tasa: datos.tasaAfp },
         salud: { sistema: prevision.sistema_salud, isapre_id: prevision.sistema_salud === "Isapre" ? prevision.isapre?.id ?? null : null, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
+        // Tramo y número de cargas del mes: Previred y el LRE los informan aunque la persona cambie después.
+        asignacionFamiliar,
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         saldoAnterior: saldoPendiente,

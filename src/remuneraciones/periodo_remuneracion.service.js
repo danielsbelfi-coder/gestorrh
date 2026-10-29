@@ -9,11 +9,12 @@ const { PERMISOS, exigirRol } = require("../shared/permisos.js");
 async function parametrosFaltantes(anio, mes) {
     const { CODIGOS_PARAMETROS } = require("./liquidacion.service.js")
     const { CODIGOS_TRAMOS } = require("./previred.service.js")
+    const { CODIGOS_MONTOS } = require("./montos_asignacion_familiar.js")
 
     const fecha = `${anio}-${String(mes).padStart(2, "0")}-01`
     const faltantes = []
 
-    for (const codigo of [...Object.values(CODIGOS_PARAMETROS), ...Object.values(CODIGOS_TRAMOS)]) {
+    for (const codigo of [...Object.values(CODIGOS_PARAMETROS), ...Object.values(CODIGOS_TRAMOS), ...Object.values(CODIGOS_MONTOS)]) {
         if (await obtenerParametroVigente(codigo, fecha) === null) {
             faltantes.push(codigo)
         }

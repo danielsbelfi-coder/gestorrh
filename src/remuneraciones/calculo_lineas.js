@@ -32,7 +32,7 @@ function sumarSegun(lineas, marca) {
     }, 0)
 }
 
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, conceptos }) {
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, conceptos }) {
     const valorHora = valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
 
@@ -56,6 +56,15 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
         } else {
             lineas.push({ concepto: grupo.concepto, cantidad: null, monto: grupo.monto })
         }
+    }
+
+    // Asignación familiar del mes (no imponible ni tributable): cantidad = número de cargas.
+    if (asignacionFamiliar && asignacionFamiliar.monto > 0) {
+        lineas.push({
+            concepto: conceptos.ASIGNACION_FAMILIAR,
+            cantidad: asignacionFamiliar.cargas,
+            monto: asignacionFamiliar.monto
+        })
     }
 
     if (minutosAtraso > 0) {

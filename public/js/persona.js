@@ -119,7 +119,8 @@ async function cargarPersona() {
     document.getElementById("seccionRelaciones").hidden = false
     document.getElementById("seccionSituacion").hidden = false
     document.getElementById("seccionPrevision").hidden = false
-    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones()])
+    document.getElementById("seccionCargas").hidden = false
+    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas()])
 }
 
 async function cargarRelaciones() {
@@ -299,6 +300,203 @@ document.getElementById("previsiones").addEventListener("click", async function 
     }
     mensaje("info", "Cambio de previsión eliminado.")
     await Promise.all([cargarPrevisiones(), refrescarVigente()])
+})
+
+// ---------- Cargas familiares ----------
+
+const RELACIONES = {
+    hijo: "Hijo o hija", conyuge: "Cónyuge", conviviente_civil: "Conviviente civil", nieto: "Nieto o nieta",
+    madre_viuda: "Madre viuda", ascendiente: "Ascendiente", propia: "La propia trabajadora", otro: "Otra"
+}
+const TIPOS_CARGA = { simple: "Simple", maternal: "Maternal", invalidez: "Invalidez" }
+let cargas = []
+let cargaEnEdicion = null
+
+const mesTexto = (fecha) => String(fecha).slice(0, 7).split("-").reverse().join("-")
+
+// Aviso cuando un registro toca meses ya cerrados: esas liquidaciones no cambian.
+function avisoMesesCerrados(textoExito, meses) {
+    if (!meses || meses.length === 0) {
+        mensaje("info", textoExito)
+        return
+    }
+    mensaje("info", `${textoExito} Ojo: alcanza meses ya cerrados (${meses.map(mesTexto).join(", ")}). Esas liquidaciones no cambian; si corresponde, paga la diferencia como «Asignación familiar retroactiva» en las variables del mes en curso.`)
+}
+
+async function cargarTramos() {
+    const resultado = await llamarApi(`/api/personas/${personaId}/tramos-asignacion`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo cargar el tramo de asignación familiar")
+        return
+    }
+    document.getElementById("tramosAsignacion").innerHTML = resultado.datos.length === 0
+        ? `<p class="texto-suave">Sin tramo registrado: se informa tramo D (sin derecho). Si la persona tiene cargas vigentes, la liquidación pedirá registrar el tramo.</p>`
+        : `<table>
+            <thead><tr><th>Desde</th><th>Tramo</th><th>Documento</th><th></th></tr></thead>
+            <tbody>${resultado.datos.map((t) => `
+                <tr>
+                    <td>${escaparHtml(mesTexto(t.desde))}</td>
+                    <td>${escaparHtml(t.tramo)}</td>
+                    <td>${escaparHtml(t.documento ?? "")}</td>
+                    <td><button type="button" class="chico secundario" data-eliminar-tramo="${t.id}">Eliminar</button></td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`
+}
+
+document.getElementById("formTramo").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const creado = await crearRegistro(`/api/personas/${personaId}/tramos-asignacion`, {
+        desde: valor("tramoDesde"),
+        tramo: valor("tramoValor"),
+        documento: textoONulo("tramoDocumento")
+    }, "Tramo registrado.")
+    if (creado) {
+        avisoMesesCerrados("Tramo registrado.", creado.meses_cerrados)
+        this.reset()
+        cargarTramos()
+    }
+})
+
+document.getElementById("tramosAsignacion").addEventListener("click", async function (evento) {
+    const id = evento.target.closest("[data-eliminar-tramo]")?.dataset.eliminarTramo
+    if (!id || !confirm("¿Eliminar este tramo? Desde ese mes volverá a regir el tramo anterior.")) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/personas/${personaId}/tramos-asignacion/${id}`, { method: "DELETE" })
+    if (resultado.status !== 204) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo eliminar")
+        return
+    }
+    mensaje("info", "Tramo eliminado.")
+    cargarTramos()
+})
+
+function estadoCarga(carga) {
+    const hoy = new Date().toISOString().slice(0, 10)
+    if (carga.desde > hoy) {
+        return "Futura"
+    }
+    return carga.hasta !== null && carga.hasta < hoy ? "Vencida" : "Vigente"
+}
+
+async function cargarCargas() {
+    const resultado = await llamarApi(`/api/personas/${personaId}/cargas`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudieron cargar las cargas familiares")
+        return
+    }
+    cargas = resultado.datos
+    document.getElementById("cargasFamiliares").innerHTML = cargas.length === 0
+        ? `<p class="texto-suave">Sin cargas registradas.</p>`
+        : `<table>
+            <thead><tr><th>Nombre</th><th>RUT</th><th>Relación</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Documento</th><th>Estado</th><th></th></tr></thead>
+            <tbody>${cargas.map((c) => `
+                <tr>
+                    <td>${escaparHtml(c.nombre)}</td>
+                    <td>${c.rut ? escaparHtml(formatearRut(c.rut, c.dv)) : ""}</td>
+                    <td>${escaparHtml(RELACIONES[c.relacion] ?? c.relacion)}</td>
+                    <td>${escaparHtml(TIPOS_CARGA[c.tipo] ?? c.tipo)}</td>
+                    <td>${escaparHtml(fechaCorta(c.desde))}</td>
+                    <td>${escaparHtml(c.hasta ? fechaCorta(c.hasta) : "Sin término")}</td>
+                    <td>${escaparHtml(c.documento ?? "")}</td>
+                    <td>${escaparHtml(estadoCarga(c))}</td>
+                    <td>
+                        <button type="button" class="chico secundario" data-editar-carga="${c.id}">Editar</button>
+                        <button type="button" class="chico secundario" data-eliminar-carga="${c.id}">Eliminar</button>
+                    </td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`
+}
+
+// "12.345.678-9" → { rut: "12345678", dv: "9" }. Vacío → sin RUT.
+function rutDeCarga() {
+    const texto = valor("cargaRut").replace(/[.\s]/g, "")
+    if (texto === "") {
+        return { rut: null, dv: null }
+    }
+    const [rut, dv] = texto.includes("-") ? texto.split("-") : [texto.slice(0, -1), texto.slice(-1)]
+    return { rut, dv }
+}
+
+function terminarEdicionCarga() {
+    cargaEnEdicion = null
+    document.getElementById("formCarga").reset()
+    document.getElementById("botonCarga").textContent = "Registrar carga"
+    document.getElementById("cancelarCarga").hidden = true
+}
+
+document.getElementById("cancelarCarga").addEventListener("click", terminarEdicionCarga)
+
+document.getElementById("formCarga").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const datos = {
+        nombre: valor("cargaNombre"),
+        ...rutDeCarga(),
+        relacion: valor("cargaRelacion"),
+        tipo: valor("cargaTipo"),
+        desde: valor("cargaDesde"),
+        hasta: textoONulo("cargaHasta"),
+        documento: textoONulo("cargaDocumento")
+    }
+
+    const editando = cargaEnEdicion !== null
+    let guardada
+    if (!editando) {
+        guardada = await crearRegistro(`/api/personas/${personaId}/cargas`, datos, "Carga registrada.")
+    } else {
+        const resultado = await llamarApi(`/api/personas/${personaId}/cargas/${cargaEnEdicion}`, { method: "PUT", body: JSON.stringify(datos) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo guardar")
+            return
+        }
+        guardada = resultado.datos
+    }
+
+    if (guardada) {
+        terminarEdicionCarga()
+        await cargarCargas()
+        avisoMesesCerrados(editando ? "Carga actualizada." : "Carga registrada.", guardada.meses_cerrados)
+    }
+})
+
+document.getElementById("cargasFamiliares").addEventListener("click", async function (evento) {
+    const editar = evento.target.closest("[data-editar-carga]")?.dataset.editarCarga
+    if (editar) {
+        const carga = cargas.find((c) => String(c.id) === editar)
+        cargaEnEdicion = carga.id
+        document.getElementById("cargaNombre").value = carga.nombre
+        document.getElementById("cargaRut").value = carga.rut ? formatearRut(carga.rut, carga.dv) : ""
+        document.getElementById("cargaRelacion").value = carga.relacion
+        document.getElementById("cargaTipo").value = carga.tipo
+        document.getElementById("cargaDesde").value = carga.desde
+        document.getElementById("cargaHasta").value = carga.hasta ?? ""
+        document.getElementById("cargaDocumento").value = carga.documento ?? ""
+        document.getElementById("botonCarga").textContent = "Guardar cambios"
+        document.getElementById("cancelarCarga").hidden = false
+        document.getElementById("cargaNombre").focus()
+        return
+    }
+
+    const id = evento.target.closest("[data-eliminar-carga]")?.dataset.eliminarCarga
+    if (!id || !confirm("¿Eliminar esta carga? Si fue un error de registro, elimínala; si el documento venció, mejor indica su fecha de término.")) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/personas/${personaId}/cargas/${id}`, { method: "DELETE" })
+    if (resultado.status !== 204) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo eliminar")
+        return
+    }
+    if (String(cargaEnEdicion) === id) {
+        terminarEdicionCarga()
+    }
+    mensaje("info", "Carga eliminada.")
+    cargarCargas()
 })
 
 // ---------- Guardar ----------

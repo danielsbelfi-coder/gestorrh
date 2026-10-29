@@ -45,6 +45,12 @@ function camposTrabajador(datos) {
         12: datos.tipoCotizante,
         13: datos.diasTrabajados,
         18: datos.tramo,
+        19: datos.cargasSimples ?? 0,
+        20: datos.cargasMaternales ?? 0,
+        21: datos.cargasInvalidez ?? 0,
+        22: datos.asignacion ?? 0,
+        23: datos.asignacionRetroactiva ?? 0,
+        24: datos.reintegroCargas ?? 0,
         25: "N"
     }
 }

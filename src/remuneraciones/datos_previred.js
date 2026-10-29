@@ -7,6 +7,16 @@ function montoLinea(lineas, codigo) {
         .reduce((suma, linea) => suma + Number(linea.monto), 0)
 }
 
+// Tramo y cargas guardados en la liquidación (sin tramo registrado → D, sin derecho). Las liquidaciones calculadas
+// antes de existir las cargas no los tienen: siguen con el tramo según la renta y sin cargas.
+function asignacionFamiliarPrevired(detalle, limitesTramo) {
+    const guardada = detalle.asignacionFamiliar
+    if (!guardada) {
+        return { tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo), cargasSimples: 0, cargasMaternales: 0, cargasInvalidez: 0 }
+    }
+    return { tramo: guardada.tramo ?? "D", cargasSimples: guardada.simples, cargasMaternales: guardada.maternales, cargasInvalidez: guardada.invalidez }
+}
+
 function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tipoJornada, fechasInasistencia, fechasPermisoSinGoce }) {
     const trabajador = liquidacion.Trabajador
     const persona = trabajador.Persona
@@ -28,7 +38,10 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
             mes,
             diasTrabajados: liquidacion.dias_trabajados,
             tipoCotizante: detalle.cotizante.tipo,
-            tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo)
+            ...asignacionFamiliarPrevired(detalle, limitesTramo),
+            asignacion: monto("ASIGNACION_FAMILIAR"),
+            asignacionRetroactiva: monto("ASIGNACION_FAMILIAR_RETROACTIVA"),
+            reintegroCargas: monto("REINTEGRO_CARGAS_FAMILIARES")
         },
         prevision: {
             codigoAfp: persona.Afp.codigo_previred,
@@ -100,6 +113,7 @@ function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasP
 }
 
 module.exports = {
+    asignacionFamiliarPrevired,
     datosPrevired,
     problemasPrevired
 }

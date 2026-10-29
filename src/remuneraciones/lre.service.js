@@ -8,7 +8,7 @@ const { obtenerLimitesTramo } = require("./previred.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
-const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
+const { asignacionFamiliarPrevired } = require("./datos_previred.js")
 const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
 const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
 
@@ -165,7 +165,7 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             isapreLre: persona.Isapre?.codigo_lre ?? null,
             cotizaCesantia: montoDe("CESANTIA") + montoDe("APORTE_CESANTIA") > 0,
             mutualLre: mutualidad.codigo_lre,
-            tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo),
+            ...asignacionFamiliarPrevired(detalle, limitesTramo),
             diasTrabajados: liquidacion.dias_trabajados,
             diasLicencia: detalle.diasPago.licenciaMedica,
             diasVacaciones: detalle.diasPago.vacaciones

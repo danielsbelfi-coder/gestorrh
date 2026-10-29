@@ -67,6 +67,13 @@ Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **
 ### Historial de previsión (ficha de la persona)
 La AFP, el sistema de salud y el plan de isapre se registran **por mes** en la ficha de la persona, sección **Historial de previsión**: «Registrar cambio» indicando desde qué mes rige. Cada liquidación se calcula con la previsión que regía en su mes, y el PDF, el LRE y Previred de meses anteriores siguen mostrando la de ese mes aunque la persona cambie después. Arriba, en «Previsión y salud», se ve la vigente hoy. No se aceptan cambios que alcancen meses ya cerrados: en ese caso se reabre el periodo o se regulariza en Previred o con la isapre.
 
+### Cargas familiares (ficha de la persona)
+En la ficha de la persona, sección **Cargas familiares**, se registra lo que dice el documento que presenta el trabajador (resolución de la CCAF o del IPS):
+- **Tramo de asignación familiar** (A, B, C o D) desde un mes, con el número del documento. Sin tramo registrado se informa D (sin derecho). Si la persona tiene cargas vigentes y no tiene tramo, la liquidación avisa y no se calcula.
+- **Cargas**: nombre, RUT (opcional), relación, tipo (simple, maternal o invalidez, que recibe el doble), fecha desde y, si el documento la indica, fecha hasta. Cuando el trabajador renueva el documento, se edita la carga (**Editar**) o se registra una nueva.
+
+La asignación se paga por **mes completo**: cuenta toda carga vigente al menos un día del mes. Aparece en la liquidación como «Asignación familiar» (no imponible ni tributable), en Previred (campos 18 a 24) y en el LRE (1111 a 1114 y 2311). La **asignación retroactiva** (por ejemplo, desde la solicitud hasta la aprobación) y el **reintegro de cargas** se ingresan como variables del mes. Registrar una carga o un tramo que alcanza meses cerrados está permitido: esas liquidaciones no cambian y la pantalla avisa para pagar la diferencia como retroactiva.
+
 ### Mi seguridad (todos los usuarios)
 En el pie del menú, **Mi seguridad** reúne:
 - **Cambiar contraseña** (cierra tus sesiones en otros navegadores).
@@ -103,7 +110,7 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 **Liquidaciones**: elige el periodo y **Calcular** (un trabajador) o **Calcular todas**. Revisa el detalle, después **Cerrar liquidación** o **Cerrar todas**. Descarga **PDF de todas** o **PDF con aportes** (incluye aportes del empleador). Una liquidación cerrada ya no cambia.
 
 ### 6.7 Archivos legales
-**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan pensionados, cargas familiares, CCAF ni APV, ni los aportes de la reforma previsional.
+**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan pensionados, CCAF ni APV, ni los aportes de la reforma previsional.
 
 ### 6.8 Cerrar el mes
 **Periodos → Cerrar periodo**. Antes de cerrar, el sistema revisa cada trabajador (resumen aprobado, liquidación emitida, sin variables pendientes y finiquito emitido si terminó en el mes). Si falta algo, muestra la lista para resolverla.

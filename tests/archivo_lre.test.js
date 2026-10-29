@@ -138,3 +138,10 @@ test("finiquito por renuncia: solo el feriado; sin filas en cero", () => {
 
     assert.deepStrictEqual(lineas.map((l) => l.codigo_lre), [2313])
 })
+test("identificación: cargas familiares por tipo y tramo; sin cargas van en 0", () => {
+    const conCargas = camposIdentificacionLre({ ...ana, tramo: "A", cargasSimples: 2, cargasMaternales: 1, cargasInvalidez: 1 })
+    assert.deepStrictEqual([conCargas[1111], conCargas[1112], conCargas[1113], conCargas[1114]], [2, 1, 1, "A"])
+
+    const sinCargas = camposIdentificacionLre(ana)
+    assert.deepStrictEqual([sinCargas[1111], sinCargas[1112], sinCargas[1113]], [0, 0, 0])
+})

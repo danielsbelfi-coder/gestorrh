@@ -108,3 +108,26 @@ test("la edad ya no bloquea: una persona de 70 años sin problemas de datos est�
 
     assert.deepStrictEqual(problemasPrevired(revision({ liquidacion })), [])
 })
+test("cargas familiares: tramo y cargas guardados en la liquidación, montos en 22, 23 y 24", () => {
+    const conCargas = structuredClone(entrada)
+    conCargas.liquidacion.detalle_calculo.asignacionFamiliar = { tramo: "B", simples: 2, maternales: 0, invalidez: 1, unitario: 13870, monto: 55480 }
+    conCargas.liquidacion.LiquidacionLineas = [
+        ...lineas,
+        { codigo: "ASIGNACION_FAMILIAR", monto: "55480.00" },
+        { codigo: "ASIGNACION_FAMILIAR_RETROACTIVA", monto: "27740.00" },
+        { codigo: "REINTEGRO_CARGAS_FAMILIARES", monto: "13870.00" }
+    ]
+    const [principal] = lineasTrabajador(datosPrevired(conCargas)).map((linea) => linea.split(";"))
+
+    // Campos 18 a 24 (posiciones 17 a 23): tramo, simples, maternales, invalidez, asignación, retroactiva, reintegro.
+    assert.deepStrictEqual(principal.slice(17, 24), ["B", "2", "0", "1", "55480", "27740", "13870"])
+})
+
+test("cargas familiares: sin tramo registrado va D; una liquidación antigua sigue con el tramo por renta", () => {
+    const sinTramo = structuredClone(entrada)
+    sinTramo.liquidacion.detalle_calculo.asignacionFamiliar = { tramo: null, simples: 0, maternales: 0, invalidez: 0, unitario: 0, monto: 0 }
+    assert.strictEqual(datosPrevired(sinTramo).trabajador.tramo, "D")
+
+    const antigua = datosPrevired(entrada).trabajador
+    assert.deepStrictEqual([antigua.tramo, antigua.cargasSimples, antigua.asignacion], ["C", 0, 0])
+})
