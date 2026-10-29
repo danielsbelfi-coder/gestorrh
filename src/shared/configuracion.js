@@ -3,22 +3,7 @@
 const fs = require("fs")
 const { leerClave } = require("../auth/cifrado.js")
 
-const CLAVES_DEBILES = ["secret", "secreto", "changeme", "cambiar", "password", "contraseña", "jwt_secret", "mi_clave_secreta", "clave_secreta"]
 const REQUERIDAS_BD = ["DB_NAME", "DB_USER", "DB_HOST", "DB_DIALECT"]
-const MAXIMO_RECOMENDADO_HORAS = 24
-
-function aHoras(duracion) {
-    const texto = String(duracion).trim()
-    if (/^\d+$/.test(texto)) {
-        return Number(texto) / 3600
-    }
-    const coincidencia = /^(\d+)\s*([smhd])$/.exec(texto)
-    if (!coincidencia) {
-        return null
-    }
-    const factor = { s: 1 / 3600, m: 1 / 60, h: 1, d: 24 }[coincidencia[2]]
-    return Number(coincidencia[1]) * factor
-}
 
 const HOSTS_LOCALES = ["localhost", "127.0.0.1", "::1"]
 
@@ -80,27 +65,6 @@ function validarConfiguracion(env, existeArchivo = fs.existsSync) {
         errores.push(`DB_SSL_CA indica un archivo que no existe: ${ca}`)
     }
 
-    const secreto = env.JWT_SECRET ?? ""
-    if (secreto === "") {
-        errores.push("Falta JWT_SECRET")
-    } else if (secreto.length < 32) {
-        errores.push("JWT_SECRET es demasiado corta: usa al menos 32 caracteres aleatorios")
-    } else if (CLAVES_DEBILES.some((debil) => secreto.toLowerCase().includes(debil))) {
-        errores.push("JWT_SECRET parece una clave de ejemplo: genera una aleatoria (node -e \"console.log(require('crypto').randomBytes(48).toString('base64url'))\")")
-    }
-
-    // Sin vencimiento, un token robado serviría para siempre.
-    if (!env.JWT_EXPIRES_IN) {
-        errores.push("Falta JWT_EXPIRES_IN (por ejemplo 8h): sin ella los tokens no vencen nunca")
-    } else {
-        const horas = aHoras(env.JWT_EXPIRES_IN)
-        if (horas === null || horas <= 0) {
-            errores.push("JWT_EXPIRES_IN no es válida: usa un formato como 30m, 8h o 1d")
-        } else if (horas > MAXIMO_RECOMENDADO_HORAS) {
-            advertencias.push(`JWT_EXPIRES_IN dura más de ${MAXIMO_RECOMENDADO_HORAS} horas: se recomienda 8h`)
-        }
-    }
-
     // Clave para cifrar los secretos del 2FA. Perderla o cambiarla invalida el 2FA de todos los usuarios.
     try {
         leerClave(env.TOTP_CLAVE_CIFRADO)
@@ -136,4 +100,4 @@ function validarConfiguracion(env, existeArchivo = fs.existsSync) {
     return { errores, advertencias }
 }
 
-module.exports = { validarConfiguracion, aHoras, origenDeLaApp }
+module.exports = { validarConfiguracion, origenDeLaApp }

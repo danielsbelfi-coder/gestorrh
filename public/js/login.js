@@ -20,9 +20,15 @@ const formulario = document.getElementById("formLogin")
 const boton = document.getElementById("botonEntrar")
 const mensajeError = document.getElementById("mensajeError")
 
-if (localStorage.getItem("token")) {
-    window.location.href = "index.html"
-}
+requiereLogin()
+
+// Si ya hay una sesión abierta, no tiene sentido volver a ingresar. Se usa fetch directo (no llamarApi)
+// porque un 401 aquí es lo normal y no debe redirigir otra vez al login.
+fetch("/api/auth/usuario").then((respuesta) => {
+    if (respuesta.ok) {
+        window.location.href = "index.html"
+    }
+}).catch(() => { /* sin conexión: se queda en el login */ })
 
 formulario.addEventListener("submit", async function (evento) {
     evento.preventDefault()
@@ -42,7 +48,7 @@ formulario.addEventListener("submit", async function (evento) {
         })
 
         if (resultado.status === 200) {
-            localStorage.setItem("token", resultado.datos.token)
+            guardarCsrf(resultado.datos.csrfToken)
             window.location.href = acceso.destino(resultado.datos)
             return
         }

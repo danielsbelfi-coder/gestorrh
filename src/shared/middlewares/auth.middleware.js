@@ -1,12 +1,21 @@
-const jwt = require("jsonwebtoken")
-const { Usuario, UsuarioEmpresaRol, Empresa, Cuenta, Rol } = require("../associations");
+// Revisa la sesión de cada petición (cookie + sesión guardada en el servidor). Ver "Seguridad de acceso" en el SPEC.
+const { UsuarioEmpresaRol, Cuenta, Rol } = require("../associations");
 const { ROLES_ASIGNABLES } = require("../permisos");
-const { AuthenticationError } = require("../errors");
 const { rutaDePlataforma, enmascararCuentas } = require("../../soporte/acceso_soporte.js");
+const { origenDeLaApp } = require("../configuracion.js")
+const {
+    nombreCookie, opcionesCookie, leerCookie, motivoInvalidez, estadoDeAcceso, rutaPermitida, mensajeDeEstado,
+    metodoQueEscribe, origenPermitido, csrfValido
+} = require("../../auth/reglas_sesion.js")
+const sesiones = require("../../auth/sesion.service.js")
+
+const PRODUCCION = process.env.NODE_ENV === "production"
+const NOMBRE_COOKIE = nombreCookie(PRODUCCION)
 
 const RUTAS_CUENTA_CANCELADA = [
     "GET /api/auth/usuario",
     "PATCH /api/auth/cambiar-password",
+    "POST /api/auth/logout",
     "GET /api/cuenta/empresas"
 ]
 
@@ -17,28 +26,41 @@ function rutaPermitidaCuentaCancelada(req) {
         || (req.method === "GET" && /^\/api\/cuenta\/empresas\/\d+\/exportar$/.test(ruta))
 }
 
-const verificarToken = async (req, res, next) => {
+function sinSesion(res) {
+    res.clearCookie(NOMBRE_COOKIE, opcionesCookie(PRODUCCION))
+    return res.status(401).json({ error: "Tu sesión terminó. Inicia sesión de nuevo" })
+}
+
+// La petición debe venir de la propia aplicación (Origin) y traer el token CSRF de la sesión.
+// El login no pasa por aquí: solo revisa Origin (ver auth.controller.js).
+function revisarCsrf(req, sesion) {
+    const origen = { origin: req.get("origin"), secFetchSite: req.get("sec-fetch-site") }
+    return origenPermitido(origen, origenDeLaApp(process.env)) && csrfValido(req.get("x-csrf-token"), sesion.csrf_token)
+}
+
+const verificarSesion = async (req, res, next) => {
     try {
+        const token = leerCookie(req.headers.cookie, NOMBRE_COOKIE)
+        const sesion = await sesiones.buscarSesion(token)
 
-        const auth = req.headers.authorization;
-
-
-        if (!auth) {
-            throw new AuthenticationError('Token no proporcionado')
-        };
-
-        const token = auth.split(" ")[1]
-
-        if (!token) {
-            throw new AuthenticationError('Token no proporcionado')
+        if (sesion === null) {
+            return sinSesion(res)
         }
 
-        const tokenPayload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] })
+        const usuario = sesion.Usuario
 
-        const usuario = await Usuario.findByPk(tokenPayload.sub)
+        if (!usuario || usuario.estado !== "activo") {
+            await sesiones.cerrarTodasLasSesiones(sesion.usuario_id)
+            return sinSesion(res)
+        }
 
-        if (usuario === null || usuario.estado !== "activo") {
-            throw new AuthenticationError("Usuario no válido")
+        if (motivoInvalidez(sesion, usuario) !== null) {
+            await sesiones.cerrarSesion(sesion.id)
+            return sinSesion(res)
+        }
+
+        if (metodoQueEscribe(req.method) && !revisarCsrf(req, sesion)) {
+            return res.status(403).json({ error: "La solicitud no es válida. Recarga la página", codigo: "csrf" })
         }
 
         if (usuario.cuenta_id !== null) {
@@ -49,7 +71,8 @@ const verificarToken = async (req, res, next) => {
 
             if (cuenta.estado === "cancelada") {
                 if (usuario.es_admin_cuenta !== true) {
-                    throw new AuthenticationError("Cuenta cancelada")
+                    await sesiones.cerrarTodasLasSesiones(usuario.id)
+                    return sinSesion(res)
                 }
 
                 if (!rutaPermitidaCuentaCancelada(req)) {
@@ -58,19 +81,20 @@ const verificarToken = async (req, res, next) => {
             }
         }
 
-        if (usuario.password_cambiado_en !== null) {
-            const cambioEnSegundos = Math.floor(usuario.password_cambiado_en.getTime() / 1000)
-
-            if (tokenPayload.iat < cambioEnSegundos) {
-                throw new AuthenticationError("Token anterior al último cambio de contraseña")
-            }
+        // Pasos obligatorios pendientes (código del 2FA, cambiar la contraseña, inscribir el 2FA).
+        let estado = estadoDeAcceso(sesion, usuario)
+        // TEMPORAL hasta S4: todavía no existen las pantallas para inscribir el 2FA, así que no se exige.
+        if (estado === "activar_2fa") {
+            estado = "normal"
+        }
+        if (!rutaPermitida(estado, req.method, req.originalUrl)) {
+            return res.status(403).json({ error: mensajeDeEstado(estado), paso: estado })
         }
 
-        if (usuario.debe_cambiar_password === true && req.originalUrl !== "/api/auth/cambiar-password") {
-            return res.status(403).json({ error: "Debes cambiar contraseña antes de continuar" })
-        }
+        await sesiones.tocarSesion(sesion)
 
         req.usuario = usuario
+        req.sesion = sesion
 
         // Solo los roles en uso dan acceso: un vínculo antiguo como SUPERVISOR o LECTURA no abre la empresa.
         const vinculos = await UsuarioEmpresaRol.findAll({
@@ -110,15 +134,13 @@ const verificarToken = async (req, res, next) => {
         next()
 
     } catch (error) {
-        if (error instanceof AuthenticationError)
-            return res.status(error.statusCode).json({ error: "Acceso denegado. Token no proporcionado o inválido." })
-
-        if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError")
-            return res.status(401).json({ error: "Acceso denegado. Token no proporcionado o inválido." })
+        console.error("Error al revisar la sesión:", error.message)
         res.status(500).json({
             error: "Error interno del servidor"
         })
     }
 }
 
-module.exports = verificarToken
+module.exports = verificarSesion
+module.exports.NOMBRE_COOKIE = NOMBRE_COOKIE
+module.exports.PRODUCCION = PRODUCCION

@@ -27,6 +27,18 @@ test("cookie: __Host- y Secure solo en producción", () => {
     assert.equal(r.opcionesCookie(false).secure, false)
 })
 
+test("leerCookie encuentra la cookie por su nombre exacto", () => {
+    assert.equal(r.leerCookie("gestorrh=abc", "gestorrh"), "abc")
+    assert.equal(r.leerCookie("otra=1; gestorrh=abc-_9; x=2", "gestorrh"), "abc-_9")
+    assert.equal(r.leerCookie("__Host-gestorrh=xyz", "__Host-gestorrh"), "xyz")
+    // No confunde nombres parecidos.
+    assert.equal(r.leerCookie("__Host-gestorrh=xyz", "gestorrh"), null)
+    assert.equal(r.leerCookie("gestorrh2=xyz", "gestorrh"), null)
+    assert.equal(r.leerCookie("gestorrh=", "gestorrh"), null)
+    assert.equal(r.leerCookie(undefined, "gestorrh"), null)
+    assert.equal(r.leerCookie("basura", "gestorrh"), null)
+})
+
 test("2FA obligatorio para soporte, comercial y admins de cuenta; voluntario para el resto", () => {
     assert.equal(r.requiere2fa(soporte), true)
     assert.equal(r.requiere2fa(comercial), true)

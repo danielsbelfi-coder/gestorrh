@@ -1,12 +1,47 @@
-async function llamarApi(ruta, opciones = {}) {
-    const token = localStorage.getItem("token")
+// La sesión viaja en una cookie que el JavaScript no puede leer (HttpOnly): aquí no se guarda ningún token de sesión.
+// Lo único que se guarda es el token CSRF, que el servidor exige en la cabecera X-CSRF-Token de toda petición
+// que escribe. Solo no sirve para entrar (hace falta la cookie); se guarda por pestaña (sessionStorage).
+const CLAVE_CSRF = "csrf"
 
+function guardarCsrf(token) {
+    try {
+        if (token) {
+            sessionStorage.setItem(CLAVE_CSRF, token)
+        } else {
+            sessionStorage.removeItem(CLAVE_CSRF)
+        }
+    } catch {
+        // Sin almacenamiento: se vuelve a pedir al servidor cuando haga falta.
+    }
+}
+
+function leerCsrf() {
+    try {
+        return sessionStorage.getItem(CLAVE_CSRF)
+    } catch {
+        return null
+    }
+}
+
+// El token viene en GET /api/auth/usuario (también en la respuesta del login y del cambio de contraseña).
+async function renovarCsrf() {
+    const respuesta = await fetch("/api/auth/usuario")
+    if (respuesta.ok) {
+        guardarCsrf((await respuesta.json()).csrf_token)
+    }
+    return leerCsrf()
+}
+
+const METODOS_QUE_ESCRIBEN = ["POST", "PUT", "PATCH", "DELETE"]
+
+async function llamarApi(ruta, opciones = {}, reintento = false) {
+    const metodo = String(opciones.method ?? "GET").toUpperCase()
     const headers = {
         "Content-Type": "application/json"
     }
 
-    if (token) {
-        headers["Authorization"] = "Bearer " + token
+    if (METODOS_QUE_ESCRIBEN.includes(metodo) && ruta !== "/api/auth/login") {
+        headers["X-CSRF-Token"] = leerCsrf() ?? await renovarCsrf() ?? ""
     }
 
     const respuesta = await fetch(ruta, {
@@ -20,19 +55,41 @@ async function llamarApi(ruta, opciones = {}) {
 
     const datos = respuesta.status === 204 ? null : await respuesta.json()
 
+    // Token CSRF viejo (por ejemplo, la sesión se renovó en otra pestaña): se pide uno nuevo y se reintenta una vez.
+    if (respuesta.status === 403 && datos?.codigo === "csrf" && !reintento && ruta !== "/api/auth/login") {
+        guardarCsrf(null)
+        return llamarApi(ruta, opciones, true)
+    }
+
+    if (ruta === "/api/auth/usuario" && respuesta.ok) {
+        guardarCsrf(datos.csrf_token)
+    }
+
     return { status: respuesta.status, datos }
 }
 
-// Token vencido o inválido: se borra y se vuelve al login.
+// Sesión terminada (vencida, cerrada en otro lado o inexistente): se vuelve al login.
 function sesionVencida() {
-    localStorage.removeItem("token")
+    guardarCsrf(null)
     window.location.href = "login.html"
 }
 
+// Botón "Cerrar sesión": el servidor borra la sesión, así que la cookie deja de servir aunque alguien la haya copiado.
+async function cerrarSesion() {
+    try {
+        await llamarApi("/api/auth/logout", { method: "POST" })
+    } finally {
+        sesionVencida()
+    }
+}
+
+// Antes la sesión era un token guardado en el navegador. Se borra si quedó de una versión anterior.
+// La comprobación real de la sesión la hace la primera llamada a la API (un 401 lleva al login).
 function requiereLogin() {
-    const token = localStorage.getItem("token")
-    if (!token) {
-        window.location.href = "login.html"
+    try {
+        localStorage.removeItem("token")
+    } catch {
+        // Sin almacenamiento: no hay nada que borrar.
     }
 }
 
@@ -46,11 +103,7 @@ function escaparHtml(texto) {
 }
 
 async function descargarArchivo(ruta) {
-    const token = localStorage.getItem("token")
-
-    const respuesta = await fetch(ruta, {
-        headers: { "Authorization": "Bearer " + token }
-    })
+    const respuesta = await fetch(ruta)
 
     if (respuesta.status === 401) {
         sesionVencida()

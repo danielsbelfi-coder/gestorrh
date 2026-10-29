@@ -33,6 +33,21 @@ function nombreCookie(produccion) {
     return produccion ? "__Host-gestorrh" : "gestorrh"
 }
 
+// Lee una cookie de la cabecera "Cookie" (formato "a=1; b=2"). Devuelve null si no está.
+function leerCookie(cabecera, nombre) {
+    for (const parte of String(cabecera ?? "").split(";")) {
+        const igual = parte.indexOf("=")
+        if (igual === -1) {
+            continue
+        }
+        if (parte.slice(0, igual).trim() === nombre) {
+            const valor = parte.slice(igual + 1).trim()
+            return valor === "" ? null : valor
+        }
+    }
+    return null
+}
+
 // Sin maxAge: es cookie de sesión del navegador. El vencimiento real lo controla el servidor.
 function opcionesCookie(produccion) {
     return { httpOnly: true, sameSite: "strict", path: "/", secure: produccion === true }
@@ -159,6 +174,7 @@ module.exports = {
     generarToken,
     hashToken,
     nombreCookie,
+    leerCookie,
     opcionesCookie,
     requiere2fa,
     debeActivar2fa,

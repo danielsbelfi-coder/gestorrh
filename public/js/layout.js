@@ -206,18 +206,23 @@ function armarLateral(usuario) {
 }
 
 async function iniciarLayout() {
-    if (!localStorage.getItem("token")) {
-        window.location.href = "login.html"
-        return
-    }
-
     const contenido = document.querySelector("main.contenido")
     if (!contenido) {
         return
     }
 
     const resultado = await llamarApi("/api/auth/usuario")
-    const usuario = resultado.status === 200 ? resultado.datos : {}
+    if (resultado.status !== 200) {
+        // Un 401 ya llevó al login.
+        return
+    }
+    const usuario = resultado.datos
+
+    // Con la contraseña inicial, las demás pantallas responden 403: se va directo a cambiarla.
+    if (usuario.debe_cambiar_password === true) {
+        window.location.href = "cambiar-password.html"
+        return
+    }
 
     // La pantalla de inicio de soporte es su panel de cuentas y accesos.
     if (usuario.rol_plataforma === "soporte" && (location.pathname.endsWith("/") || location.pathname.endsWith("index.html"))) {
@@ -268,7 +273,7 @@ async function iniciarLayout() {
     document.body.prepend(velo)
     document.body.prepend(lateral)
 
-    document.getElementById("botonSalir").addEventListener("click", sesionVencida)
+    document.getElementById("botonSalir").addEventListener("click", cerrarSesion)
     document.getElementById("botonMenu").addEventListener("click", () => {
         // En pantallas angostas el menú se abre encima; en pantallas anchas se oculta o se muestra del todo.
         if (window.matchMedia("(max-width: 860px)").matches) {

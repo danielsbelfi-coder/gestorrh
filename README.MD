@@ -10,7 +10,7 @@ variables de remuneración, liquidaciones de sueldo, archivos Previred y LRE, y 
 
 - Backend: Node.js 22, Express 5, Sequelize 6, PostgreSQL
 - Frontend: HTML, CSS y JavaScript sin framework (carpeta `public/`)
-- Autenticación: JWT. Seguridad HTTP con helmet. Contraseñas con bcrypt.
+- Autenticación: sesiones guardadas en el servidor (cookie HttpOnly + SameSite=Strict, protección CSRF), verificación en dos pasos (TOTP). Seguridad HTTP con helmet. Contraseñas con bcrypt.
 
 ## Requisitos
 
@@ -50,8 +50,8 @@ Cada usuario de plataforma recibe una contraseña inicial aleatoria que se muest
 | `DB_SSL` | `true` en la nube: cifra la conexión y **comprueba el certificado** de la base (que sea de una autoridad confiable y del host indicado) |
 | `DB_SSL_CA` | Solo si el proveedor usa una autoridad propia (por ejemplo AWS RDS): ruta del certificado `.pem` o su contenido. Neon no lo necesita |
 | `DB_SSL_VERIFICAR` | `false` desactiva la comprobación del certificado. Solo para pruebas locales; en producción el servidor no arranca |
-| `JWT_SECRET` | Mínimo 32 caracteres aleatorios. `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
-| `JWT_EXPIRES_IN` | Duración de la sesión, por ejemplo `8h` |
+| `TOTP_CLAVE_CIFRADO` | Clave de 32 bytes para cifrar los secretos del 2FA. `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
+| `APP_ORIGEN` | Dirección de la app sin ruta (`https://...`). Obligatoria en producción; en local se usa `http://localhost:PORT` |
 
 Al iniciar, el servidor revisa la configuración y **no arranca** si falta algo grave (clave débil, sin vencimiento de sesión, sin contraseña de BD en producción).
 

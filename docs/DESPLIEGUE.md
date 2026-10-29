@@ -15,7 +15,7 @@ Las pantallas de Neon y Render cambian de vez en cuando: si un botón tiene otro
 
 - El código de la rama `main` debe estar en GitHub (repositorio público o privado, da igual).
 - `npm test` en verde en tu PC.
-- Ten a mano un bloc de notas **solo en tu PC** para ir guardando lo que se genere (contraseña de la base, `JWT_SECRET`, contraseñas iniciales). No lo subas a ningún lado.
+- Ten a mano un bloc de notas **solo en tu PC** para ir guardando lo que se genere (contraseña de la base, `TOTP_CLAVE_CIFRADO`, contraseñas iniciales). No lo subas a ningún lado.
 
 ---
 
@@ -79,15 +79,17 @@ Cada uno muestra una contraseña inicial **una sola vez**: anótala en tu bloc d
 
 ---
 
-## 3. Clave de sesión (`JWT_SECRET`)
+## 3. Clave del 2FA (`TOTP_CLAVE_CIFRADO`)
 
-Genera una clave nueva, distinta de la de tu PC:
+Cifra en la base los secretos de la verificación en dos pasos. Genera una nueva, distinta de la de tu PC:
 
 ```
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
-Cópiala a tu bloc de notas. Va solo en Render.
+Cópiala a tu bloc de notas. Va solo en Render. **No la pierdas ni la cambies**: sin ella, hay que restablecer el acceso de todos los usuarios que tienen 2FA.
+
+(Las sesiones ya no usan `JWT_SECRET` ni `JWT_EXPIRES_IN`: si estaban en Render, se pueden borrar.)
 
 ---
 
@@ -121,8 +123,8 @@ Cópiala a tu bloc de notas. Va solo en Render.
 | `DB_USER` | `neondb_owner` |
 | `DB_PASSWORD` | la contraseña de Neon |
 | `DB_SSL` | `true` (cifra la conexión y comprueba el certificado de Neon; no hace falta nada más) |
-| `JWT_SECRET` | la clave del paso 3 |
-| `JWT_EXPIRES_IN` | `8h` |
+| `TOTP_CLAVE_CIFRADO` | la clave del paso 3 |
+| `APP_ORIGEN` | la dirección del servicio, sin barra final, por ejemplo `https://gestorrh.onrender.com` (se ve arriba en el panel de Render) |
 
 No agregues `PORT`: Render la pone sola.
 

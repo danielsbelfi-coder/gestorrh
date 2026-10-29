@@ -1,20 +1,12 @@
 const { Usuario, Cuenta } = require("../shared/associations")
 const bcrypt = require("bcrypt")
-const jwt = require("jsonwebtoken")
 const { AuthenticationError, ValidationError, ForbiddenError } = require("../shared/errors")
 const { condicionEmail } = require("../usuarios/email_usuario.js")
 const { problemasDePassword } = require("../shared/politica_password.js")
 
 const HASH_FALSO = bcrypt.hashSync("relleno", 10)
 
-function generarToken(usuarioId) {
-    return jwt.sign(
-        { sub: usuarioId },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
-    )
-}
-
+// Devuelve el usuario si el correo y la contraseña calzan. No crea la sesión.
 async function autenticarUsuario(email, password) {
     if (typeof password !== "string" || password.trim() === ""
         || typeof email !== "string" || email.trim() === "") {
@@ -45,9 +37,8 @@ async function autenticarUsuario(email, password) {
         }
     }
 
-    const token = generarToken(usuario.id)
-
-    return { token, debeCambiarPassword: usuario.debe_cambiar_password, cuentaCancelada }
+    // La sesión la crea el controller (necesita la IP y el navegador de la petición).
+    return { usuario, debeCambiarPassword: usuario.debe_cambiar_password, cuentaCancelada }
 }
 
 async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
@@ -80,8 +71,6 @@ async function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
         debe_cambiar_password: false,
         password_cambiado_en: new Date()
     })
-
-    return generarToken(usuario.id)
 }
 
 module.exports = {

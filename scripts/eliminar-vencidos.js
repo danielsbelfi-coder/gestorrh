@@ -3,6 +3,7 @@ const { sequelize } = require("../src/shared/database.js")
 const { Empresa, Cuenta, AccesoSoporte, RegistroSoporte } = require("../src/shared/associations.js")
 const { eliminarEmpresa, eliminarCuenta } = require("../src/eliminacion/eliminacion.service.js")
 const { DIAS_CONSERVACION_DATOS, DIAS_CONSERVACION_REGISTRO_SOPORTE } = require("../src/shared/constantes.js")
+const { borrarSesionesVencidas } = require("../src/auth/sesion.service.js")
 
 function fechaLimite() {
     const fecha = new Date()
@@ -77,6 +78,17 @@ async function main() {
     } catch (error) {
         errores++
         console.error(`Error al depurar el registro de soporte: ${error.message}`)
+    }
+
+    // Sesiones vencidas o inactivas: no sirven para entrar, solo ocupan espacio.
+    try {
+        const sesiones = await borrarSesionesVencidas(new Date(), { simular })
+        if (sesiones > 0) {
+            console.log(`Sesiones vencidas: ${sesiones}`)
+        }
+    } catch (error) {
+        errores++
+        console.error(`Error al borrar sesiones vencidas: ${error.message}`)
     }
 
     if (cuentas.length === 0 && empresas.length === 0 && !hayRegistroVencido) {

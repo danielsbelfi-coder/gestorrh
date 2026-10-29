@@ -6,6 +6,7 @@ const { normalizarEmail, emailValido } = require("../shared/email.js")
 const { exigirEmailLibre } = require("./email_usuario.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
 const { verificarCupoUsuarios } = require("../cuentas/consumo.service.js")
+const { cerrarTodasLasSesiones } = require("../auth/sesion.service.js")
 
 async function obtenerUsuarioCuenta(id, usuario) {
     const objetivo = await Usuario.findByPk(id)
@@ -99,6 +100,7 @@ async function desactivarUsuarioCuenta(id, usuario) {
     await objetivo.update({
         estado: "inactivo"
     })
+    await cerrarTodasLasSesiones(objetivo.id)
     return objetivo
 }
 
@@ -261,6 +263,8 @@ async function restablecerPasswordCuenta(id, usuario) {
         debe_cambiar_password: true,
         password_cambiado_en: new Date()
     })
+    // Quien tuviera una sesión abierta con la contraseña anterior queda fuera.
+    await cerrarTodasLasSesiones(objetivo.id)
 
     return {
         usuario: { id: objetivo.id, nombre: objetivo.nombre, email: objetivo.email },

@@ -5,6 +5,7 @@ require("dotenv").config()
 const { sequelize } = require("../src/shared/database.js")
 const { Usuario } = require("../src/shared/associations.js")
 const { generarPasswordInicial } = require("../src/shared/password.js")
+const { cerrarTodasLasSesiones } = require("../src/auth/sesion.service.js")
 
 async function main() {
     const email = (process.argv[2] ?? "").trim()
@@ -28,8 +29,10 @@ async function main() {
         { password_hash: hash, debe_cambiar_password: true, estado: "activo", password_cambiado_en: new Date() },
         { where: { id: usuarios[0].id } }
     )
+    const cerradas = await cerrarTodasLasSesiones(usuarios[0].id)
 
     console.log(`Contraseña reiniciada para ${usuarios[0].email} (id ${usuarios[0].id}).`)
+    console.log(`Sesiones cerradas: ${cerradas}.`)
     console.log(`Contraseña inicial: ${password}`)
     console.log("Cópiala ahora: no se vuelve a mostrar. Se pedirá cambiarla al ingresar.")
 }

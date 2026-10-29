@@ -4,6 +4,7 @@ const { AccesoSoporte, RegistroSoporte, Empresa, Usuario, Cuenta } = require("..
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { obtenerEmpresaDeCuenta } = require("../empresas/empresa.service.js")
 const { generarPasswordInicial } = require("../shared/password.js")
+const { cerrarTodasLasSesiones } = require("../auth/sesion.service.js")
 const { HORAS_POR_DEFECTO, validarAutorizacion, validarMotivo, textoMotivo, estadoDeAcceso } = require("./acceso_soporte.js")
 
 function condicionVigente(ahora = new Date()) {
@@ -181,6 +182,8 @@ async function restablecerPrincipal(cuentaId, body, soporte, { metodo, ruta, ip 
     const { password: passwordInicial, hash } = await generarPasswordInicial()
 
     await principal.update({ password_hash: hash, debe_cambiar_password: true, password_cambiado_en: new Date() })
+    // Quien tuviera una sesión abierta con la contraseña anterior queda fuera.
+    await cerrarTodasLasSesiones(principal.id)
 
     await RegistroSoporte.create({
         tipo: "restablecer_password",

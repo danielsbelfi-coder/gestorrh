@@ -30,7 +30,8 @@ formulario.addEventListener("submit", async function (evento) {
 
     if (resultado.status === 200) {
         mensaje.textContent = "Contraseña actualizada"
-        localStorage.setItem("token", resultado.datos.token)
+        // La sesión se renovó: el servidor envió una cookie nueva y este es el token CSRF nuevo.
+        guardarCsrf(resultado.datos.csrfToken)
         setTimeout(function () {
             window.location.href = "index.html"
         }, 1500)
