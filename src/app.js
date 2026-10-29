@@ -49,6 +49,13 @@ app.get("/api/salud", (req, res) => {
     res.status(200).json({ estado: "ok", ip: req.ip })
 })
 
+// Las respuestas de la API traen datos de personas: el navegador no debe guardarlas en su caché
+// (en un computador compartido, otra persona podría verlas después de cerrar sesión).
+app.use("/api", (req, res, next) => {
+    res.set("Cache-Control", "no-store")
+    next()
+})
+
 app.use("/api/empresas", verificarSesion, empresaRoutes)
 app.use("/api/personas", verificarSesion, personaRoutes)
 app.use("/api/trabajadores", verificarSesion, trabajadorRoutes)

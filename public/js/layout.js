@@ -348,4 +348,13 @@ function nombreEmpresa(empresa) {
     return empresa.nombre_fantasia || empresa.razon_social || `Empresa ${empresa.id}`
 }
 
+// Al volver con "Atrás", el navegador puede mostrar una copia de la página guardada en memoria, sin preguntar
+// al servidor (por ejemplo, después de cerrar sesión). Se recarga para comprobar que la sesión siga abierta:
+// si se cerró, la recarga lleva al login y nadie ve los datos que había en pantalla.
+window.addEventListener("pageshow", (evento) => {
+    if (evento.persisted) {
+        location.reload()
+    }
+})
+
 iniciarLayout()
