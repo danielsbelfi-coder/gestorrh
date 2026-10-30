@@ -80,6 +80,49 @@ function camposPrevision(datos) {
     }
 }
 
+// APVI (40-44, con el depósito convenido en el 44) y APVC (45-49).
+function camposAhorro(ahorro) {
+    const campos = {}
+    if (ahorro?.apvi) {
+        Object.assign(campos, {
+            40: ahorro.apvi.institucionCodigo,
+            41: textoPrevired(ahorro.apvi.numeroContrato, 20),
+            42: ahorro.apvi.formaPago,
+            43: ahorro.apvi.monto,
+            44: ahorro.apvi.depositoConvenido
+        })
+    }
+    if (ahorro?.apvc) {
+        Object.assign(campos, {
+            45: ahorro.apvc.institucionCodigo,
+            46: textoPrevired(ahorro.apvc.numeroContrato, 20),
+            47: ahorro.apvc.formaPago,
+            48: ahorro.apvc.trabajador,
+            49: ahorro.apvc.empleador
+        })
+    }
+    return campos
+}
+
+// Caja de compensación (83-91). Con caja, el 7 % de Fonasa se reparte entre la caja (90) y Fonasa (70).
+// La asignación familiar pagada se informa en el 91 (con caja) o en el 73 (IPS, sin caja).
+function camposCcaf(ccaf, salud) {
+    if (!ccaf?.codigo) {
+        return ccaf?.asignacionFamiliar > 0 ? { 73: ccaf.asignacionFamiliar } : {}
+    }
+    const campos = {
+        83: ccaf.codigo,
+        84: ccaf.rentaImponible,
+        ...ccaf.descuentos,
+        90: ccaf.saludCcaf,
+        91: ccaf.asignacionFamiliar
+    }
+    if (salud.sistema === "Fonasa") {
+        campos[70] = salud.legal - ccaf.saludCcaf
+    }
+    return campos
+}
+
 const CODIGO_ISL = "00"
 
 function camposEmpleador(datos) {
@@ -135,6 +178,8 @@ function lineasTrabajador(datos) {
     const principal = asignar(lineaVacia(), {
         ...trabajador,
         ...prevision,
+        ...camposAhorro(datos.ahorro),
+        ...camposCcaf(datos.ccaf, datos.prevision.salud),
         ...empleador,
         ...camposMovimiento(primero, "00")
     })
@@ -172,6 +217,8 @@ function tramoAsignacionFamiliar(renta, limites) {
 
 module.exports = {
     tramoAsignacionFamiliar,
+    camposAhorro,
+    camposCcaf,
     lineaVacia,
     asignar,
     camposTrabajador,

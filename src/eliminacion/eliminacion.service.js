@@ -22,6 +22,7 @@ const PASOS_EMPRESA = [
     { tabla: "previsiones_persona", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "tramos_asignacion_persona", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "cargas_familiares", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
+    { tabla: "ahorros_voluntarios_persona", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "personas", filtro: "empresa_id = :empresaId" },
     { tabla: "jornadas", filtro: "empresa_id = :empresaId" },
     { tabla: "cargos", filtro: "empresa_id = :empresaId" },

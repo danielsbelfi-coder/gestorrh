@@ -3,7 +3,7 @@
 const { limpiarRut, rutEsValido, formatearRut } = require("../shared/rut.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 
-// Cajas de compensación vigentes. Por ahora solo se guarda el dato; su efecto en el cálculo y en Previred es un paso aparte.
+// Cajas de compensación vigentes. Sus códigos en Previred y el LRE están en remuneraciones/ccaf.js.
 const CCAF = {
     los_andes: "Caja Los Andes",
     la_araucana: "Caja La Araucana",

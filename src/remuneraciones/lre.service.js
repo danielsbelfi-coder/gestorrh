@@ -9,6 +9,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { ConflictError, NotFoundError } = require("../shared/errors.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { asignacionFamiliarPrevired } = require("./datos_previred.js")
+const { CODIGO_LRE } = require("./ccaf.js")
 const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
 const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
 
@@ -166,6 +167,9 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             cotizaCesantia: montoDe("CESANTIA") + montoDe("APORTE_CESANTIA") > 0,
             mutualLre: mutualidad.codigo_lre,
             ...asignacionFamiliarPrevired(detalle, limitesTramo),
+            ccafLre: CODIGO_LRE[detalle.ccaf?.caja] ?? 0,
+            apvi: Boolean(detalle.apv?.apvi),
+            apvc: Boolean(detalle.apv?.apvc),
             diasTrabajados: liquidacion.dias_trabajados,
             diasLicencia: detalle.diasPago.licenciaMedica,
             diasVacaciones: detalle.diasPago.vacaciones

@@ -16,6 +16,7 @@ const { contratoDelMes } = require("./contrato_del_mes.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
 const { sumarDias, edadAl } = require("../shared/fechas.js")
 const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
+const { saludParaCcaf } = require("./ccaf.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -54,7 +55,8 @@ const CODIGOS_SISTEMA = [
     "SALUD_ADICIONAL_ISAPRE", "CESANTIA", "IMPUESTO_UNICO",
     "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
-    "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA"
+    "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA",
+    "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC"
 ]
 
 async function obtenerConceptosSistema() {
@@ -276,10 +278,11 @@ function filasLineas(lineasOrdenadas, liquidacionId) {
     }))
 }
 
-function advertenciasDe(pendientes) {
-    return pendientes > 0
-        ? [`Hay ${pendientes} variable(s) pendiente(s) de aprobación que no se consideraron en el cálculo`]
-        : []
+function advertenciasDe(pendientes, avisos = []) {
+    return [
+        ...(pendientes > 0 ? [`Hay ${pendientes} variable(s) pendiente(s) de aprobación que no se consideraron en el cálculo`] : []),
+        ...avisos
+    ]
 }
 
 async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
@@ -348,6 +351,10 @@ async function prepararCalculo(periodo, trabajador) {
     } catch (error) {
         throw new ConflictError(error.message)
     }
+
+    // APV individual, APV colectivo y depósito convenido vigentes en el mes (ficha de la persona).
+    const { ahorrosEnMes } = require("../trabajadores/ahorro_voluntario.service.js")
+    const ahorrosDelMes = await ahorrosEnMes(persona.id, periodo.anio, periodo.mes)
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)
@@ -418,6 +425,7 @@ async function prepararCalculo(periodo, trabajador) {
         topeCesantiaUF: parametros.topeCesantiaUF,
         tramos,
         saldoPendiente,
+        ahorros: ahorrosDelMes,
         conceptos
     }
 
@@ -436,8 +444,28 @@ async function prepararCalculo(periodo, trabajador) {
         baseCesantia: resultado.baseCesantia,
         baseSeguroSocial,
         tasas: tasasAportes,
+        fijos: resultado.ahorros.apvc?.empleador > 0 ? [{ concepto: conceptos.APORTE_APVC, monto: resultado.ahorros.apvc.empleador }] : [],
         conceptos
     })
+
+    // Caja de compensación de la empresa al calcular: Previred reparte el 7 % de Fonasa entre la caja y Fonasa.
+    let saludCcaf = 0
+    if (empresa.ccaf) {
+        const tasaCcaf = await obtenerParametroVigente("TASA_SALUD_CCAF", primerDia)
+        if (tasaCcaf === null) {
+            throw new ConflictError("No existe un parámetro TASA_SALUD_CCAF vigente para la fecha del periodo")
+        }
+        saludCcaf = saludParaCcaf({
+            caja: empresa.ccaf,
+            sistemaSalud: prevision.sistema_salud,
+            baseCotizaciones: resultado.baseCotizaciones,
+            saludLegal: resultado.descuentoSaludLegal,
+            tasa: Number(tasaCcaf.valor)
+        })
+    }
+    const avisos = resultado.nuevoSaldoPendiente > 0
+        ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
+        : []
     const montoDe = (codigo) => resultado.lineas
         .filter((l) => l.concepto.codigo === codigo)
         .reduce((suma, l) => suma + l.monto, 0)
@@ -467,6 +495,9 @@ async function prepararCalculo(periodo, trabajador) {
         salud: { sistema: prevision.sistema_salud, isapre_id: prevision.sistema_salud === "Isapre" ? prevision.isapre?.id ?? null : null, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
         // Tramo y número de cargas del mes: Previred y el LRE los informan aunque la persona cambie después.
         asignacionFamiliar,
+        // APV y depósito convenido (institución, contrato, forma de pago, régimen y montos) y caja de la empresa.
+        apv: resultado.ahorros,
+        ccaf: { caja: empresa.ccaf ?? null, saludCcaf },
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         saldoAnterior: saldoPendiente,
@@ -503,7 +534,7 @@ async function prepararCalculo(periodo, trabajador) {
         fecha_calculo: new Date().toISOString().slice(0, 10)
     }
 
-    return { campos, lineasOrdenadas, pendientes }
+    return { campos, lineasOrdenadas, pendientes, avisos }
 }
 
 async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, usuarioId) {
@@ -525,7 +556,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         throw new ConflictError("La liquidación ya fue emitida; para modificarla use el recálculo")
     }
 
-    const { campos, lineasOrdenadas, pendientes } = await prepararCalculo(periodo, trabajador)
+    const { campos, lineasOrdenadas, pendientes, avisos } = await prepararCalculo(periodo, trabajador)
 
     const liquidacion = await sequelize.transaction(async (transaction) => {
         if (vigente !== null) {
@@ -548,7 +579,7 @@ async function crearLiquidacion(periodo_id, trabajador_id, empresasPermitidas, u
         return nueva
     })
 
-    return { liquidacion, advertencias: advertenciasDe(pendientes), reemplazada: vigente !== null }
+    return { liquidacion, advertencias: advertenciasDe(pendientes, avisos), reemplazada: vigente !== null }
 }
 
 async function recalcularLiquidacion(periodo_id, liquidacion_id, motivo, empresasPermitidas, usuarioId) {
@@ -580,7 +611,7 @@ async function recalcularLiquidacion(periodo_id, liquidacion_id, motivo, empresa
 
     const trabajador = await obtenerTrabajadorDelPeriodo(periodo, anterior.trabajador_id)
 
-    const { campos, lineasOrdenadas, pendientes } = await prepararCalculo(periodo, trabajador)
+    const { campos, lineasOrdenadas, pendientes, avisos } = await prepararCalculo(periodo, trabajador)
 
     const liquidacion = await sequelize.transaction(async (transaction) => {
         await anterior.update({ vigente: false }, { transaction })
@@ -600,7 +631,7 @@ async function recalcularLiquidacion(periodo_id, liquidacion_id, motivo, empresa
         return nueva
     })
 
-    return { liquidacion, advertencias: advertenciasDe(pendientes) }
+    return { liquidacion, advertencias: advertenciasDe(pendientes, avisos) }
 }
 
 async function validarEmision(periodo, liquidacion) {

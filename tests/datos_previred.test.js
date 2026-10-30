@@ -131,3 +131,27 @@ test("cargas familiares: sin tramo registrado va D; una liquidación antigua sig
     const antigua = datosPrevired(entrada).trabajador
     assert.deepStrictEqual([antigua.tramo, antigua.cargasSimples, antigua.asignacion], ["C", 0, 0])
 })
+
+test("CCAF y APV: datos desde lo guardado en la liquidación, y problemas", () => {
+    const con = structuredClone(entrada)
+    con.liquidacion.detalle_calculo.ccaf = { caja: "los_andes", saludCcaf: 45037 }
+    con.liquidacion.detalle_calculo.apv = {
+        apvi: { institucionCodigo: "033", numeroContrato: "C1", formaPago: 1, regimen: "B", monto: 80000 },
+        apvc: null,
+        depositoConvenido: { institucionCodigo: "005", numeroContrato: null, formaPago: 1, monto: 40000 }
+    }
+    con.liquidacion.LiquidacionLineas = [...lineas, { codigo: "CCAF_CREDITO_PERSONAL", monto: "25000.00" }, { codigo: "CCAF_DENTAL", monto: "4000.00" }]
+    const datos = datosPrevired(con)
+    assert.deepStrictEqual([datos.ccaf.codigo, datos.ccaf.saludCcaf, datos.ccaf.descuentos[85], datos.ccaf.descuentos[86]], ["01", 45037, 25000, 4000])
+    assert.deepStrictEqual(datos.ahorro.apvi, { institucionCodigo: "033", numeroContrato: "C1", formaPago: 1, monto: 80000, depositoConvenido: 40000 })
+
+    const problemas = problemasPrevired({ liquidacion: con.liquidacion, primerDia: "2027-07-01", fechasInasistencia: entrada.fechasInasistencia, fechasPermisoSinGoce: [] })
+    assert.ok(problemas.some((p) => /descuento dental/.test(p)), problemas.join(" | "))
+    assert.ok(problemas.some((p) => /misma institución/.test(p)), problemas.join(" | "))
+})
+
+test("CCAF y APV: una liquidación antigua no informa caja ni APV", () => {
+    const datos = datosPrevired(entrada)
+    assert.strictEqual(datos.ccaf.codigo, null)
+    assert.deepStrictEqual(datos.ahorro, { apvi: null, apvc: null })
+})

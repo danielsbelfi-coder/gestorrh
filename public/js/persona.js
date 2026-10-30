@@ -11,6 +11,7 @@ const CAMPOS_TEXTO = ["nombres", "apellido_paterno", "apellido_materno", "direcc
 const CAMPOS_SELECCION = ["nacionalidad", "sexo_genero", "tipo_cuenta", "sistema_salud"]
 
 let persona = null
+let afpsApv = []
 let primeraEmpresa = true
 
 function valor(id) {
@@ -89,6 +90,15 @@ async function cargarCatalogos() {
     llenarSelect(document.getElementById("isapre_id"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
     llenarSelect(document.getElementById("prevAfp"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Elige la AFP")
     llenarSelect(document.getElementById("prevIsapre"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
+
+    // Institución del APV: las AFP con su código Previred de 3 dígitos, u otra institución con su código.
+    afpsApv = activas(afps).filter((a) => a.codigo_previred).map((a) => ({ codigo: String(a.codigo_previred).padStart(3, "0"), nombre: a.nombre }))
+    const institucion = document.getElementById("ahoInstitucion")
+    institucion.innerHTML = [
+        `<option value="">Elige la institución</option>`,
+        ...afpsApv.map((a) => `<option value="${escaparHtml(a.codigo)}">${escaparHtml(a.nombre)} (${escaparHtml(a.codigo)})</option>`),
+        `<option value="otra">Otra institución…</option>`
+    ].join("")
 }
 
 // ---------- Modo edición ----------
@@ -120,7 +130,9 @@ async function cargarPersona() {
     document.getElementById("seccionSituacion").hidden = false
     document.getElementById("seccionPrevision").hidden = false
     document.getElementById("seccionCargas").hidden = false
-    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas()])
+    document.getElementById("seccionAhorro").hidden = false
+    mostrarCamposAhorro()
+    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros()])
 }
 
 async function cargarRelaciones() {
@@ -497,6 +509,173 @@ document.getElementById("cargasFamiliares").addEventListener("click", async func
     }
     mensaje("info", "Carga eliminada.")
     cargarCargas()
+})
+
+// ---------- Ahorro previsional voluntario ----------
+
+const TIPOS_AHORRO = { apvi: "APV individual", apvc: "APV colectivo", deposito_convenido: "Depósito convenido" }
+let ahorros = []
+let ahorroEnEdicion = null
+
+function textoMonto(modalidad, valor) {
+    if (valor === null || valor === undefined) {
+        return ""
+    }
+    const numero = Number(valor)
+    if (modalidad === "uf") {
+        return `${numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })} UF`
+    }
+    if (modalidad === "porcentaje") {
+        return `${numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })} %`
+    }
+    return pesos(numero)
+}
+
+function estadoAhorro(ahorro) {
+    const mesActual = new Date().toISOString().slice(0, 7)
+    if (ahorro.desde.slice(0, 7) > mesActual) {
+        return "Futuro"
+    }
+    return ahorro.hasta !== null && ahorro.hasta.slice(0, 7) < mesActual ? "Terminado" : "Vigente"
+}
+
+async function cargarAhorros() {
+    const resultado = await llamarApi(`/api/personas/${personaId}/ahorros-voluntarios`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo cargar el ahorro previsional voluntario")
+        return
+    }
+    ahorros = resultado.datos
+    document.getElementById("ahorrosVoluntarios").innerHTML = ahorros.length === 0
+        ? `<p class="texto-suave">Sin APV ni depósitos convenidos registrados.</p>`
+        : `<table>
+            <thead><tr><th>Tipo</th><th>Institución</th><th>Contrato</th><th>Régimen</th><th>Trabajador</th><th>Empleador</th><th>Desde</th><th>Hasta</th><th>Estado</th><th></th></tr></thead>
+            <tbody>${ahorros.map((a) => `
+                <tr>
+                    <td>${escaparHtml(TIPOS_AHORRO[a.tipo] ?? a.tipo)}</td>
+                    <td>${escaparHtml(a.institucion_nombre)} (${escaparHtml(a.institucion_codigo)})</td>
+                    <td>${escaparHtml(a.numero_contrato ?? "")}</td>
+                    <td>${escaparHtml(a.regimen ?? "")}</td>
+                    <td class="numero">${escaparHtml(textoMonto(a.modalidad, a.monto))}</td>
+                    <td class="numero">${escaparHtml(a.tipo === "deposito_convenido" ? "" : textoMonto(a.modalidad, a.aporte_empleador))}</td>
+                    <td>${escaparHtml(mesTexto(a.desde))}</td>
+                    <td>${escaparHtml(a.hasta ? mesTexto(a.hasta) : "Sin término")}</td>
+                    <td>${escaparHtml(estadoAhorro(a))}</td>
+                    <td>
+                        <button type="button" class="chico secundario" data-editar-ahorro="${a.id}">Editar</button>
+                        <button type="button" class="chico secundario" data-eliminar-ahorro="${a.id}">Eliminar</button>
+                    </td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`
+}
+
+// Muestra u oculta los campos según el tipo y la institución elegidos.
+function mostrarCamposAhorro() {
+    const tipo = valor("ahoTipo")
+    const regimen = document.getElementById("ahoRegimen")
+    document.querySelectorAll(".solo-apv").forEach((campo) => { campo.hidden = tipo === "deposito_convenido" })
+    regimen.required = tipo !== "deposito_convenido"
+    document.querySelectorAll(".solo-apvc").forEach((campo) => { campo.hidden = tipo !== "apvc" })
+    document.getElementById("ahoMontoTexto").textContent = tipo === "apvc" ? "Monto del trabajador" : tipo === "deposito_convenido" ? "Monto del depósito" : "Monto"
+
+    const otra = valor("ahoInstitucion") === "otra"
+    document.querySelectorAll(".solo-otra-institucion").forEach((campo) => { campo.hidden = !otra })
+    document.getElementById("ahoCodigo").required = otra
+    document.getElementById("ahoNombre").required = otra
+}
+document.getElementById("ahoTipo").addEventListener("change", mostrarCamposAhorro)
+document.getElementById("ahoInstitucion").addEventListener("change", mostrarCamposAhorro)
+
+function terminarEdicionAhorro() {
+    ahorroEnEdicion = null
+    document.getElementById("formAhorro").reset()
+    document.getElementById("botonAhorro").textContent = "Registrar"
+    document.getElementById("cancelarAhorro").hidden = true
+    mostrarCamposAhorro()
+}
+document.getElementById("cancelarAhorro").addEventListener("click", terminarEdicionAhorro)
+
+document.getElementById("formAhorro").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const tipo = valor("ahoTipo")
+    const otra = valor("ahoInstitucion") === "otra"
+    const afp = afpsApv.find((a) => a.codigo === valor("ahoInstitucion"))
+    const datos = {
+        tipo,
+        institucion_codigo: otra ? valor("ahoCodigo") : valor("ahoInstitucion"),
+        institucion_nombre: otra ? valor("ahoNombre") : afp?.nombre ?? "",
+        numero_contrato: textoONulo("ahoContrato"),
+        forma_pago: Number(valor("ahoFormaPago")),
+        regimen: tipo === "deposito_convenido" ? null : valor("ahoRegimen"),
+        modalidad: valor("ahoModalidad"),
+        monto: valor("ahoMonto"),
+        aporte_empleador: tipo === "apvc" ? textoONulo("ahoAporte") : null,
+        desde: valor("ahoDesde"),
+        hasta: textoONulo("ahoHasta")
+    }
+
+    const editando = ahorroEnEdicion !== null
+    let guardado
+    if (!editando) {
+        guardado = await crearRegistro(`/api/personas/${personaId}/ahorros-voluntarios`, datos, "Registrado.")
+    } else {
+        const resultado = await llamarApi(`/api/personas/${personaId}/ahorros-voluntarios/${ahorroEnEdicion}`, { method: "PUT", body: JSON.stringify(datos) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo guardar")
+            return
+        }
+        guardado = resultado.datos
+    }
+
+    if (guardado) {
+        terminarEdicionAhorro()
+        await cargarAhorros()
+        avisoMesesCerrados(editando ? "Cambios guardados." : `${TIPOS_AHORRO[tipo]} registrado.`, guardado.meses_cerrados)
+    }
+})
+
+document.getElementById("ahorrosVoluntarios").addEventListener("click", async function (evento) {
+    const editar = evento.target.closest("[data-editar-ahorro]")?.dataset.editarAhorro
+    if (editar) {
+        const a = ahorros.find((x) => String(x.id) === editar)
+        ahorroEnEdicion = a.id
+        const esAfp = afpsApv.some((x) => x.codigo === a.institucion_codigo)
+        document.getElementById("ahoTipo").value = a.tipo
+        document.getElementById("ahoInstitucion").value = esAfp ? a.institucion_codigo : "otra"
+        document.getElementById("ahoCodigo").value = esAfp ? "" : a.institucion_codigo
+        document.getElementById("ahoNombre").value = esAfp ? "" : a.institucion_nombre
+        document.getElementById("ahoContrato").value = a.numero_contrato ?? ""
+        document.getElementById("ahoFormaPago").value = String(a.forma_pago)
+        document.getElementById("ahoRegimen").value = a.regimen ?? "A"
+        document.getElementById("ahoModalidad").value = a.modalidad
+        document.getElementById("ahoMonto").value = Number(a.monto)
+        document.getElementById("ahoAporte").value = a.aporte_empleador === null ? "" : Number(a.aporte_empleador)
+        document.getElementById("ahoDesde").value = a.desde.slice(0, 7)
+        document.getElementById("ahoHasta").value = a.hasta ? a.hasta.slice(0, 7) : ""
+        document.getElementById("botonAhorro").textContent = "Guardar cambios"
+        document.getElementById("cancelarAhorro").hidden = false
+        mostrarCamposAhorro()
+        document.getElementById("ahoTipo").focus()
+        return
+    }
+
+    const id = evento.target.closest("[data-eliminar-ahorro]")?.dataset.eliminarAhorro
+    if (!id || !confirm("¿Eliminar este registro? Si el ahorro terminó, mejor indica su mes hasta.")) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/personas/${personaId}/ahorros-voluntarios/${id}`, { method: "DELETE" })
+    if (resultado.status !== 204) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo eliminar")
+        return
+    }
+    if (String(ahorroEnEdicion) === id) {
+        terminarEdicionAhorro()
+    }
+    mensaje("info", "Registro eliminado.")
+    await cargarAhorros()
 })
 
 // ---------- Guardar ----------

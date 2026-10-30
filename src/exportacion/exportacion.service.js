@@ -4,7 +4,7 @@ const {
     Empresa, Cargo, Persona, Trabajador, ContratoTrabajo, ContratoAnexo,
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
-    ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional, PrevisionPersona, CargaFamiliar, TramoAsignacionPersona,
+    ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional, PrevisionPersona, CargaFamiliar, TramoAsignacionPersona, AhorroVoluntario,
     Finiquito, Jornada, PeriodoReapertura, AccesoSoporte, RegistroSoporte
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
@@ -21,6 +21,7 @@ const TABLAS = [
     { archivo: "previsiones_persona.csv", modelo: PrevisionPersona, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { archivo: "tramos_asignacion.csv", modelo: TramoAsignacionPersona, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { archivo: "cargas_familiares.csv", modelo: CargaFamiliar, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
+    { archivo: "ahorros_voluntarios.csv", modelo: AhorroVoluntario, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { archivo: "trabajadores.csv", modelo: Trabajador, filtro: "empresa_id = :empresaId" },
     { archivo: "contratos.csv", modelo: ContratoTrabajo, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "anexos.csv", modelo: ContratoAnexo, filtro: `contrato_id IN (SELECT id FROM contratos_trabajo WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },

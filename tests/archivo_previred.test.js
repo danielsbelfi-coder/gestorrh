@@ -144,3 +144,22 @@ test("tipo de cotizante: un pensionado que no cotiza va con 2 en el campo 12", (
 
     assert.strictEqual(campos[11], 2)
 })
+const { camposAhorro, camposCcaf } = require("../src/remuneraciones/archivo_previred.js")
+
+test("APVI con depósito convenido (40-44) y APVC (45-49)", () => {
+    const campos = camposAhorro({
+        apvi: { institucionCodigo: "033", numeroContrato: "AB;12", formaPago: 1, monto: 100000, depositoConvenido: 50000 },
+        apvc: { institucionCodigo: "201", numeroContrato: null, formaPago: 2, trabajador: 30000, empleador: 20000 }
+    })
+    assert.deepStrictEqual(campos, { 40: "033", 41: "AB 12", 42: 1, 43: 100000, 44: 50000, 45: "201", 46: "", 47: 2, 48: 30000, 49: 20000 })
+    assert.deepStrictEqual(camposAhorro({ apvi: null, apvc: null }), {})
+})
+
+test("CCAF: código, renta, descuentos, reparto de Fonasa y asignación en el 91; sin caja, asignación en el 73", () => {
+    const ccaf = { codigo: "03", rentaImponible: 1000000, saludCcaf: 42000, descuentos: { 85: 20000, 86: 0, 87: 0, 88: 3000, 89: 0 }, asignacionFamiliar: 22601 }
+    const fonasa = camposCcaf(ccaf, { sistema: "Fonasa", legal: 70000 })
+    assert.deepStrictEqual([fonasa[83], fonasa[84], fonasa[85], fonasa[88], fonasa[90], fonasa[70], fonasa[91]], ["03", 1000000, 20000, 3000, 42000, 28000, 22601])
+    assert.strictEqual(camposCcaf({ ...ccaf, saludCcaf: 0 }, { sistema: "Isapre", legal: 70000 })[70], undefined)
+    assert.deepStrictEqual(camposCcaf({ codigo: null, asignacionFamiliar: 22601 }, { sistema: "Fonasa", legal: 70000 }), { 73: 22601 })
+    assert.deepStrictEqual(camposCcaf({ codigo: null, asignacionFamiliar: 0 }, { sistema: "Fonasa", legal: 70000 }), {})
+})

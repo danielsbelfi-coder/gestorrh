@@ -50,7 +50,7 @@ function camposIdentificacionLre(datos) {
         1142: 0,
         1143: datos.sistemaSalud === "Fonasa" ? FONASA_LRE : datos.isapreLre,
         1151: datos.cotizaCesantia ? 1 : 0,
-        1110: 0,
+        1110: datos.ccafLre ?? 0,
         1152: datos.mutualLre,
         1111: datos.cargasSimples ?? 0,
         1112: datos.cargasMaternales ?? 0,
@@ -60,8 +60,8 @@ function camposIdentificacionLre(datos) {
         1116: datos.diasLicencia > 0 ? datos.diasLicencia : "",
         1117: datos.diasVacaciones > 0 ? datos.diasVacaciones : "",
         1118: 0,
-        1155: 0,
-        1157: 0,
+        1155: datos.apvi ? 1 : 0,
+        1157: datos.apvc ? 1 : 0,
         1131: 0
     }
 }

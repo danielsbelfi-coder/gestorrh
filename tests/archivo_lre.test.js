@@ -145,3 +145,10 @@ test("identificación: cargas familiares por tipo y tramo; sin cargas van en 0",
     const sinCargas = camposIdentificacionLre(ana)
     assert.deepStrictEqual([sinCargas[1111], sinCargas[1112], sinCargas[1113]], [0, 0, 0])
 })
+
+test("identificación: caja de compensación y marcas de APVI y APVC", () => {
+    const con = camposIdentificacionLre({ ...ana, ccafLre: 3, apvi: true, apvc: false })
+    assert.deepStrictEqual([con[1110], con[1155], con[1157]], [3, 1, 0])
+    const sin = camposIdentificacionLre(ana)
+    assert.deepStrictEqual([sin[1110], sin[1155], sin[1157]], [0, 0, 0])
+})

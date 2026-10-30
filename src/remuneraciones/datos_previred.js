@@ -1,5 +1,6 @@
 const { tramoAsignacionFamiliar } = require("./archivo_previred.js")
 const { movimientosDelMes } = require("./movimientos_previred.js")
+const { CODIGO_PREVIRED, DESCUENTOS_CCAF, problemasDescuentosCcaf } = require("./ccaf.js")
 
 function montoLinea(lineas, codigo) {
     return lineas
@@ -15,6 +16,29 @@ function asignacionFamiliarPrevired(detalle, limitesTramo) {
         return { tramo: tramoAsignacionFamiliar(detalle.cotizaciones.rentaImponible, limitesTramo), cargasSimples: 0, cargasMaternales: 0, cargasInvalidez: 0 }
     }
     return { tramo: guardada.tramo ?? "D", cargasSimples: guardada.simples, cargasMaternales: guardada.maternales, cargasInvalidez: guardada.invalidez }
+}
+
+// APVI (con el depósito convenido en su bloque) y APVC guardados en la liquidación. null si no hay.
+function ahorroPrevired(apv) {
+    const apvi = apv?.apvi ?? null
+    const dc = apv?.depositoConvenido ?? null
+    const bloqueApvi = apvi ?? dc
+    return {
+        apvi: bloqueApvi === null ? null : {
+            institucionCodigo: bloqueApvi.institucionCodigo,
+            numeroContrato: bloqueApvi.numeroContrato,
+            formaPago: bloqueApvi.formaPago,
+            monto: apvi?.monto ?? 0,
+            depositoConvenido: dc?.monto ?? 0
+        },
+        apvc: apv?.apvc ? {
+            institucionCodigo: apv.apvc.institucionCodigo,
+            numeroContrato: apv.apvc.numeroContrato,
+            formaPago: apv.apvc.formaPago,
+            trabajador: apv.apvc.trabajador,
+            empleador: apv.apvc.empleador
+        } : null
+    }
 }
 
 function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tipoJornada, fechasInasistencia, fechasPermisoSinGoce }) {
@@ -56,6 +80,15 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
                 legal: monto("SALUD"),
                 adicional: monto("SALUD_ADICIONAL_ISAPRE")
             }
+        },
+        ahorro: ahorroPrevired(detalle.apv),
+        ccaf: {
+            codigo: detalle.ccaf?.caja ? CODIGO_PREVIRED[detalle.ccaf.caja] : null,
+            rentaImponible: renta,
+            saludCcaf: detalle.ccaf?.saludCcaf ?? 0,
+            descuentos: Object.fromEntries(Object.entries(DESCUENTOS_CCAF).map(([codigo, regla]) => [regla.campo, monto(codigo)])),
+            // Lo pagado por asignación familiar, que el empleador recupera de la caja (91) o del IPS (73).
+            asignacionFamiliar: monto("ASIGNACION_FAMILIAR") + monto("ASIGNACION_FAMILIAR_RETROACTIVA") + monto("REINTEGRO_CARGAS_FAMILIARES")
         },
         empleador: {
             rentaImponible: renta,
@@ -100,6 +133,14 @@ function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasP
     }
     if (detalle.salud.sistema === "Isapre" && !persona.Isapre?.codigo_previred) {
         problemas.push("La isapre de la persona no tiene código Previred")
+    }
+
+    const montoDe = (codigo) => montoLinea(liquidacion.LiquidacionLineas ?? [], codigo)
+    problemas.push(...problemasDescuentosCcaf(detalle.ccaf?.caja ?? null,
+        Object.fromEntries(Object.keys(DESCUENTOS_CCAF).map((codigo) => [codigo, montoDe(codigo)]))))
+    const { apvi, depositoConvenido } = detalle.apv ?? {}
+    if (apvi && depositoConvenido && apvi.institucionCodigo !== depositoConvenido.institucionCodigo) {
+        problemas.push("El depósito convenido va en el bloque del APV individual de Previred: debe ser de la misma institución que el APVI")
     }
 
     if (detalle.diasPago.inasistencia !== fechasInasistencia.length) {

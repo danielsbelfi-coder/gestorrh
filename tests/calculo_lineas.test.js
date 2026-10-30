@@ -231,3 +231,38 @@ test("asignación familiar: línea de haber con el número de cargas, fuera de l
     assert.strictEqual(con.baseGratificacion, sin.baseGratificacion)
     assert.strictEqual(monto(calcular({ sueldoBase: 900000, asignacionFamiliar: { monto: 0, cargas: 1 } }), "ASIGNACION_FAMILIAR"), 0)
 })
+
+test("APV y depósito convenido: líneas, rebaja tributable del régimen B y líquido", () => {
+    const conceptos = {
+        ...CONCEPTOS,
+        APVI_A: concepto("APVI_A", "descuento"), APVI_B: concepto("APVI_B", "descuento"),
+        APVC_A: concepto("APVC_A", "descuento"), APVC_B: concepto("APVC_B", "descuento"),
+        DEPOSITO_CONVENIDO: concepto("DEPOSITO_CONVENIDO", "haber"),
+        DESCUENTO_DEPOSITO_CONVENIDO: concepto("DESCUENTO_DEPOSITO_CONVENIDO", "descuento")
+    }
+    const datos = {
+        sueldoBase: 1500000, horasSemanales: 42, diasPagados: 30, variables: [], minutosAtraso: 0, ingresoMinimoMensual: 553553,
+        tasaAfp: 11.44, tasaSalud: 7, planSaludUF: 0, topeImponibleUF: 90, valorUF: 40000, valorUTM: 70000, tasaCesantia: 0.6, topeCesantiaUF: 135.2,
+        tramos: [{ desdeUTM: 0, hastaUTM: 13.5, tasa: 0, rebajaUTM: 0 }, { desdeUTM: 13.5, hastaUTM: 30, tasa: 4, rebajaUTM: 0.54 }, { desdeUTM: 30, hastaUTM: null, tasa: 8, rebajaUTM: 1.74 }],
+        saldoPendiente: 0, conceptos
+    }
+    const sin = calcularLiquidacionPorLineas(datos)
+    const con = calcularLiquidacionPorLineas({ ...datos, ahorros: [
+        { tipo: "apvi", institucion_codigo: "033", institucion_nombre: "AFP Capital", forma_pago: 1, regimen: "B", modalidad: "pesos", monto: "100000" },
+        { tipo: "deposito_convenido", institucion_codigo: "033", institucion_nombre: "AFP Capital", forma_pago: 1, regimen: null, modalidad: "pesos", monto: "50000" }
+    ] })
+    const monto = (r, codigo) => r.lineas.filter((l) => l.concepto.codigo === codigo).reduce((s, l) => s + l.monto, 0)
+
+    assert.strictEqual(monto(con, "APVI_B"), 100000)
+    assert.strictEqual(monto(con, "DEPOSITO_CONVENIDO"), 50000)
+    assert.strictEqual(monto(con, "DESCUENTO_DEPOSITO_CONVENIDO"), 50000)
+    assert.strictEqual(con.baseTributable, sin.baseTributable - 100000)
+    assert.strictEqual(con.rentaImponible, sin.rentaImponible)
+    const impuesto = (r) => monto(r, "IMPUESTO_UNICO")
+    assert.ok(impuesto(con) < impuesto(sin))
+    assert.strictEqual(con.liquidoAPagar, sin.liquidoAPagar - 100000 + (impuesto(sin) - impuesto(con)))
+
+    const regimenA = calcularLiquidacionPorLineas({ ...datos, ahorros: [{ tipo: "apvi", institucion_codigo: "033", institucion_nombre: "X", forma_pago: 1, regimen: "A", modalidad: "pesos", monto: "100000" }] })
+    assert.strictEqual(regimenA.baseTributable, sin.baseTributable)
+    assert.strictEqual(monto(regimenA, "APVI_A"), 100000)
+})

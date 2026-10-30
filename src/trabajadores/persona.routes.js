@@ -3,6 +3,7 @@ const { listar, crear, obtenerPorId, actualizar, importar } = require("./persona
 const situacionRoutes = require("./situacion_previsional.routes.js")
 const previsionRoutes = require("./prevision_persona.routes.js")
 const { tramosRouter, cargasRouter } = require("./carga_familiar.routes.js")
+const ahorrosRoutes = require("./ahorro_voluntario.routes.js")
 const router = express.Router()
 
 router.get("/", listar)
@@ -13,6 +14,7 @@ router.use("/:personaId/situaciones-previsionales", situacionRoutes)
 router.use("/:personaId/previsiones", previsionRoutes)
 router.use("/:personaId/tramos-asignacion", tramosRouter)
 router.use("/:personaId/cargas", cargasRouter)
+router.use("/:personaId/ahorros-voluntarios", ahorrosRoutes)
 router.post("/importar", importar)
 
 module.exports = router

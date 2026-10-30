@@ -74,6 +74,17 @@ En la ficha de la persona, sección **Cargas familiares**, se registra lo que di
 
 La asignación se paga por **mes completo**: cuenta toda carga vigente al menos un día del mes. Aparece en la liquidación como «Asignación familiar» (no imponible ni tributable), en Previred (campos 18 a 24) y en el LRE (1111 a 1114 y 2311). La **asignación retroactiva** (por ejemplo, desde la solicitud hasta la aprobación) y el **reintegro de cargas** se ingresan como variables del mes. Registrar una carga o un tramo que alcanza meses cerrados está permitido: esas liquidaciones no cambian y la pantalla avisa para pagar la diferencia como retroactiva.
 
+### Ahorro previsional voluntario (ficha de la persona)
+En la ficha de la persona, sección **Ahorro previsional voluntario**, se registran el **APV individual**, el **APV colectivo** y el **depósito convenido** que se descuentan por planilla: institución (una AFP de la lista u otra con su código Previred de 3 dígitos), número de contrato, forma de pago (directa o indirecta), régimen A o B, monto en pesos, UF o porcentaje de la renta imponible, aporte del empleador (solo APV colectivo) y mes desde y hasta. Solo puede haber uno de cada tipo vigente por mes.
+- El APV **régimen B** rebaja la base del impuesto único del mes, hasta 50 UF.
+- El **depósito convenido** aparece como haber y como descuento del mismo monto (no cambia el líquido).
+- El aporte del empleador al APV colectivo va con los aportes del empleador.
+
+### Caja de compensación (CCAF)
+Si la empresa tiene caja (ficha de la empresa), Previred informa la caja, reparte el 7 % de Fonasa entre la caja (4,2 %) y Fonasa (2,8 %) e informa la asignación familiar pagada para que se compense. La liquidación no cambia. Los **descuentos de la caja** (crédito personal, dental, leasing, seguro de vida y otros) se ingresan cada mes como **variables**, según lo que informa la caja. Previred avisa si un descuento no lo recibe la caja de la empresa (por ejemplo, el dental solo lo recibe Los Héroes).
+
+Si los descuentos dejan el líquido en negativo, la liquidación se calcula igual, avisa y el saldo se descuenta el mes siguiente.
+
 ### Mi seguridad (todos los usuarios)
 En el pie del menú, **Mi seguridad** reúne:
 - **Cambiar contraseña** (cierra tus sesiones en otros navegadores).
@@ -110,7 +121,7 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 **Liquidaciones**: elige el periodo y **Calcular** (un trabajador) o **Calcular todas**. Revisa el detalle, después **Cerrar liquidación** o **Cerrar todas**. Descarga **PDF de todas** o **PDF con aportes** (incluye aportes del empleador). Una liquidación cerrada ya no cambia.
 
 ### 6.7 Archivos legales
-**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan pensionados, CCAF ni APV, ni los aportes de la reforma previsional.
+**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan los pensionados afiliados a una caja (1 %) ni controlan el tope anual del depósito convenido.
 
 ### 6.8 Cerrar el mes
 **Periodos → Cerrar periodo**. Antes de cerrar, el sistema revisa cada trabajador (resumen aprobado, liquidación emitida, sin variables pendientes y finiquito emitido si terminó en el mes). Si falta algo, muestra la lista para resolverla.

@@ -30,6 +30,7 @@ const { LicenciaMedica } = require("../asistencia/licencia_medica.model.js");
 const { SituacionPrevisional } = require("../trabajadores/situacion_previsional.model.js");
 const { PrevisionPersona } = require("../trabajadores/prevision_persona.model.js")
 const { CargaFamiliar, TramoAsignacionPersona } = require("../trabajadores/carga_familiar.model.js")
+const { AhorroVoluntario } = require("../trabajadores/ahorro_voluntario.model.js")
 const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 const { Jornada } = require("../contratos/jornada.model");
 const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
@@ -328,6 +329,8 @@ CargaFamiliar.belongsTo(Persona, { foreignKey: "persona_id", onDelete: "CASCADE"
 Persona.hasMany(CargaFamiliar, { foreignKey: "persona_id" })
 TramoAsignacionPersona.belongsTo(Persona, { foreignKey: "persona_id", onDelete: "CASCADE" })
 Persona.hasMany(TramoAsignacionPersona, { foreignKey: "persona_id" })
+AhorroVoluntario.belongsTo(Persona, { foreignKey: "persona_id", onDelete: "CASCADE" })
+Persona.hasMany(AhorroVoluntario, { foreignKey: "persona_id" })
 Finiquito.belongsTo(Trabajador, {
     foreignKey: "trabajador_id"
 })
@@ -387,6 +390,7 @@ module.exports = {
     PrevisionPersona,
     CargaFamiliar,
     TramoAsignacionPersona,
+    AhorroVoluntario,
     Finiquito,
     Jornada,
     ParametroHistorial

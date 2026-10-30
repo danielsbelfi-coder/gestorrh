@@ -191,6 +191,50 @@
             </form>
         </section>
 
+        <section class="tarjeta" id="seccionAhorro" hidden>
+            <h2>Ahorro previsional voluntario</h2>
+            <p class="texto-suave">APV individual, APV colectivo y depósito convenido que se descuentan por planilla, con el mes desde y hasta el que rigen. El APV régimen B rebaja la base del impuesto único hasta 50 UF al mes. Las liquidaciones de meses cerrados no cambian.</p>
+            <div id="ahorrosVoluntarios"></div>
+            <form id="formAhorro">
+                <label>Tipo
+                    <select id="ahoTipo" required>
+                        <option value="apvi">APV individual</option>
+                        <option value="apvc">APV colectivo</option>
+                        <option value="deposito_convenido">Depósito convenido</option>
+                    </select>
+                </label>
+                <label>Institución<select id="ahoInstitucion" required></select></label>
+                <label class="solo-otra-institucion" hidden>Código Previred (3 dígitos)<input type="text" id="ahoCodigo" inputmode="numeric" maxlength="3" pattern="\d{3}"></label>
+                <label class="solo-otra-institucion" hidden>Nombre de la institución<input type="text" id="ahoNombre" maxlength="80"></label>
+                <label>N° de contrato<input type="text" id="ahoContrato" maxlength="20"></label>
+                <label>Forma de pago
+                    <select id="ahoFormaPago" required>
+                        <option value="1">Directa</option>
+                        <option value="2">Indirecta (a través de la AFP)</option>
+                    </select>
+                </label>
+                <label class="solo-apv">Régimen
+                    <select id="ahoRegimen">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                    </select>
+                </label>
+                <label>Modalidad
+                    <select id="ahoModalidad" required>
+                        <option value="pesos">Pesos</option>
+                        <option value="uf">UF</option>
+                        <option value="porcentaje">% de la renta imponible</option>
+                    </select>
+                </label>
+                <label><span id="ahoMontoTexto">Monto</span><input type="number" id="ahoMonto" min="0" step="0.0001" required></label>
+                <label class="solo-apvc" hidden>Aporte del empleador<input type="number" id="ahoAporte" min="0" step="0.0001"></label>
+                <label>Desde (mes)<input type="month" id="ahoDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
+                <label>Hasta (mes, opcional)<input type="month" id="ahoHasta" placeholder="AAAA-MM" pattern="\d{4}-\d{2}"></label>
+                <button type="submit" id="botonAhorro">Registrar</button>
+                <button type="button" class="secundario" id="cancelarAhorro" hidden>Cancelar edición</button>
+            </form>
+        </section>
+
         <section class="tarjeta" id="seccionSituacion" hidden>
             <h2>Situación previsional</h2>
             <p class="texto-suave">Historial por mes: pensionado, si sigue cotizando en la AFP y tipo de pensión. Cada registro rige desde su mes hasta el siguiente registro.</p>

@@ -1,4 +1,5 @@
-function calcularAportesEmpleador({ baseCotizaciones, baseCesantia, baseSeguroSocial = baseCotizaciones, tasas, conceptos }) {
+// fijos: aportes con monto ya calculado (por ejemplo, el aporte del empleador al APV colectivo).
+function calcularAportesEmpleador({ baseCotizaciones, baseCesantia, baseSeguroSocial = baseCotizaciones, tasas, fijos = [], conceptos }) {
     const calculos = [
         { concepto: conceptos.APORTE_CESANTIA, base: baseCesantia, tasa: tasas.cesantia },
         { concepto: conceptos.APORTE_MUTUAL, base: baseCotizaciones, tasa: tasas.mutual },
@@ -11,6 +12,7 @@ function calcularAportesEmpleador({ baseCotizaciones, baseCesantia, baseSeguroSo
 
     const aportes = calculos
         .map(({ concepto, base, tasa }) => ({ concepto, cantidad: null, monto: Math.round(base * tasa / 100) }))
+        .concat(fijos.map(({ concepto, monto }) => ({ concepto, cantidad: null, monto })))
         .filter((aporte) => aporte.monto > 0)
 
     const totalAportes = aportes.reduce((suma, aporte) => suma + aporte.monto, 0)

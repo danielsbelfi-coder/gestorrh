@@ -1,4 +1,5 @@
 const { DIAS_MES_COMERCIAL } = require("./dias_pago.js")
+const { calcularAhorros } = require("./ahorro_voluntario.js")
 
 function valorHoraOrdinaria(sueldoBase, horasSemanales) {
     return (sueldoBase / 30 * 28) / (horasSemanales * 4)
@@ -96,6 +97,15 @@ function buscarTramo(tramos, baseEnUTM) {
     return tramo
 }
 
+// Descuentos del trabajador por APV y depósito convenido (el aporte del empleador al APVC va con los aportes).
+function lineasAhorro(ahorros, conceptos) {
+    return [
+        ahorros.apvi && { concepto: conceptos[`APVI_${ahorros.apvi.regimen}`], monto: ahorros.apvi.monto },
+        ahorros.apvc && { concepto: conceptos[`APVC_${ahorros.apvc.regimen}`], monto: ahorros.apvc.trabajador },
+        ahorros.depositoConvenido && { concepto: conceptos.DESCUENTO_DEPOSITO_CONVENIDO, monto: ahorros.depositoConvenido.monto }
+    ].filter(Boolean)
+}
+
 function calcularLiquidacionPorLineas(datos) {
     const { tasaAfp, tasaSalud, planSaludUF, topeImponibleUF, valorUF, valorUTM, tasaCesantia, topeCesantiaUF, tramos, saldoPendiente, conceptos } = datos
 
@@ -116,7 +126,10 @@ function calcularLiquidacionPorLineas(datos) {
     const baseCesantia = Math.min(rentaImponible, topeCesantia)
     const descuentoCesantia = Math.round(baseCesantia * tasaCesantia / 100)
 
-    const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoSaludLegal + descuentoCesantia))
+    // APV y depósito convenido vigentes en el mes; el APV régimen B rebaja la base tributable hasta 50 UF.
+    const ahorros = calcularAhorros(datos.ahorros ?? [], { valorUF, rentaImponible })
+
+    const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoSaludLegal + descuentoCesantia) - ahorros.rebajaTributable)
     const baseEnUTM = baseTributable / valorUTM
     const tramo = buscarTramo(tramos, baseEnUTM)
     const montoImpuestoUnico = Math.round(Math.max(0, baseTributable * tramo.tasa / 100 - tramo.rebajaUTM * valorUTM))
@@ -126,6 +139,7 @@ function calcularLiquidacionPorLineas(datos) {
         { concepto: conceptos.SALUD, monto: descuentoSaludLegal },
         { concepto: conceptos.SALUD_ADICIONAL_ISAPRE, monto: descuentoAdicionalIsapre },
         { concepto: conceptos.CESANTIA, monto: descuentoCesantia },
+        ...lineasAhorro(ahorros, conceptos),
         { concepto: conceptos.IMPUESTO_UNICO, monto: montoImpuestoUnico },
         { concepto: conceptos.DESCUENTO_PAGO_EXCESO, monto: saldoPendiente }
     ]
@@ -134,6 +148,11 @@ function calcularLiquidacionPorLineas(datos) {
         if (legal.monto > 0) {
             lineas.push({ concepto: legal.concepto, cantidad: null, monto: legal.monto })
         }
+    }
+
+    // El depósito convenido es un haber (no imponible ni tributable) que se descuenta completo para enviarlo a la institución.
+    if (ahorros.depositoConvenido?.monto > 0) {
+        lineas.push({ concepto: conceptos.DEPOSITO_CONVENIDO, cantidad: null, monto: ahorros.depositoConvenido.monto })
     }
 
     const sumarTipo = (tipo) => lineas.filter((l) => l.concepto.tipo === tipo).reduce((suma, l) => suma + l.monto, 0)
@@ -164,6 +183,7 @@ function calcularLiquidacionPorLineas(datos) {
         baseTributable,
         baseEnUTM,
         tramo,
+        ahorros,
         totalHaberes,
         totalDescuentos,
         liquidoAPagar,
