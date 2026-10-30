@@ -349,6 +349,14 @@ async function prepararCalculo(periodo, trabajador) {
             montos: await montosAsignacionFamiliar(`${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`)
         })
     } catch (error) {
+        if (error.codigo === "sin_tramo") {
+            // Mensaje con lo que hay que hacer: el tramo se registra en la ficha de la persona.
+            const mes = `${String(periodo.mes).padStart(2, "0")}-${periodo.anio}`
+            const nombre = [persona.nombres, persona.apellido_paterno].filter(Boolean).join(" ")
+            throw new ConflictError(`Falta el tramo de asignación familiar de ${nombre}: tiene cargas vigentes en ${mes}. ` +
+                `Regístrelo en Personas → ficha de ${nombre} → Cargas familiares → «Tramo de asignación familiar», ` +
+                `desde ${mes} o el mes que indique el documento de la CCAF o del IPS, y vuelva a calcular`)
+        }
         throw new ConflictError(error.message)
     }
 

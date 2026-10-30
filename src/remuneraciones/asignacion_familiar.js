@@ -44,7 +44,9 @@ function calcularAsignacion({ tramo, cargas, montos }) {
     const invalidez = contar("invalidez")
 
     if (cargas.length > 0 && !TRAMOS.includes(tramo)) {
-        throw new Error("La persona tiene cargas familiares vigentes en el mes, pero no tiene tramo de asignación familiar registrado")
+        const error = new Error("La persona tiene cargas familiares vigentes en el mes, pero no tiene tramo de asignación familiar registrado")
+        error.codigo = "sin_tramo"
+        throw error
     }
 
     const unitario = tramo === "A" || tramo === "B" || tramo === "C" ? Number(montos[tramo]) : 0

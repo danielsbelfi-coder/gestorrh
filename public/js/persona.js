@@ -133,6 +133,7 @@ async function cargarPersona() {
     document.getElementById("seccionAhorro").hidden = false
     mostrarCamposAhorro()
     await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros()])
+    avisoSinTramo()
 }
 
 async function cargarRelaciones() {
@@ -322,7 +323,18 @@ const RELACIONES = {
 }
 const TIPOS_CARGA = { simple: "Simple", maternal: "Maternal", invalidez: "Invalidez" }
 let cargas = []
+let tramos = []
 let cargaEnEdicion = null
+
+// Con cargas registradas y sin ningún tramo, la liquidación no se puede calcular: se avisa arriba de la sección.
+function avisoSinTramo() {
+    const aviso = document.getElementById("avisoSinTramo")
+    const sinTramo = tramos.length === 0 && cargas.some((c) => estadoCarga(c) !== "Vencida")
+    aviso.hidden = !sinTramo
+    aviso.textContent = sinTramo
+        ? "Falta el tramo: esta persona tiene cargas, pero no tiene tramo de asignación familiar. Mientras no lo registres, su liquidación no se puede calcular. Regístralo aquí abajo, desde el mes que indique el documento."
+        : ""
+}
 
 const mesTexto = (fecha) => String(fecha).slice(0, 7).split("-").reverse().join("-")
 
@@ -341,7 +353,8 @@ async function cargarTramos() {
         mensaje("error", resultado.datos?.error ?? "No se pudo cargar el tramo de asignación familiar")
         return
     }
-    document.getElementById("tramosAsignacion").innerHTML = resultado.datos.length === 0
+    tramos = resultado.datos
+    document.getElementById("tramosAsignacion").innerHTML = tramos.length === 0
         ? `<p class="texto-suave">Sin tramo registrado: se informa tramo D (sin derecho). Si la persona tiene cargas vigentes, la liquidación pedirá registrar el tramo.</p>`
         : `<table>
             <thead><tr><th>Desde</th><th>Tramo</th><th>Documento</th><th></th></tr></thead>
@@ -354,6 +367,7 @@ async function cargarTramos() {
                 </tr>`).join("")}
             </tbody>
         </table>`
+    avisoSinTramo()
 }
 
 document.getElementById("formTramo").addEventListener("submit", async function (evento) {
@@ -422,6 +436,7 @@ async function cargarCargas() {
                 </tr>`).join("")}
             </tbody>
         </table>`
+    avisoSinTramo()
 }
 
 // "12.345.678-9" → { rut: "12345678", dv: "9" }. Vacío → sin RUT.
