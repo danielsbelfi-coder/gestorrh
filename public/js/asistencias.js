@@ -51,7 +51,7 @@ async function cargarAsistencias() {
         .filter((t) => t.estado !== "postulante")
         .map((trabajador) => {
             const persona = personaPorId.get(trabajador.persona_id)
-            return { id: trabajador.id, texto: `${persona ? textoPersona(persona) : "Persona " + trabajador.persona_id} · #${trabajador.id}` }
+            return { id: trabajador.id, texto: textoTrabajador(trabajador, persona) }
         }))
 }
 

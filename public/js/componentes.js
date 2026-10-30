@@ -494,6 +494,15 @@ function valorContrato(campo, valor) {
 
 // ---------- Ciclo mensual ----------
 
+// Texto de un trabajador para los buscadores: nombre, RUT y su relación laboral (desde y, si terminó, hasta).
+// Así se distinguen dos relaciones de la misma persona (por ejemplo, un finiquito y una recontratación).
+function textoTrabajador(trabajador, persona) {
+    const relacion = trabajador.fecha_termino
+        ? `desde ${fechaCorta(trabajador.fecha_ingreso)} hasta ${fechaCorta(trabajador.fecha_termino)}`
+        : `desde ${fechaCorta(trabajador.fecha_ingreso)}`
+    return `${persona ? textoPersona(persona) : "Trabajador " + trabajador.id} · ${relacion}`
+}
+
 ESTADOS.resumen = { sin_resumen: ["Sin resumen", "peligro"], pendiente: ["Pendiente", "advertencia"], aprobado: ["Aprobado", "exito"] }
 ESTADOS.variable = { pendiente: ["Pendiente", "advertencia"], aprobada: ["Aprobada", "exito"] }
 TEXTOS.fuenteRegistro = { manual: "Manual", asistencia: "Desde asistencia", importacion: "Importación" }
@@ -512,7 +521,7 @@ async function trabajadoresDeLaEmpresa() {
             persona,
             nombre: nombreCompleto(persona) || `Trabajador ${t.id}`,
             rut: persona ? formatearRut(persona.rut, persona.dv) : "",
-            textoBuscador: `${persona ? textoPersona(persona) : "Trabajador " + t.id} · #${t.id}`
+            textoBuscador: textoTrabajador(t, persona)
         }
     })
     return { trabajadores, porId: porId(trabajadores) }

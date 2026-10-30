@@ -204,16 +204,22 @@ document.getElementById("btnAprobarTodas").addEventListener("click", async funct
     cargarVariables()
 })
 
-selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); salirDeEdicion(); cargarVariables() })
+// Solo los trabajadores con relación laboral en el mes del periodo elegido.
+function llenarTrabajadoresDelPeriodo() {
+    const periodo = periodoElegido()
+    llenarBuscador(document.getElementById("trabajador"), (datosTrabajadores?.trabajadores ?? [])
+        .filter((t) => periodo !== null && vigenteEnPeriodo(t, periodo))
+        .map((t) => ({ id: t.id, texto: t.textoBuscador })))
+}
+
+selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); salirDeEdicion(); llenarTrabajadoresDelPeriodo(); cargarVariables() })
 
 document.addEventListener("empresa-lista", async function () {
     limpiarMensajes()
     datosTrabajadores = (await trabajadoresDeLaEmpresa()) ?? datosTrabajadores
-    llenarBuscador(document.getElementById("trabajador"), datosTrabajadores.trabajadores
-        .filter((t) => t.estado !== "postulante")
-        .map((t) => ({ id: t.id, texto: t.textoBuscador })))
     await cargarConceptos()
     periodos = await llenarSelectorPeriodos(selectorPeriodo)
+    llenarTrabajadoresDelPeriodo()
     salirDeEdicion()
     cargarVariables()
 })

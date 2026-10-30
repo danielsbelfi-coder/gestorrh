@@ -68,13 +68,17 @@ async function cargarTrabajadores() {
     }
     trabajadores = deEmpresaActual(listas[0])
     personaPorId = porId(listas[1])
+    llenarTrabajadoresDelPeriodo()
+}
 
-    llenarBuscador(document.getElementById("trabajador"), trabajadores
-        .filter((t) => t.estado !== "postulante")
-        .map((t) => {
-            const persona = personaPorId.get(t.persona_id)
-            return { id: t.id, texto: `${persona ? textoPersona(persona) : "Trabajador " + t.id} · #${t.id}` }
-        }))
+// Solo los trabajadores con relación laboral en el mes del periodo elegido (no los finiquitados antes ni los que entran después).
+function llenarTrabajadoresDelPeriodo() {
+    const periodo = periodoElegido()
+    const input = document.getElementById("trabajador")
+    input.value = ""
+    llenarBuscador(input, trabajadores
+        .filter((t) => periodo !== null && vigenteEnPeriodo(t, periodo))
+        .map((t) => ({ id: t.id, texto: textoTrabajador(t, personaPorId.get(t.persona_id)) })))
 }
 
 async function cargarLiquidaciones() {
@@ -314,11 +318,12 @@ async function descargarTodas(conAportes) {
 
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
-selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); cargarLiquidaciones() })
+selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); llenarTrabajadoresDelPeriodo(); cargarLiquidaciones() })
 
 document.addEventListener("empresa-lista", async function () {
     limpiarMensajes()
     await cargarTrabajadores()
     periodos = await llenarSelectorPeriodos(selectorPeriodo)
+    llenarTrabajadoresDelPeriodo()
     cargarLiquidaciones()
 })
