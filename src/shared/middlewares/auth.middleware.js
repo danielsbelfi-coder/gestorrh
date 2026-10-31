@@ -2,6 +2,7 @@
 const { UsuarioEmpresaRol, Cuenta, Rol } = require("../associations");
 const { ROLES_ASIGNABLES } = require("../permisos");
 const { rutaDePlataforma, enmascararCuentas, resolverEmpresaSoporte } = require("../../soporte/acceso_soporte.js");
+const { resolverEmpresaCliente } = require("../empresa_elegida.js");
 const { origenDeLaApp } = require("../configuracion.js")
 const {
     nombreCookie, opcionesCookie, leerCookie, motivoInvalidez, estadoDeAcceso, rutaPermitida, mensajeDeEstado,
@@ -144,6 +145,16 @@ const verificarSesion = async (req, res, next) => {
                     req.accesoSoporte = acceso
                 }
             }
+        }
+
+        // Usuarios de clientes: la petición se limita a la empresa elegida en la barra (X-Empresa), salvo las
+        // pantallas de varias empresas; sin cabecera siguen viendo todas sus empresas.
+        if (!usuario.rol_plataforma) {
+            const elegida = resolverEmpresaCliente(req.get("x-empresa"), empresasPermitidas, req.originalUrl)
+            if (elegida.error) {
+                return res.status(403).json({ error: "No tienes acceso a la empresa elegida. Se cambió a otra de tus empresas.", codigo: elegida.error })
+            }
+            empresasPermitidas = elegida.empresas
         }
 
         req.empresasPermitidas = empresasPermitidas

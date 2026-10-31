@@ -66,6 +66,9 @@ async function llamarApi(ruta, opciones = {}, reintento = false) {
         guardarCsrf(datos.csrf_token)
     }
 
+    if (respuesta.status === 403 && datos?.codigo === "empresa_no_permitida") {
+        empresaNoPermitida(datos.error)
+    }
     if (respuesta.status === 403 && datos?.codigo === "acceso_soporte") {
         accesoDeSoporteTerminado(datos.error)
     }
@@ -87,8 +90,8 @@ function destinoTrasIngreso(datos) {
     return "index.html"
 }
 
-// Empresa de trabajo en la cabecera X-Empresa. El servidor la usa para limitar a soporte a la empresa elegida
-// (y a una que el cliente haya autorizado); para los demás usuarios hoy no cambia nada.
+// Empresa de trabajo en la cabecera X-Empresa. El servidor limita cada petición a la empresa elegida (soporte,
+// además, solo a una que el cliente haya autorizado), salvo las pantallas de varias empresas.
 function agregarEmpresa(headers) {
     const id = empresaActual()
     if (id !== null) {
@@ -103,6 +106,14 @@ function accesoDeSoporteTerminado(texto) {
     olvidarEmpresaActual()
     alert(`${texto}. El acceso pudo vencer o el cliente lo revocó.`)
     window.location.href = "soporte.html"
+}
+
+// La empresa elegida en la barra ya no es del usuario (por ejemplo, le quitaron el acceso con la página abierta):
+// se olvida y se recarga; la barra elige otra de sus empresas.
+function empresaNoPermitida(texto) {
+    olvidarEmpresaActual()
+    alert(texto)
+    window.location.reload()
 }
 
 // Sesión terminada (vencida, cerrada en otro lado o inexistente): se vuelve al login.
@@ -148,6 +159,9 @@ async function descargarArchivo(ruta) {
 
     if (!respuesta.ok) {
         const datos = await respuesta.json()
+        if (respuesta.status === 403 && datos?.codigo === "empresa_no_permitida") {
+            empresaNoPermitida(datos.error)
+        }
         if (respuesta.status === 403 && datos?.codigo === "acceso_soporte") {
             accesoDeSoporteTerminado(datos.error)
         }
