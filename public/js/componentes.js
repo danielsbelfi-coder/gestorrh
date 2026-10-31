@@ -475,7 +475,8 @@ function hoyIso() {
 const TEXTOS_CONTRATO = {
     tipoJornada: { completa: "Completa", parcial: "Parcial", excluido_limitacion: "Excluido de limitación" },
     sistemaRemuneracion: { mensual: "Mensual", diario: "Diario", semanal: "Semanal", hora: "Por hora" },
-    periodicidadPago: { mensual: "Mensual", quincenal: "Quincenal", semanal: "Semanal" }
+    periodicidadPago: { mensual: "Mensual", quincenal: "Quincenal", semanal: "Semanal" },
+    tipoContrato: { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
 }
 
 // Campos que un anexo puede modificar (CAMPOS_MODIFICABLES de contrato_anexo.service.js).
@@ -490,7 +491,9 @@ const CAMPOS_ANEXO = {
     periodicidad_pago: { texto: "Periodicidad de pago", tipo: "lista", opciones: TEXTOS_CONTRATO.periodicidadPago },
     fecha_termino: { texto: "Fecha de término", tipo: "fecha" },
     comuna_prestacion: { texto: "Comuna de prestación", tipo: "comuna" },
-    jornada_id: { texto: "Jornada (horario)", tipo: "jornada" }
+    jornada_id: { texto: "Jornada (horario)", tipo: "jornada" },
+    // Código 8 en Previred: solo plazo fijo u obra o faena → indefinido.
+    tipo_contrato: { texto: "Tipo de contrato (pasar a indefinido)", tipo: "lista", opciones: { indefinido: "Indefinido" }, textos: TEXTOS_CONTRATO.tipoContrato }
 }
 
 // Plantillas de jornada conocidas por la pantalla (id → jornada), para mostrar su nombre en anexos.
@@ -509,7 +512,7 @@ function valorContrato(campo, valor) {
         return fechaCorta(valor)
     }
     if (definicion?.tipo === "lista") {
-        return definicion.opciones[valor] ?? valor
+        return (definicion.textos ?? definicion.opciones)[valor] ?? valor
     }
     if (definicion?.tipo === "jornada") {
         return jornadasConocidas.get(Number(valor))?.nombre ?? `Jornada #${valor}`

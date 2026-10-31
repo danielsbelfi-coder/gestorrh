@@ -46,3 +46,11 @@ test("inasistencias y permisos: un movimiento por tramo, todo ordenado por fecha
         { codigo: 3, desde: "2027-07-15", hasta: "2027-07-16" }
     ])
 })
+test("código 8: paso a indefinido en el mes, con fecha desde", () => {
+    assert.deepStrictEqual(movimientosDelMes({ ...base, fechaConversion: "2027-07-16" }), [{ codigo: 8, desde: "2027-07-16", hasta: null }])
+    assert.deepStrictEqual(movimientosDelMes({ ...base, fechaConversion: "2027-06-30" }), [{ codigo: 0, desde: null, hasta: null }])
+})
+
+test("código 8 con ingreso del mismo mes: el ingreso va con 7 (contrato original)", () => {
+    assert.deepStrictEqual(movimientosDelMes({ ...base, fechaIngreso: "2027-07-01", fechaConversion: "2027-07-20" }).map((m) => m.codigo), [7, 8])
+})

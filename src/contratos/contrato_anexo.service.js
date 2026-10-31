@@ -25,6 +25,23 @@ async function validarJornadaDelAnexo(valorNuevo, contrato) {
     }
 }
 
+// Código 8 (Previred): paso de plazo fijo u obra o faena a indefinido. Ver «Código 8» en el SPEC.
+async function validarConversion(datos, contrato) {
+    if (datos.valor_nuevo !== "indefinido") {
+        throw new ValidationError("Por anexo, el tipo de contrato solo puede pasar a indefinido")
+    }
+    if (contrato.tipo_contrato === "indefinido") {
+        throw new ConflictError("El contrato ya es indefinido")
+    }
+    if (!datos.fecha_vigencia || datos.fecha_vigencia < contrato.fecha_inicio) {
+        throw new ValidationError("La conversión a indefinido debe regir desde el inicio del contrato o después")
+    }
+    const pendiente = await ContratoAnexo.count({ where: { contrato_id: contrato.id, campo_modificado: "tipo_contrato", estado_firma: "pendiente" } })
+    if (pendiente > 0) {
+        throw new ConflictError("El contrato ya tiene un anexo de conversión a indefinido pendiente de firma")
+    }
+}
+
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
         "sueldo_base",
@@ -37,7 +54,8 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         "periodicidad_pago",
         "fecha_termino",
         "comuna_prestacion",
-        "jornada_id"
+        "jornada_id",
+        "tipo_contrato"
     ]
     const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
         include: [Trabajador]
@@ -66,6 +84,14 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
 
     if (datos.campo_modificado === "jornada_id") {
         await validarJornadaDelAnexo(datos.valor_nuevo, contrato)
+    }
+
+    if (datos.campo_modificado === "tipo_contrato") {
+        await validarConversion(datos, contrato)
+    }
+
+    if (datos.campo_modificado === "fecha_termino" && contrato.tipo_contrato === "indefinido") {
+        throw new ConflictError("Un contrato indefinido no tiene fecha de término; el fin de la relación se registra como término en la ficha del trabajador")
     }
 
 
@@ -107,6 +133,12 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     if (anexo.campo_modificado === "jornada_id") {
         await validarJornadaDelAnexo(anexo.valor_nuevo, contrato)
     }
+    if (anexo.campo_modificado === "tipo_contrato" && contrato.tipo_contrato === "indefinido") {
+        throw new ConflictError("El contrato ya es indefinido")
+    }
+    if (anexo.campo_modificado === "fecha_termino" && contrato.tipo_contrato === "indefinido") {
+        throw new ConflictError("El contrato ya es indefinido: este anexo de fecha de término no se puede firmar")
+    }
 
     await sequelize.transaction(async (t) => {
         await anexo.update({
@@ -119,13 +151,25 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
                 transaction: t
             }
         )
+        // Al pasar a indefinido, el contrato deja de tener fecha de término y causal de plazo fijo.
+        const conversion = anexo.campo_modificado === "tipo_contrato"
+            ? { fecha_termino: null, causal_plazo_fijo: null }
+            : {}
         await contrato.update({
-            [anexo.campo_modificado]: anexo.valor_nuevo
+            [anexo.campo_modificado]: anexo.valor_nuevo,
+            ...conversion
         },
             {
                 transaction: t
             },
         )
+        // Una renovación (fecha de término) que quedó pendiente ya no corresponde en un contrato indefinido.
+        if (anexo.campo_modificado === "tipo_contrato") {
+            await ContratoAnexo.update({ estado_firma: "rechazado" }, {
+                where: { contrato_id: contrato.id, campo_modificado: "fecha_termino", estado_firma: "pendiente" },
+                transaction: t
+            })
+        }
 
     })
     return anexo

@@ -3,12 +3,18 @@ const { estaEnElMes } = require("./dias_pago.js")
 
 const CODIGO_LICENCIA = { comun: 3, maternal: 3, accidente_trabajo: 6 }
 
-function movimientosDelMes({ anio, mes, fechaIngreso, fechaTermino, tipoContrato, licencias, fechasInasistencia, fechasPermisoSinGoce }) {
+// fechaConversion: vigencia del anexo firmado que pasó el contrato a indefinido (código 8), si es de este mes.
+function movimientosDelMes({ anio, mes, fechaIngreso, fechaTermino, tipoContrato, fechaConversion = null, licencias, fechasInasistencia, fechasPermisoSinGoce }) {
     const primerDia = `${anio}-${String(mes).padStart(2, "0")}-01`
     const movimientos = []
+    const conversion = estaEnElMes(fechaConversion, anio, mes)
 
     if (estaEnElMes(fechaIngreso, anio, mes)) {
-        movimientos.push({ codigo: tipoContrato === "indefinido" ? 1 : 7, desde: fechaIngreso, hasta: null })
+        // Si en el mismo mes pasó a indefinido, el ingreso fue con el contrato original (plazo fijo u obra o faena).
+        movimientos.push({ codigo: tipoContrato === "indefinido" && !conversion ? 1 : 7, desde: fechaIngreso, hasta: null })
+    }
+    if (conversion) {
+        movimientos.push({ codigo: 8, desde: fechaConversion, hasta: null })
     }
     if (estaEnElMes(fechaTermino, anio, mes)) {
         movimientos.push({ codigo: 2, desde: null, hasta: fechaTermino })

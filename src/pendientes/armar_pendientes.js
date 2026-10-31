@@ -11,7 +11,8 @@ const TIPOS = {
     resumen: "Resumen de asistencia",
     saldo: "Liquidación con saldo desactualizado",
     finiquito_saldo: "Finiquito con saldo desactualizado",
-    relacion: "Liquidación con otra relación del mes cambiada"
+    relacion: "Liquidación con otra relación del mes cambiada",
+    plazo_vencido: "Plazo fijo vencido"
 }
 
 const TIPO_CONTRATO = { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
@@ -68,7 +69,9 @@ function deContrato(contrato) {
 function deAnexo(anexo) {
     const trabajador = anexo.ContratoTrabajo.Trabajador
     return base("anexo", anexo.id, trabajador, {
-        detalle: `${anexo.campo_modificado}: ${anexo.valor_anterior ?? "(vacío)"} → ${anexo.valor_nuevo}, rige desde el ${fechaCorta(anexo.fecha_vigencia)}`,
+        detalle: anexo.campo_modificado === "tipo_contrato"
+            ? `Pasa de ${(TIPO_CONTRATO[anexo.valor_anterior] ?? anexo.valor_anterior ?? "").toLowerCase()} a indefinido desde el ${fechaCorta(anexo.fecha_vigencia)} (código 8 en Previred)`
+            : `${anexo.campo_modificado}: ${anexo.valor_anterior ?? "(vacío)"} → ${anexo.valor_nuevo}, rige desde el ${fechaCorta(anexo.fecha_vigencia)}`,
         fecha: anexo.fecha_vigencia,
         enlace: enlace("trabajador.html", { id: trabajador.id, empresa: trabajador.empresa_id }),
         accion: { texto: "Firmar", metodo: "PATCH", ruta: `/api/contratos/${anexo.contrato_id}/anexos/${anexo.id}/firmar`, cuerpo: {} },
@@ -189,6 +192,28 @@ function deFiniquitoSaldo(finiquito, saldo) {
     })
 }
 
+// Contrato a plazo fijo cuya fecha de término ya pasó y la relación sigue sin término registrado (art. 159 N° 4).
+// La acción crea el anexo de conversión a indefinido (vigente el día siguiente al vencimiento), que después se firma.
+const MOTIVO_CONVERSION = "Continuó trabajando después del vencimiento del plazo (art. 159 N° 4 del Código del Trabajo)"
+
+function dePlazoVencido(contrato) {
+    const trabajador = contrato.Trabajador
+    const [anio, mes, dia] = contrato.fecha_termino.split("-").map(Number)
+    const siguiente = new Date(Date.UTC(anio, mes - 1, dia + 1)).toISOString().slice(0, 10)
+    return base("plazo_vencido", contrato.id, trabajador, {
+        detalle: `El plazo venció el ${fechaCorta(contrato.fecha_termino)} y la relación sigue: renueva (anexo de fecha de término), convierte a indefinido o registra el término`,
+        fecha: contrato.fecha_termino,
+        enlace: enlace("trabajador.html", { id: trabajador.id, empresa: trabajador.empresa_id }),
+        accion: {
+            texto: "Convertir a indefinido",
+            metodo: "POST",
+            ruta: `/api/contratos/${contrato.id}/anexos`,
+            cuerpo: { campo_modificado: "tipo_contrato", valor_nuevo: "indefinido", fecha_vigencia: siguiente, motivo: MOTIVO_CONVERSION }
+        },
+        permiso: "CREAR_ANEXO"
+    })
+}
+
 // rolesPorEmpresa: { [empresa_id]: "ADMIN" | "JEFE_RRHH" | "RRHH" }. Sin rol en esa empresa (por ejemplo soporte), no actúa.
 // permisos: la matriz PERMISOS de src/shared/permisos.js (se recibe como parámetro para que esta función no toque la base).
 function puedeActuar(item, rolesPorEmpresa, permisos) {
@@ -201,4 +226,4 @@ function ordenar(items) {
     return [...items].sort((a, b) => String(a.fecha ?? "").localeCompare(String(b.fecha ?? "")) || a.clave.localeCompare(b.clave))
 }
 
-module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deRelacion, deFiniquitoSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }
+module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deRelacion, deFiniquitoSaldo, dePlazoVencido, puedeActuar, ordenar, nombrePersona, fechaCorta }

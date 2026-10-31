@@ -1,6 +1,6 @@
 const { aplicarPrevisionGuardada } = require("./prevision_liquidacion.js")
 const { Asistencia, Liquidacion, LiquidacionLinea, Trabajador, Persona, Afp, Isapre,
-    Empresa, Mutualidad, ContratoTrabajo } = require("../shared/associations.js")
+    Empresa, Mutualidad, ContratoTrabajo, ContratoAnexo } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
@@ -31,6 +31,15 @@ async function obtenerLimitesTramo(fecha) {
     }
 
     return limites
+}
+
+// Vigencia del anexo firmado que pasó a indefinido un contrato del trabajador, si cae en el mes (código 8).
+async function fechaConversionDelMes(trabajadorId, primerDia, ultimoDia) {
+    const anexo = await ContratoAnexo.findOne({
+        where: { campo_modificado: "tipo_contrato", estado_firma: "firmado", fecha_vigencia: { [Op.between]: [primerDia, ultimoDia] } },
+        include: [{ model: ContratoTrabajo, attributes: [], where: { trabajador_id: trabajadorId }, required: true }]
+    })
+    return anexo?.fecha_vigencia ?? null
 }
 
 async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
@@ -102,6 +111,7 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
             limitesTramo,
             codigoMutual: mutualidad.codigo_previred,
             tipoJornada: contrato.tipo_jornada,
+            fechaConversion: await fechaConversionDelMes(trabajadorId, primerDia, ultimoDia),
             fechasInasistencia,
             fechasPermisoSinGoce
         }), tipoLinea))

@@ -36,9 +36,9 @@ function montosLiquidacion(liquidacion) {
 
 // Contrato (con sus anexos firmados) que rige al trabajador en el mes.
 function contratoEnMes(contratos, trabajadorId, anio, mes) {
-    const { primerDia, ultimoDia } = rangoDelPeriodo({ anio, mes })
+    const { ultimoDia } = rangoDelPeriodo({ anio, mes })
     const delMes = contratos
-        .filter((c) => c.trabajador_id === trabajadorId && c.fecha_inicio <= ultimoDia && (c.fecha_termino === null || c.fecha_termino >= primerDia))
+        .filter((c) => c.trabajador_id === trabajadorId && c.fecha_inicio <= ultimoDia)
         .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))
         .pop()
     if (!delMes) {

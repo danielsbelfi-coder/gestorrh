@@ -41,7 +41,7 @@ function ahorroPrevired(apv) {
     }
 }
 
-function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tipoJornada, fechasInasistencia, fechasPermisoSinGoce }) {
+function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tipoJornada, fechaConversion = null, fechasInasistencia, fechasPermisoSinGoce }) {
     const trabajador = liquidacion.Trabajador
     const persona = trabajador.Persona
     const detalle = liquidacion.detalle_calculo
@@ -106,6 +106,7 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
             fechaIngreso: trabajador.fecha_ingreso,
             fechaTermino: trabajador.fecha_termino,
             tipoContrato: liquidacion.snapshot_contrato.tipo_contrato,
+            fechaConversion,
             licencias,
             fechasInasistencia,
             fechasPermisoSinGoce

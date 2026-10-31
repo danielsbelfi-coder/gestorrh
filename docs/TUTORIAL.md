@@ -41,7 +41,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 3. Entrar a la empresa y completar la ficha: tipo de empleador, giro, código de actividad SII, comuna, **organismo administrador (mutual) y tasa adicional**, caja de compensación. Guardar cambios. Estos datos alimentan Previred y las liquidaciones.
 4. **Administración → Usuarios → Crear usuario**: nombre y correo. El sistema genera la contraseña inicial. Luego **Asignar rol** (ADMIN, JEFE_RRHH, RRHH...) por empresa. Crea al menos un usuario RRHH y uno JEFE_RRHH para probar la separación de funciones.
 5. **Consumo del plan** muestra cuántos trabajadores y usuarios quedan.
-6. **Pendientes** (junto a Inicio, con un número en el menú) reúne todo lo que espera firma o aprobación en tus empresas: contratos y anexos por firmar, marcas y correcciones de asistencia, variables del mes y resúmenes de asistencia por aprobar, y las liquidaciones que hay que recalcular porque cambió el saldo de pago en exceso del mes anterior. ADMIN y JEFE_RRHH pueden firmar o aprobar ahí mismo, de a uno o seleccionando varios; RRHH ve la misma lista sin botones, para saber qué falta. **Ver** abre la pantalla de cada registro para revisarlo antes.
+6. **Pendientes** (junto a Inicio, con un número en el menú) reúne todo lo que espera firma o aprobación en tus empresas: contratos y anexos por firmar, marcas y correcciones de asistencia, variables del mes y resúmenes de asistencia por aprobar, las liquidaciones que hay que recalcular porque cambió el saldo de pago en exceso del mes anterior, y los **plazos fijos vencidos** cuya relación sigue sin término (por el art. 159 N° 4, si el trabajador continúa, el contrato pasa a indefinido): **Convertir a indefinido** crea el anexo, que después se firma; para renovar o terminar, usa **Ver**. ADMIN y JEFE_RRHH pueden firmar o aprobar ahí mismo, de a uno o seleccionando varios; RRHH ve la misma lista sin botones, para saber qué falta. **Ver** abre la pantalla de cada registro para revisarlo antes.
 
 ## 4. Preparar la empresa (RRHH)
 
@@ -57,7 +57,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 4. El contrato nace **vigente con firma pendiente**. Al crearlo, el postulante pasa a **trabajador activo**.
 5. **Firma**: solo ADMIN o JEFE_RRHH pueden **Firmar contrato**. Si RRHH lo intenta, el sistema lo rechaza.
 6. Si hay un error y el contrato aún no está firmado ni tiene anexos, se puede **Corregir** o **Anular** (con motivo). No se puede anular si el trabajador ya tiene asistencia, licencias, resúmenes, variables, liquidaciones o finiquitos.
-7. Contrato firmado: los cambios posteriores se hacen con **Nuevo anexo** (campo a modificar, nuevo valor, rige desde, motivo), que también debe firmarse. Un anexo puede cambiar la jornada.
+7. Contrato firmado: los cambios posteriores se hacen con **Nuevo anexo** (campo a modificar, nuevo valor, rige desde, motivo), que también debe firmarse. Un anexo puede cambiar la jornada. **Paso a indefinido** (plazo fijo u obra o faena): anexo «Tipo de contrato (pasar a indefinido)» con la fecha desde la que rige; al firmarlo, el contrato queda indefinido y sin fecha de término. El mes del cambio ya se liquida como indefinido (seguro de cesantía 0,6 % del trabajador y 2,4 % del empleador) y en Previred va el movimiento **8** con esa fecha. Un contrato indefinido ya no admite anexos de fecha de término.
 
 ## 6. Cada mes
 

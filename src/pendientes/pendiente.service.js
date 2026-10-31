@@ -62,6 +62,25 @@ async function finiquitosDesactualizados(empresas) {
     return resultado
 }
 
+// Plazos fijos vencidos con la relación vigente y sin anexo pendiente de renovación o conversión.
+async function plazosVencidos(empresas) {
+    const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date())
+    const contratos = await ContratoTrabajo.findAll({
+        where: { estado: "vigente", tipo_contrato: "plazo_fijo", fecha_termino: { [Op.lt]: hoy } },
+        include: [{ ...trabajadorDe(empresas), attributes: ["id", "empresa_id", "fecha_termino", "estado"] }]
+    })
+    const abiertos = contratos.filter((c) => c.Trabajador.estado !== "postulante"
+        && (c.Trabajador.fecha_termino === null || c.Trabajador.fecha_termino > c.fecha_termino))
+    if (abiertos.length === 0) {
+        return []
+    }
+    const conAnexo = new Set((await ContratoAnexo.findAll({
+        where: { contrato_id: abiertos.map((c) => c.id), estado_firma: "pendiente", campo_modificado: ["fecha_termino", "tipo_contrato"] },
+        attributes: ["contrato_id"]
+    })).map((a) => a.contrato_id))
+    return abiertos.filter((c) => !conAnexo.has(c.id))
+}
+
 async function rolesPorEmpresa(usuarioId) {
     const vinculos = await UsuarioEmpresaRol.findAll({
         where: { usuario_id: usuarioId, estado: "activo" },
@@ -76,7 +95,7 @@ async function listarPendientes(usuario, empresasPermitidas) {
         return { items: [], total: 0, accionables: 0 }
     }
 
-    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles, saldos, finiquitos] = await Promise.all([
+    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles, saldos, finiquitos, vencidos] = await Promise.all([
         ContratoTrabajo.findAll({ where: { estado_firma: "pendiente", estado: "vigente" }, include: [trabajadorDe(empresas)] }),
         ContratoAnexo.findAll({
             where: { estado_firma: "pendiente" },
@@ -95,7 +114,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         mesesCerrados(empresas),
         rolesPorEmpresa(usuario.id),
         saldosDesactualizados(empresas),
-        finiquitosDesactualizados(empresas)
+        finiquitosDesactualizados(empresas),
+        plazosVencidos(empresas)
     ])
 
     const marcasAbiertas = marcas.filter((marca) => !cerrados.has(`${marca.Trabajador.empresa_id}-${String(marca.fecha).slice(0, 7)}`))
@@ -108,7 +128,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         ...variables.map(armar.deVariable),
         ...resumenes.map(armar.deResumen),
         ...saldos.map(({ liquidacion, saldo, relacion }) => relacion ? armar.deRelacion(liquidacion) : armar.deSaldo(liquidacion, saldo)),
-        ...finiquitos.map(({ finiquito, saldo }) => armar.deFiniquitoSaldo(finiquito, saldo))
+        ...finiquitos.map(({ finiquito, saldo }) => armar.deFiniquitoSaldo(finiquito, saldo)),
+        ...vencidos.map(armar.dePlazoVencido)
     ]).map((item) => ({ ...item, puede_actuar: armar.puedeActuar(item, roles, PERMISOS) }))
 
     return { items, total: items.length, accionables: items.filter((item) => item.puede_actuar).length }

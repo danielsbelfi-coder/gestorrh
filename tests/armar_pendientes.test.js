@@ -93,3 +93,20 @@ test("deFiniquitoSaldo: recalcula el finiquito con los datos guardados", () => {
     assert.deepEqual(item.accion, { texto: "Recalcular", metodo: "POST", ruta: "/api/finiquitos/9/recalcular", cuerpo: {} })
     assert.match(item.detalle, /30-11-2026.*\$50\.000.*\$0/)
 })
+
+test("plazo fijo vencido: acción que crea el anexo de conversión desde el día siguiente", () => {
+    const v = p.dePlazoVencido({ id: 9, tipo_contrato: "plazo_fijo", fecha_termino: "2027-07-31", Trabajador: trabajador })
+    assert.equal(v.clave, "plazo_vencido-9")
+    assert.equal(v.tipo_texto, "Plazo fijo vencido")
+    assert.match(v.detalle, /venció el 31-07-2027/)
+    assert.deepEqual(v.accion, {
+        texto: "Convertir a indefinido",
+        metodo: "POST",
+        ruta: "/api/contratos/9/anexos",
+        cuerpo: { campo_modificado: "tipo_contrato", valor_nuevo: "indefinido", fecha_vigencia: "2027-08-01", motivo: "Continuó trabajando después del vencimiento del plazo (art. 159 N° 4 del Código del Trabajo)" }
+    })
+    assert.equal(v.permiso, "CREAR_ANEXO")
+
+    const a = p.deAnexo({ id: 4, contrato_id: 9, campo_modificado: "tipo_contrato", valor_anterior: "obra_faena", valor_nuevo: "indefinido", fecha_vigencia: "2027-08-01", ContratoTrabajo: { Trabajador: trabajador } })
+    assert.equal(a.detalle, "Pasa de obra o faena a indefinido desde el 01-08-2027 (código 8 en Previred)")
+})

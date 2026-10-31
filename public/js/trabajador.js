@@ -179,6 +179,11 @@ function abrirAnexo(contratoId) {
     contratoParaAnexo = contratos.find((c) => c.id === contratoId)
     document.getElementById("tituloAnexo").textContent = `Nuevo anexo del contrato #${contratoId}`
     document.getElementById("formAnexo").reset()
+    // Un contrato indefinido no tiene fecha de término ni se puede volver a convertir.
+    const indefinido = contratoParaAnexo?.tipo_contrato === "indefinido"
+    llenarSelect(document.getElementById("campoAnexo"), Object.entries(CAMPOS_ANEXO)
+        .filter(([campo]) => !(indefinido && (campo === "fecha_termino" || campo === "tipo_contrato")))
+        .map(([campo, def]) => ({ id: campo, texto: def.texto })))
     prepararCampoValor()
     const panel = document.getElementById("panelAnexo")
     panel.hidden = false

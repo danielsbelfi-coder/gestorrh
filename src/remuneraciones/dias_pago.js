@@ -3,7 +3,7 @@ const DIAS_MES_COMERCIAL = 30
 const { diasEntre } = require("../shared/fechas.js")
 
 function estaEnElMes(fecha, anio, mes) {
-    return fecha !== null && fecha.slice(0, 7) === `${anio}-${String(mes).padStart(2, "0")}`
+    return fecha !== null && fecha !== undefined && fecha.slice(0, 7) === `${anio}-${String(mes).padStart(2, "0")}`
 }
 
 function calcularDiasPago({ anio, mes, fechaIngreso, fechaTermino, resumen }) {
