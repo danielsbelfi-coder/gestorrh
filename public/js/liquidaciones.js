@@ -25,6 +25,21 @@ function periodoElegido() {
     return periodos.find((periodo) => String(periodo.id) === selectorPeriodo.value) ?? null
 }
 
+// Fechas de la relación laboral: distinguen dos liquidaciones de la misma persona en el mes (término y recontratación).
+function relacionDe(trabajadorId) {
+    const t = trabajadores.find((x) => x.id === trabajadorId)
+    if (!t) {
+        return ""
+    }
+    return t.fecha_termino ? `desde ${fechaCorta(t.fecha_ingreso)} hasta ${fechaCorta(t.fecha_termino)}` : `desde ${fechaCorta(t.fecha_ingreso)}`
+}
+
+// ¿La persona de esta liquidación tiene otra liquidación en la lista del periodo?
+function personaRepetida(liquidacion) {
+    const persona = trabajadores.find((t) => t.id === liquidacion.trabajador_id)?.persona_id
+    return liquidaciones.filter((l) => trabajadores.find((t) => t.id === l.trabajador_id)?.persona_id === persona).length > 1
+}
+
 function nombreDe(trabajadorId) {
     const trabajador = trabajadores.find((t) => t.id === trabajadorId)
     return nombreCompleto(personaPorId.get(trabajador?.persona_id)) || `Trabajador ${trabajadorId}`
@@ -55,7 +70,12 @@ const tabla = crearTabla({
     textoBuscar: "Buscar por nombre o RUT…",
     vacio: "Todavía no hay liquidaciones calculadas en este periodo.",
     columnas: [
-        { titulo: "Trabajador", valor: (l) => nombreDe(l.trabajador_id) },
+        {
+            titulo: "Trabajador", valor: (l) => nombreDe(l.trabajador_id),
+            html: (l) => escaparHtml(nombreDe(l.trabajador_id)) + (personaRepetida(l)
+                ? `<br><span class="texto-suave">Relación ${escaparHtml(relacionDe(l.trabajador_id))}</span>`
+                : "")
+        },
         { titulo: "RUT", valor: (l) => rutDe(l.trabajador_id) },
         { titulo: "Versión", valor: (l) => l.version, numero: true },
         {
@@ -141,7 +161,7 @@ function mostrarDetalle(liquidacion) {
         <div class="encabezado-pagina">
             <div>
                 <h2>${escaparHtml(nombreDe(liquidacion.trabajador_id))}</h2>
-                <p>${escaparHtml(nombrePeriodo(periodoElegido()))} · versión ${escaparHtml(liquidacion.version)} · ${escaparHtml(textoEstado("liquidacion", liquidacion.estado))}</p>
+                <p>${escaparHtml(nombrePeriodo(periodoElegido()))} · versión ${escaparHtml(liquidacion.version)} · ${escaparHtml(textoEstado("liquidacion", liquidacion.estado))} · relación ${escaparHtml(relacionDe(liquidacion.trabajador_id))} · ${escaparHtml(liquidacion.dias_trabajados)} días</p>
             </div>
             <button type="button" class="secundario chico" id="cerrarDetalle">Cerrar detalle</button>
         </div>
