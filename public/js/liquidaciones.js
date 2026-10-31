@@ -58,7 +58,12 @@ const tabla = crearTabla({
         { titulo: "Trabajador", valor: (l) => nombreDe(l.trabajador_id) },
         { titulo: "RUT", valor: (l) => rutDe(l.trabajador_id) },
         { titulo: "Versión", valor: (l) => l.version, numero: true },
-        { titulo: "Estado", valor: (l) => textoEstado("liquidacion", l.estado), html: (l) => insignia("liquidacion", l.estado) },
+        {
+            titulo: "Estado", valor: (l) => textoEstado("liquidacion", l.estado),
+            html: (l) => insignia("liquidacion", l.estado) + (l.relacion_desactualizada
+                ? ` <span class="insignia peligro" title="La persona tiene otra relación laboral en el mes que cambió o se calculó después: los topes y el impuesto se comparten">Recalcular: cambió la otra relación del mes</span>`
+                : "")
+        },
         { titulo: "Haberes", valor: (l) => Number(l.total_haberes), html: (l) => escaparHtml(pesos(l.total_haberes)), numero: true },
         { titulo: "Descuentos", valor: (l) => Number(l.total_descuentos), html: (l) => escaparHtml(pesos(l.total_descuentos)), numero: true },
         { titulo: "Líquido", valor: (l) => Number(l.liquido_a_pagar), html: (l) => `<strong>${escaparHtml(pesos(l.liquido_a_pagar))}</strong>`, numero: true },
@@ -206,7 +211,9 @@ document.getElementById("btnCalcularTodas").addEventListener("click", async func
     }
 
     const cerradas = new Set(liquidaciones.filter((l) => l.estado === "emitida").map((l) => l.trabajador_id))
+    // Por fecha de ingreso: si una persona tiene dos relaciones en el mes, la anterior se calcula primero (topes compartidos).
     const pendientes = trabajadores.filter((t) => vigenteEnPeriodo(t, periodo) && !cerradas.has(t.id))
+        .sort((a, b) => String(a.fecha_ingreso).localeCompare(String(b.fecha_ingreso)) || a.id - b.id)
 
     if (pendientes.length === 0) {
         mensaje("info", "No hay liquidaciones por calcular: todos los trabajadores del mes ya tienen su liquidación cerrada.")

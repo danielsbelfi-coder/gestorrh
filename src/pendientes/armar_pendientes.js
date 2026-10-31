@@ -10,7 +10,8 @@ const TIPOS = {
     variable: "Variable del mes",
     resumen: "Resumen de asistencia",
     saldo: "Liquidación con saldo desactualizado",
-    finiquito_saldo: "Finiquito con saldo desactualizado"
+    finiquito_saldo: "Finiquito con saldo desactualizado",
+    relacion: "Liquidación con otra relación del mes cambiada"
 }
 
 const TIPO_CONTRATO = { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
@@ -158,6 +159,23 @@ function deSaldo(liquidacion, saldo) {
     })
 }
 
+// Liquidación de la segunda relación del mes cuya relación anterior cambió (o se calculó después).
+const MOTIVO_RELACION = "Cambió la otra relación laboral de la persona en el mes"
+
+function deRelacion(liquidacion) {
+    const periodo = liquidacion.PeriodoRemuneracion
+    const ruta = `/api/periodos-remuneracion/${periodo.id}/liquidaciones`
+    return base("relacion", liquidacion.id, liquidacion.Trabajador, {
+        detalle: `Mes ${nombreMes(periodo)}: la persona tiene otra relación laboral en el mes que cambió; los topes y el impuesto se comparten`,
+        fecha: inicioDelPeriodo(periodo),
+        enlace: enlace("liquidaciones.html", { periodo: periodo.id, empresa: periodo.empresa_id }),
+        accion: liquidacion.estado === "calculada"
+            ? { texto: "Recalcular", metodo: "POST", ruta, cuerpo: { trabajador_id: liquidacion.trabajador_id } }
+            : { texto: "Recalcular", metodo: "POST", ruta: `${ruta}/${liquidacion.id}/recalcular`, cuerpo: { motivo: MOTIVO_RELACION } },
+        permiso: "CALCULAR_LIQUIDACION"
+    })
+}
+
 // Finiquito (calculado o emitido) que descontó un saldo de pago en exceso distinto del que hoy deja la liquidación del mes.
 function deFiniquitoSaldo(finiquito, saldo) {
     const trabajador = finiquito.Trabajador
@@ -183,4 +201,4 @@ function ordenar(items) {
     return [...items].sort((a, b) => String(a.fecha ?? "").localeCompare(String(b.fecha ?? "")) || a.clave.localeCompare(b.clave))
 }
 
-module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deFiniquitoSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }
+module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deRelacion, deFiniquitoSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }

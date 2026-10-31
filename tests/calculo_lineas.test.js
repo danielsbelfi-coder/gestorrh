@@ -266,3 +266,32 @@ test("APV y depósito convenido: líneas, rebaja tributable del régimen B y lí
     assert.strictEqual(regimenA.baseTributable, sin.baseTributable)
     assert.strictEqual(monto(regimenA, "APVI_A"), 100000)
 })
+
+test("dos relaciones en el mes: topes compartidos e impuesto reliquidado", () => {
+    const datos = {
+        sueldoBase: 4000000, horasSemanales: 42, diasPagados: 15, variables: [], minutosAtraso: 0, ingresoMinimoMensual: 553553,
+        tasaAfp: 11.44, tasaSalud: 7, planSaludUF: 0, topeImponibleUF: 90, valorUF: 40000, valorUTM: 70000, tasaCesantia: 0.6, topeCesantiaUF: 135.2,
+        tramos: [{ desdeUTM: 0, hastaUTM: 13.5, tasa: 0, rebajaUTM: 0 }, { desdeUTM: 13.5, hastaUTM: 30, tasa: 4, rebajaUTM: 0.54 }, { desdeUTM: 30, hastaUTM: null, tasa: 8, rebajaUTM: 1.74 }],
+        saldoPendiente: 0, conceptos: CONCEPTOS
+    }
+    const primera = calcularLiquidacionPorLineas(datos)
+    const impuesto = (r) => r.lineas.filter((l) => l.concepto.codigo === "IMPUESTO_UNICO").reduce((s, l) => s + l.monto, 0)
+    const anterior = {
+        baseCotizaciones: primera.baseCotizaciones, baseCesantia: primera.baseCesantia, baseTributable: primera.baseTributable,
+        impuesto: impuesto(primera), gratificacion: primera.lineas.find((l) => l.concepto.codigo === "GRATIFICACION")?.monto ?? 0
+    }
+    const segunda = calcularLiquidacionPorLineas({ ...datos, relacionAnterior: anterior })
+
+    // Tope imponible del mes: 90 UF entre las dos.
+    assert.strictEqual(primera.baseCotizaciones + segunda.baseCotizaciones, Math.min(primera.rentaImponible + segunda.rentaImponible, 90 * 40000))
+    assert.ok(segunda.baseCotizaciones < segunda.rentaImponible)
+    // Gratificación: el tope mensual se reparte.
+    const grat = (r) => r.lineas.find((l) => l.concepto.codigo === "GRATIFICACION")?.monto ?? 0
+    assert.ok(grat(primera) + grat(segunda) <= Math.round(4.75 * 553553 / 12) + 1)
+    // Impuesto: el de la suma de ambas bases, menos lo ya retenido.
+    const sola = calcularLiquidacionPorLineas({ ...datos, sueldoBase: 3000000, diasPagados: 30 })
+    assert.strictEqual(segunda.baseTributableMes, primera.baseTributable + segunda.baseTributable)
+    const total = Math.round(Math.max(0, segunda.baseTributableMes * segunda.tramo.tasa / 100 - segunda.tramo.rebajaUTM * 70000))
+    assert.strictEqual(impuesto(segunda), total - impuesto(primera))
+    assert.ok(sola)
+})

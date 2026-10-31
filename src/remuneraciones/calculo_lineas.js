@@ -33,7 +33,7 @@ function sumarSegun(lineas, marca) {
     }, 0)
 }
 
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, conceptos }) {
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, conceptos }) {
     const valorHora = valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
 
@@ -77,7 +77,8 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
     }
 
     const baseGratificacion = sumarSegun(lineas, "base_gratificacion")
-    const topeGratificacion = 4.75 * ingresoMinimoMensual / 12
+    // Con dos relaciones en el mismo mes, el tope de gratificación es uno solo: la segunda usa lo que queda.
+    const topeGratificacion = Math.max(0, 4.75 * ingresoMinimoMensual / 12 - Number(relacionAnterior?.gratificacion ?? 0))
     const montoGratificacion = Math.round(Math.max(0, Math.min(baseGratificacion * 0.25, topeGratificacion)))
 
     if (montoGratificacion > 0) {
@@ -112,9 +113,12 @@ function calcularLiquidacionPorLineas(datos) {
     const base = calcularLineasBase(datos)
     const lineas = base.lineas
 
+    // Dos relaciones en el mismo mes (relacionAnterior): los topes de cotización y de cesantía son del mes,
+    // así que esta liquidación usa lo que dejó la anterior; el impuesto se reliquida sobre la suma de ambas bases.
+    const anterior = datos.relacionAnterior ?? null
     const rentaImponible = Math.max(0, sumarSegun(lineas, "imponible"))
     const topeImponible = Math.round(topeImponibleUF * valorUF)
-    const baseCotizaciones = Math.min(rentaImponible, topeImponible)
+    const baseCotizaciones = Math.min(rentaImponible, Math.max(0, topeImponible - Number(anterior?.baseCotizaciones ?? 0)))
 
     const descuentoAFP = Math.round(baseCotizaciones * tasaAfp / 100)
     const descuentoSaludLegal = Math.round(baseCotizaciones * tasaSalud / 100)
@@ -123,16 +127,18 @@ function calcularLiquidacionPorLineas(datos) {
     const descuentoAdicionalIsapre = Math.max(0, descuentoPlanPactado - descuentoSaludLegal)
 
     const topeCesantia = Math.round(topeCesantiaUF * valorUF)
-    const baseCesantia = Math.min(rentaImponible, topeCesantia)
+    const baseCesantia = Math.min(rentaImponible, Math.max(0, topeCesantia - Number(anterior?.baseCesantia ?? 0)))
     const descuentoCesantia = Math.round(baseCesantia * tasaCesantia / 100)
 
     // APV y depósito convenido vigentes en el mes; el APV régimen B rebaja la base tributable hasta 50 UF.
     const ahorros = calcularAhorros(datos.ahorros ?? [], { valorUF, rentaImponible })
 
     const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoSaludLegal + descuentoCesantia) - ahorros.rebajaTributable)
-    const baseEnUTM = baseTributable / valorUTM
+    const baseTributableMes = baseTributable + Number(anterior?.baseTributable ?? 0)
+    const baseEnUTM = baseTributableMes / valorUTM
     const tramo = buscarTramo(tramos, baseEnUTM)
-    const montoImpuestoUnico = Math.round(Math.max(0, baseTributable * tramo.tasa / 100 - tramo.rebajaUTM * valorUTM))
+    const impuestoDelMes = Math.round(Math.max(0, baseTributableMes * tramo.tasa / 100 - tramo.rebajaUTM * valorUTM))
+    const montoImpuestoUnico = Math.max(0, impuestoDelMes - Number(anterior?.impuesto ?? 0))
 
     const legales = [
         { concepto: conceptos.AFP, monto: descuentoAFP },
@@ -181,6 +187,7 @@ function calcularLiquidacionPorLineas(datos) {
         topeCesantia,
         baseCesantia,
         baseTributable,
+        baseTributableMes,
         baseEnUTM,
         tramo,
         ahorros,

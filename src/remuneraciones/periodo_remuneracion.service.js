@@ -226,9 +226,12 @@ async function problemasDeCierre(periodo) {
         } else if (liquidacion.estado !== "emitida") {
             motivos.push("La liquidación está en borrador (sin emitir)")
         } else {
-            const { saldoDesactualizado } = require("./liquidacion.service.js")
+            const { saldoDesactualizado, relacionDesactualizada } = require("./liquidacion.service.js")
             if ((await saldoDesactualizado(liquidacion, periodo)).desactualizado) {
                 motivos.push("Cambió el saldo de pago en exceso del mes anterior: recalcule la liquidación")
+            }
+            if ((await relacionDesactualizada(liquidacion, periodo)).desactualizada) {
+                motivos.push("Cambió la otra relación laboral de la persona en este mes: recalcule la liquidación")
             }
         }
 

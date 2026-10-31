@@ -131,6 +131,80 @@ async function saldoDesactualizado(liquidacion, periodo) {
     return { desactualizado: guardado !== actual, guardado, actual }
 }
 
+// ---------- Dos relaciones laborales en el mismo mes ----------
+
+// Otras relaciones (Trabajador) de la misma persona en la misma empresa que se cruzan con el mes del periodo:
+// la anterior más cercana (ingreso antes que esta) y si hay alguna posterior (ingreso después).
+async function relacionesDelMes(periodo, trabajador) {
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    const otras = await Trabajador.findAll({
+        where: {
+            persona_id: trabajador.persona_id,
+            empresa_id: trabajador.empresa_id,
+            id: { [Op.ne]: trabajador.id },
+            estado: { [Op.ne]: "postulante" },
+            fecha_ingreso: { [Op.lte]: ultimoDia },
+            [Op.or]: [{ fecha_termino: null }, { fecha_termino: { [Op.gte]: primerDia } }]
+        },
+        order: [["fecha_ingreso", "DESC"], ["id", "DESC"]]
+    })
+    const esAnterior = (otra) => otra.fecha_ingreso < trabajador.fecha_ingreso || (otra.fecha_ingreso === trabajador.fecha_ingreso && otra.id < trabajador.id)
+    return {
+        anterior: otras.find(esAnterior) ?? null,
+        hayPosterior: otras.some((otra) => !esAnterior(otra))
+    }
+}
+
+// Lo que ya usó en el mes la relación anterior (acumulado, por si hubo más de dos): base de cotizaciones, base de
+// cesantía, base tributable, impuesto retenido y gratificación. null si no hay relación anterior.
+// Lanza 409 si la relación anterior todavía no tiene su liquidación.
+async function datosRelacionAnterior(periodo, trabajador) {
+    const { anterior } = await relacionesDelMes(periodo, trabajador)
+    if (anterior === null) {
+        return null
+    }
+    const liquidacion = await Liquidacion.findOne({ where: { periodo_id: periodo.id, trabajador_id: anterior.id, vigente: true } })
+    if (liquidacion === null) {
+        const [anio, mes, dia] = anterior.fecha_ingreso.split("-")
+        throw new ConflictError(`La persona tiene otra relación laboral en este mes (ingreso ${dia}-${mes}-${anio}): calcule primero esa liquidación, porque los topes y el impuesto del mes se comparten`)
+    }
+    const d = liquidacion.detalle_calculo ?? {}
+    const previa = d.relacionAnterior ?? {}
+    const suma = (propio, campo) => Number(propio ?? 0) + Number(previa[campo] ?? 0)
+    return {
+        trabajadorId: anterior.id,
+        liquidacionId: liquidacion.id,
+        baseCotizaciones: suma(d.cotizaciones?.baseCotizaciones, "baseCotizaciones"),
+        baseCesantia: suma(d.cesantia?.base, "baseCesantia"),
+        baseTributable: suma(d.impuesto?.baseTributable, "baseTributable"),
+        impuesto: suma(liquidacion.monto_impuesto_unico, "impuesto"),
+        gratificacion: suma(liquidacion.monto_gratificacion, "gratificacion")
+    }
+}
+
+const CAMPOS_RELACION = ["baseCotizaciones", "baseCesantia", "baseTributable", "impuesto", "gratificacion"]
+
+// ¿La liquidación se calculó con otros datos de la relación anterior del mes (o sin ella, o con una que ya no está)?
+async function relacionDesactualizada(liquidacion, periodo) {
+    const trabajador = await Trabajador.findByPk(liquidacion.trabajador_id)
+    const guardada = liquidacion.detalle_calculo?.relacionAnterior ?? null
+    let actual
+    try {
+        actual = await datosRelacionAnterior(periodo, trabajador)
+    } catch {
+        return { desactualizada: true }
+    }
+    if (guardada === null && actual === null) {
+        return { desactualizada: false }
+    }
+    if (guardada === null || actual === null) {
+        return { desactualizada: true }
+    }
+    return { desactualizada: CAMPOS_RELACION.some((campo) => Number(guardada[campo]) !== Number(actual[campo])) }
+}
+
+const MENSAJE_RELACION = "La otra relación laboral de la persona en este mes cambió (o se calculó después): recalcule esta liquidación antes de emitirla"
+
 function mensajeSaldoDesactualizado({ guardado, actual }) {
     const pesos = (monto) => `$${monto.toLocaleString("es-CL")}`
     return `Cambió el saldo de pago en exceso del mes anterior (${pesos(guardado)} → ${pesos(actual)}): recalcule la liquidación antes de emitirla`
@@ -355,6 +429,14 @@ async function prepararCalculo(periodo, trabajador) {
     const { asignacionEnMes } = require("../trabajadores/carga_familiar.service.js")
     const { calcularAsignacion } = require("./asignacion_familiar.js")
     const delMes = await asignacionEnMes(persona.id, periodo.anio, periodo.mes)
+
+    // Dos relaciones en el mismo mes: la anterior debe estar calculada (topes e impuesto compartidos) y la asignación
+    // familiar se paga una sola vez, en la última relación.
+    const relacionAnterior = await datosRelacionAnterior(periodo, trabajador)
+    const { hayPosterior } = await relacionesDelMes(periodo, trabajador)
+    if (hayPosterior) {
+        delMes.cargas = []
+    }
     let asignacionFamiliar
     try {
         asignacionFamiliar = calcularAsignacion({
@@ -447,6 +529,7 @@ async function prepararCalculo(periodo, trabajador) {
         topeCesantiaUF: parametros.topeCesantiaUF,
         tramos,
         saldoPendiente,
+        relacionAnterior,
         ahorros: ahorrosDelMes,
         conceptos
     }
@@ -531,7 +614,9 @@ async function prepararCalculo(periodo, trabajador) {
         apv: resultado.ahorros,
         ccaf: { caja: empresa.ccaf ?? null, saludCcaf },
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
-        impuesto: { baseTributable: resultado.baseTributable, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
+        impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
+        // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
+        relacionAnterior,
         saldoAnterior: saldoPendiente,
         variablesPendientes: pendientes,
         aportes: { tasas: tasasAportes, total: totalAportes, rimaMes, baseSeguroSocial },
@@ -697,6 +782,9 @@ async function validarEmision(periodo, liquidacion) {
     if (saldo.desactualizado) {
         throw new ConflictError(mensajeSaldoDesactualizado(saldo))
     }
+    if ((await relacionDesactualizada(liquidacion, periodo)).desactualizada) {
+        throw new ConflictError(MENSAJE_RELACION)
+    }
 }
 
 async function emitirLiquidacion(periodo_id, liquidacion_id, empresasPermitidas, usuarioId) {
@@ -781,8 +869,10 @@ async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     const resultado = []
     for (const liquidacion of liquidaciones) {
         const saldo = await saldoDesactualizado(liquidacion, liquidacion.PeriodoRemuneracion)
+        const relacion = await relacionDesactualizada(liquidacion, liquidacion.PeriodoRemuneracion)
         resultado.push({
             ...liquidacion.toJSON(),
+            relacion_desactualizada: relacion.desactualizada,
             saldo_anterior: saldo.guardado,
             saldo_desactualizado: saldo.desactualizado,
             saldo_anterior_actual: saldo.actual
@@ -819,5 +909,6 @@ module.exports = {
     emitirLiquidacion,
     emitirLiquidacionesPeriodo,
     saldoDesactualizado,
+    relacionDesactualizada,
     CODIGOS_PARAMETROS
 }

@@ -66,8 +66,19 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
     const problemas = []
     const lineas = []
 
-    for (const registro of liquidaciones) {
+    // La misma persona con dos relaciones en el mes: primero la relación anterior (línea 00) y después la siguiente
+    // (línea 02, segundo contrato), cada una seguida de sus líneas 01.
+    const ordenadas = [...liquidaciones].sort((a, b) =>
+        String(a.Trabajador.Persona.rut).localeCompare(String(b.Trabajador.Persona.rut))
+        || String(a.Trabajador.fecha_ingreso).localeCompare(String(b.Trabajador.fecha_ingreso))
+        || a.trabajador_id - b.trabajador_id)
+    const rutsVistos = new Set()
+
+    for (const registro of ordenadas) {
         const liquidacion = registro.toJSON()
+        const rut = liquidacion.Trabajador.Persona.rut
+        const tipoLinea = rutsVistos.has(rut) ? "02" : "00"
+        rutsVistos.add(rut)
         const trabajadorId = liquidacion.trabajador_id
         const fechasInasistencia = await fechasDeMarcas(trabajadorId, "inasistencia", primerDia, ultimoDia)
         const fechasPermisoSinGoce = await fechasDeMarcas(trabajadorId, "permiso_sin_goce", primerDia, ultimoDia)
@@ -93,7 +104,7 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
             tipoJornada: contrato.tipo_jornada,
             fechasInasistencia,
             fechasPermisoSinGoce
-        })))
+        }), tipoLinea))
     }
 
     if (problemas.length > 0) {

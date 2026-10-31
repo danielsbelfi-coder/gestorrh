@@ -163,3 +163,17 @@ test("CCAF: código, renta, descuentos, reparto de Fonasa y asignación en el 91
     assert.deepStrictEqual(camposCcaf({ codigo: null, asignacionFamiliar: 22601 }, { sistema: "Fonasa", legal: 70000 }), { 73: 22601 })
     assert.deepStrictEqual(camposCcaf({ codigo: null, asignacionFamiliar: 0 }, { sistema: "Fonasa", legal: 70000 }), {})
 })
+
+test("segundo contrato: la línea madre va con tipo 02 y sus movimientos como 01", () => {
+    const { lineasTrabajador: lineas } = require("../src/remuneraciones/archivo_previred.js")
+    const datos = {
+        trabajador: { rut: "12345678", dv: "5", apellidoPaterno: "A", apellidoMaterno: "B", nombres: "C", sexo: "femenino", nacionalidad: "chilena", anio: 2026, mes: 10, diasTrabajados: 11, tipoCotizante: 0, tramo: "D" },
+        prevision: { codigoAfp: "33", rentaImponible: 100, afp: 10, cuentaIndividual: 0, sis: 1, salud: { sistema: "Fonasa", legal: 7 } },
+        empleador: { rentaImponible: 100, rima: 0, tipoJornada: "completa", expectativaVida: 0, rentabilidadProtegida: 0, mutual: { codigo: "01", monto: 1 }, cesantia: { base: 0, trabajador: 0, empleador: 0 }, pagador: null },
+        movimientos: [{ codigo: 1, desde: "2026-10-20", hasta: null }, { codigo: 3, desde: "2026-10-25", hasta: "2026-10-26" }]
+    }
+    const [madre, adicional] = lineas(datos, "02").map((l) => l.split(";"))
+    assert.strictEqual(madre[13], "02")
+    assert.strictEqual(adicional[13], "01")
+    assert.strictEqual(lineas(datos)[0].split(";")[13], "00")
+})

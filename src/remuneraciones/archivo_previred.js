@@ -169,7 +169,9 @@ function camposMovimiento(movimiento, tipoLinea) {
     }
 }
 
-function lineasTrabajador(datos) {
+// tipoLinea: "00" línea principal; "02" segundo contrato de la misma persona en el mes (también es línea «madre»:
+// sus movimientos adicionales van después como líneas 01).
+function lineasTrabajador(datos, tipoLinea = "00") {
     const trabajador = camposTrabajador(datos.trabajador)
     const prevision = camposPrevision(datos.prevision)
     const empleador = camposEmpleador(datos.empleador)
@@ -181,7 +183,7 @@ function lineasTrabajador(datos) {
         ...camposAhorro(datos.ahorro),
         ...camposCcaf(datos.ccaf, datos.prevision.salud),
         ...empleador,
-        ...camposMovimiento(primero, "00")
+        ...camposMovimiento(primero, tipoLinea)
     })
 
     const identificacion = Object.fromEntries(

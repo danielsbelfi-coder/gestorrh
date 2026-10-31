@@ -27,7 +27,7 @@ async function mesesCerrados(empresas) {
 
 // Liquidaciones de periodos abiertos cuyo saldo de pago en exceso cambió después del cálculo.
 async function saldosDesactualizados(empresas) {
-    const { saldoDesactualizado } = require("../remuneraciones/liquidacion.service.js")
+    const { saldoDesactualizado, relacionDesactualizada } = require("../remuneraciones/liquidacion.service.js")
     const liquidaciones = await Liquidacion.findAll({
         where: { vigente: true },
         attributes: ["id", "trabajador_id", "estado", "detalle_calculo"],
@@ -38,6 +38,8 @@ async function saldosDesactualizados(empresas) {
         const saldo = await saldoDesactualizado(liquidacion, liquidacion.PeriodoRemuneracion)
         if (saldo.desactualizado) {
             resultado.push({ liquidacion, saldo })
+        } else if ((await relacionDesactualizada(liquidacion, liquidacion.PeriodoRemuneracion)).desactualizada) {
+            resultado.push({ liquidacion, relacion: true })
         }
     }
     return resultado
@@ -105,7 +107,7 @@ async function listarPendientes(usuario, empresasPermitidas) {
         ...correcciones.map(armar.deCorreccion),
         ...variables.map(armar.deVariable),
         ...resumenes.map(armar.deResumen),
-        ...saldos.map(({ liquidacion, saldo }) => armar.deSaldo(liquidacion, saldo)),
+        ...saldos.map(({ liquidacion, saldo, relacion }) => relacion ? armar.deRelacion(liquidacion) : armar.deSaldo(liquidacion, saldo)),
         ...finiquitos.map(({ finiquito, saldo }) => armar.deFiniquitoSaldo(finiquito, saldo))
     ]).map((item) => ({ ...item, puede_actuar: armar.puedeActuar(item, roles, PERMISOS) }))
 
