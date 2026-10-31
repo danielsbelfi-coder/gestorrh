@@ -6,16 +6,20 @@ let parametros = []
 
 const TIPOS = { porcentaje: "Porcentaje", monto: "Monto", factor: "Factor", otro: "Otro" }
 
-// Muestra el valor según su tipo: los montos en pesos, el resto como número.
+// Muestra el valor según su tipo: los topes en UF con "UF", los porcentajes con "%", los montos en pesos.
 function valorParametro(p) {
     const numero = Number(p.valor)
-    if (p.codigo === "UF" || p.codigo === "UTM" || p.tipo === "monto") {
-        return numero >= 1000 ? `$${numero.toLocaleString("es-CL", { maximumFractionDigits: 2 })}` : numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })
+    const texto = numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })
+    if (p.codigo.endsWith("_UF")) {
+        return `${texto} UF`
     }
     if (p.tipo === "porcentaje") {
-        return `${numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })}`
+        return `${texto} %`
     }
-    return numero.toLocaleString("es-CL", { maximumFractionDigits: 4 })
+    if (p.codigo === "UF" || p.codigo === "UTM" || p.tipo === "monto") {
+        return `$${numero.toLocaleString("es-CL", { maximumFractionDigits: 2 })}`
+    }
+    return texto
 }
 
 const tabla = crearTabla({

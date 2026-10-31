@@ -6,9 +6,9 @@ module.exports = {
     await queryInterface.bulkInsert("parametros_legales", [
       {
         codigo: "TASA_CESANTIA_TRABAJADOR",
-        nombre: "tasa Seguro de cesantia del trabajador",
+        nombre: "Seguro de cesantía, cotización del trabajador",
         valor: 0.6,
-        tipo: "monto",
+        tipo: "porcentaje",
         vigencia_desde: "2026-01-01",
         vigencia_hasta: null,
         descripcion: "0.6% de cotización obligatoria seguro de cesantía",
@@ -18,7 +18,7 @@ module.exports = {
       },
       {
         codigo: "TOPE_CESANTIA_UF",
-        nombre: "tope en uf seguro de cesantia",
+        nombre: "Tope imponible seguro de cesantía (UF)",
         valor: 135.2,
         tipo: "monto",
         vigencia_desde: "2026-02-01",

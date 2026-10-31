@@ -8,7 +8,7 @@ module.exports = {
         codigo: "COTIZACION_OBLIGATORIA_AFP",
         nombre: "Cotización obligatoria AFP",
         valor: 10,
-        tipo: "monto",
+        tipo: "porcentaje",
         vigencia_desde: "2026-01-01",
         vigencia_hasta: null,
         descripcion: "10% de cotización obligatoria AFP",
