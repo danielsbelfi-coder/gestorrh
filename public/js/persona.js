@@ -132,7 +132,7 @@ async function cargarPersona() {
     document.getElementById("seccionCargas").hidden = false
     document.getElementById("seccionAhorro").hidden = false
     mostrarCamposAhorro()
-    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros()])
+    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros(), cargarSaldos()])
     avisoSinTramo()
 }
 
@@ -691,6 +691,54 @@ document.getElementById("ahorrosVoluntarios").addEventListener("click", async fu
     }
     mensaje("info", "Registro eliminado.")
     await cargarAhorros()
+})
+
+// ---------- Saldo pendiente de relaciones anteriores ----------
+
+async function cargarSaldos() {
+    const resultado = await llamarApi(`/api/personas/${personaId}/saldos-pago-exceso`)
+    const seccion = document.getElementById("seccionSaldo")
+    if (resultado.status !== 200 || resultado.datos.finiquitos.length === 0) {
+        seccion.hidden = true
+        return
+    }
+    const { finiquitos, descontado, pendiente } = resultado.datos
+    seccion.hidden = false
+    document.getElementById("saldosRelaciones").innerHTML = `
+        <p class="${pendiente > 0 ? "alerta error" : "texto-suave"}">${pendiente > 0
+            ? `Saldo pendiente: <strong>${escaparHtml(pesos(pendiente))}</strong>. Ya descontado en relaciones posteriores: ${escaparHtml(pesos(descontado))}.`
+            : `Sin saldo pendiente. Descontado en relaciones posteriores: ${escaparHtml(pesos(descontado))}.`}</p>
+        <table>
+            <thead><tr><th>Relación</th><th>Finiquito</th><th>No recuperado</th><th>Estado</th><th></th></tr></thead>
+            <tbody>${finiquitos.map((f) => `
+                <tr>
+                    <td>${escaparHtml(fechaCorta(f.desde))} al ${escaparHtml(fechaCorta(f.hasta))}</td>
+                    <td>${escaparHtml(fechaCorta(f.fecha_finiquito))}</td>
+                    <td class="numero">${escaparHtml(pesos(f.no_recuperado))}</td>
+                    <td>${f.cerrado ? `No se cobrará: ${escaparHtml(f.cerrado.motivo)} (${escaparHtml(fechaCorta(f.cerrado.fecha))})` : "Por cobrar"}</td>
+                    <td>${f.cerrado ? "" : `<button type="button" class="chico secundario" data-no-cobrar="${f.finiquito_id}">No se cobrará</button>`}</td>
+                </tr>`).join("")}
+            </tbody>
+        </table>`
+}
+
+document.getElementById("saldosRelaciones").addEventListener("click", async function (evento) {
+    const id = evento.target.closest("[data-no-cobrar]")?.dataset.noCobrar
+    if (!id) {
+        return
+    }
+    const motivo = prompt("¿Por qué no se cobrará este saldo? (por ejemplo, el trabajador no firmó la autorización). Queda registrado:")
+    if (motivo === null) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/finiquitos/${id}/no-cobrar`, { method: "POST", body: JSON.stringify({ motivo }) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo registrar")
+        return
+    }
+    await cargarSaldos()
+    mensaje("info", "Saldo marcado como «no se cobrará».")
 })
 
 // ---------- Guardar ----------

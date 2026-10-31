@@ -58,7 +58,7 @@ async function cargarConceptos() {
     conceptoPorId = porId(resultado.datos)
     // Solo los que se ingresan a mano: activos, haberes o descuentos, y no calculados por el sistema (salvo horas extra).
     const ingresables = resultado.datos.filter((c) => c.activo !== false && c.tipo !== "aporte_empleador"
-        && (!c.calculado_por_sistema || esHoras(c)))
+        && (!c.calculado_por_sistema || esHoras(c) || c.codigo === "DESCUENTO_PAGO_EXCESO"))
     llenarSelect(document.getElementById("concepto"), ingresables.map((c) => ({
         id: c.id,
         texto: `${c.nombre} (${c.tipo === "descuento" ? "descuento" : esHoras(c) ? "horas" : "haber"})`

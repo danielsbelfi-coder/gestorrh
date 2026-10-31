@@ -573,6 +573,17 @@ async function prepararCalculo(periodo, trabajador) {
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : []
 
+    // Saldo de pago en exceso que quedó sin recuperar en el finiquito de una relación anterior: no se descuenta solo
+    // (es otra relación laboral; requiere la autorización firmada del trabajador), pero se avisa.
+    const { saldosDePersona } = require("./saldo_relaciones.service.js")
+    const { saldoPendiente: pendienteDe } = require("./saldo_relaciones.js")
+    const saldos = await saldosDePersona(persona.id, trabajador.empresa_id)
+    const deOtrasRelaciones = saldos.finiquitos.filter((f) => f.trabajador_id !== trabajador.id)
+    const pendienteAnterior = pendienteDe(deOtrasRelaciones, saldos.descontado)
+    if (pendienteAnterior > 0) {
+        avisos.push(`La persona tiene un saldo de pago en exceso de $${pendienteAnterior.toLocaleString("es-CL")} de una relación anterior que el finiquito no alcanzó a descontar. No se descuenta solo: con la autorización firmada del trabajador, ingréselo como variable «Descuento por pago en exceso»; si no se cobrará, márquelo en la ficha de la persona`)
+    }
+
     // Si el trabajador ya tiene finiquito (no pagado) y este cálculo cambia el saldo que el finiquito descontó, se avisa.
     const finiquito = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
     if (finiquito !== null && finiquito.estado !== "pagado" && trabajador.fecha_termino?.slice(0, 7) === primerDia.slice(0, 7)) {

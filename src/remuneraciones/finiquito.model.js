@@ -20,6 +20,10 @@ const Finiquito = sequelize.define("Finiquito", {
     fecha_emision: { type: DataTypes.DATE, allowNull: true },
     fecha_pago: { type: DataTypes.DATEONLY, allowNull: true },
     emitido_por_id: { type: DataTypes.INTEGER, allowNull: true },
+    // Saldo de pago en exceso no recuperado que se decidió no cobrar en una relación posterior.
+    saldo_no_cobrar_motivo: { type: DataTypes.TEXT, allowNull: true },
+    saldo_no_cobrar_en: { type: DataTypes.DATE, allowNull: true },
+    saldo_no_cobrar_usuario_id: { type: DataTypes.INTEGER, allowNull: true },
     usuario_registro_id: { type: DataTypes.INTEGER, allowNull: false }
 }, {
     tableName: "finiquitos"

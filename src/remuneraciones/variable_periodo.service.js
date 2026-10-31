@@ -14,7 +14,9 @@ async function obtenerConceptoParaVariable(conceptoId, empresaId) {
         throw new ConflictError("El concepto está inactivo")
     }
 
-    if (concepto.calculado_por_sistema && concepto.recargo_hora_extra === null) {
+    // Excepción: el saldo de pago en exceso de una relación anterior se descuenta a mano, con la autorización firmada.
+    const { CODIGO_DESCUENTO } = require("./saldo_relaciones.service.js")
+    if (concepto.calculado_por_sistema && concepto.recargo_hora_extra === null && concepto.codigo !== CODIGO_DESCUENTO) {
         throw new ValidationError("Ese concepto lo calcula el sistema y no se ingresa como variable")
     }
 
@@ -39,6 +41,21 @@ function valorDeVariable(concepto, datos) {
     }
 
     return { cantidad: null, monto }
+}
+
+// «Descuento por pago en exceso» ingresado a mano: solo hasta el saldo pendiente de relaciones anteriores de la persona.
+async function exigirSaldoDeRelacionAnterior(concepto, trabajador, monto, excluirVariableId = null) {
+    const { CODIGO_DESCUENTO, saldosDePersona } = require("./saldo_relaciones.service.js")
+    if (concepto.codigo !== CODIGO_DESCUENTO) {
+        return
+    }
+    const { pendiente } = await saldosDePersona(trabajador.persona_id, trabajador.empresa_id, { excluirVariableId })
+    if (pendiente <= 0) {
+        throw new ConflictError("La persona no tiene saldo de pago en exceso pendiente de una relación anterior; el saldo de esta relación lo descuenta el sistema solo")
+    }
+    if (monto > pendiente) {
+        throw new ConflictError(`El monto supera el saldo pendiente de relaciones anteriores ($${pendiente.toLocaleString("es-CL")})`)
+    }
 }
 
 function glosaDeVariable(glosa) {
@@ -72,6 +89,7 @@ async function crearVariable(datos, empresasPermitidas, usuarioId) {
 
     const concepto = await obtenerConceptoParaVariable(datos.concepto_id, periodo.empresa_id)
     const { cantidad, monto } = valorDeVariable(concepto, datos)
+    await exigirSaldoDeRelacionAnterior(concepto, trabajador, monto)
 
     return await VariablePeriodo.create({
         periodo_id: periodo.id,
@@ -121,6 +139,7 @@ async function editarVariable(id, datos, empresasPermitidas, usuarioId) {
 
     const concepto = await ConceptoRemuneracion.findByPk(variable.concepto_id)
     const { cantidad, monto } = valorDeVariable(concepto, datos)
+    await exigirSaldoDeRelacionAnterior(concepto, await Trabajador.findByPk(variable.trabajador_id), monto, variable.id)
 
     return await variable.update({
         cantidad,
