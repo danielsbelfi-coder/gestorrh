@@ -46,6 +46,12 @@ const ConceptoRemuneracion = sequelize.define("ConceptoRemuneracion", {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    // Descuento voluntario que cuenta para el 15 % del art. 58 del Código del Trabajo.
+    limite_art58: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

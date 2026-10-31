@@ -118,7 +118,7 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 **Resumen de asistencia → Generar desde la asistencia** propone días de inasistencia, permisos sin goce, vacaciones y minutos de atraso a partir del libro. Revisa, **Editar resumen** si hace falta y **Aprobar** (o **Aprobar todos los pendientes**). Las horas extra se muestran como información; se pagan cargándolas como variable.
 
 ### 6.5 Variables del mes
-**Variables del mes → Agregar**: periodo, trabajador, concepto (bonos, comisiones, horas extra, descuentos), monto y glosa. Quedan pendientes hasta que ADMIN o JEFE_RRHH las apruebe (**Aprobar** o **Aprobar todas las pendientes**). Los conceptos disponibles se ven en **Conceptos**.
+**Variables del mes → Agregar**: periodo, trabajador, concepto (bonos, comisiones, horas extra, descuentos), monto y glosa. Quedan pendientes hasta que ADMIN o JEFE_RRHH las apruebe (**Aprobar** o **Aprobar todas las pendientes**). Los conceptos disponibles se ven en **Conceptos**. **Art. 58:** los descuentos voluntarios (préstamo de la empresa, seguro colectivo, otros descuentos y los conceptos propios marcados en Conceptos con «Contar en el 15 %») no pueden pasar en conjunto del 15 % de la remuneración imponible del mes; si se pasan, la liquidación se calcula igual, avisa al calcular y lo muestra en el detalle.
 
 ### 6.6 Liquidaciones
 **Liquidaciones**: elige el periodo y **Calcular** (un trabajador) o **Calcular todas**. Revisa el detalle, después **Cerrar liquidación** o **Cerrar todas**. Descarga **PDF de todas** o **PDF con aportes** (incluye aportes del empleador). Una liquidación cerrada ya no cambia.

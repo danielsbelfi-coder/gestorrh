@@ -80,6 +80,7 @@ async function crearConcepto(datos, empresasPermitidas, usuarioId) {
             recargo_hora_extra: null,
             calculado_por_sistema: false,
             codigo_lre: codigoLre,
+            limite_art58: datos.tipo === "descuento" && datos.limite_art58 === true,
             activo: true
         })
     } catch (error) {
@@ -140,7 +141,24 @@ async function asignarCodigoLre(id, codigoLre, empresasPermitidas, usuarioId) {
     return await concepto.update({ codigo_lre: validarCodigoLre(codigoLre, concepto.tipo) })
 }
 
+// Marca o desmarca un descuento propio como voluntario del art. 58 (15 % de la remuneración total).
+async function marcarArt58(id, valor, empresasPermitidas, usuarioId) {
+    const concepto = await obtenerConceptoPropio(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, concepto.empresa_id, PERMISOS.CONFIGURAR_CONCEPTOS)
+
+    if (concepto.tipo !== "descuento") {
+        throw new ValidationError("Solo los descuentos cuentan para el 15 % del art. 58")
+    }
+    if (typeof valor !== "boolean") {
+        throw new ValidationError("limite_art58 debe ser true o false")
+    }
+
+    return await concepto.update({ limite_art58: valor })
+}
+
 module.exports = {
+    marcarArt58,
     listarConceptos,
     crearConcepto,
     desactivarConcepto,

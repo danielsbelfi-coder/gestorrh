@@ -16,6 +16,7 @@ const tabla = crearTabla({
         { titulo: "Imponible", valor: (c) => siNo(c.imponible) },
         { titulo: "Tributable", valor: (c) => siNo(c.tributable) },
         { titulo: "Base grat.", valor: (c) => siNo(c.base_gratificacion) },
+        { titulo: "15 % art. 58", valor: (c) => (c.tipo === "descuento" ? siNo(c.limite_art58) : "—") },
         {
             titulo: "Código LRE", valor: (c) => c.codigo_lre ?? "",
             html: (c) => c.codigo_lre ? escaparHtml(c.codigo_lre) : (c.tipo === "aporte_empleador" ? "—" : `<span class="insignia peligro">Falta</span>`)
@@ -35,6 +36,7 @@ function botones(c) {
         return ""
     }
     return `<button type="button" class="chico secundario" data-accion="lre" data-id="${c.id}">Código LRE</button>
+        ${c.tipo === "descuento" ? `<button type="button" class="chico secundario" data-accion="art58" data-id="${c.id}">${c.limite_art58 ? "Quitar del 15 %" : "Contar en el 15 %"}</button>` : ""}
         ${c.activo === false
             ? `<button type="button" class="chico" data-accion="reactivar" data-id="${c.id}">Reactivar</button>`
             : `<button type="button" class="chico secundario" data-accion="desactivar" data-id="${c.id}">Desactivar</button>`}`
@@ -53,6 +55,7 @@ async function cargarConceptos() {
 function mostrarCasillasHaber() {
     const esHaber = document.getElementById("tipo").value === "haber"
     document.querySelectorAll(".solo-haber").forEach((casilla) => { casilla.hidden = !esHaber })
+    document.querySelectorAll(".solo-descuento").forEach((casilla) => { casilla.hidden = esHaber })
 }
 document.getElementById("tipo").addEventListener("change", mostrarCasillasHaber)
 mostrarCasillasHaber()
@@ -71,7 +74,8 @@ document.getElementById("formConcepto").addEventListener("submit", async functio
         codigo_lre: lre === "" ? null : Number(lre),
         imponible: document.getElementById("imponible").checked,
         tributable: document.getElementById("tributable").checked,
-        base_gratificacion: document.getElementById("baseGratificacion").checked
+        base_gratificacion: document.getElementById("baseGratificacion").checked,
+        limite_art58: document.getElementById("limiteArt58").checked
     }, "Concepto creado.")
     if (creado) {
         cerrarPanelCrear(this)
@@ -98,6 +102,8 @@ document.getElementById("tablaConceptos").addEventListener("click", async functi
             method: "PATCH",
             body: JSON.stringify({ codigo_lre: valor.trim() === "" ? null : Number(valor) })
         })
+    } else if (boton.dataset.accion === "art58") {
+        resultado = await llamarApi(`/api/conceptos/${concepto.id}/art58`, { method: "PATCH", body: JSON.stringify({ limite_art58: !concepto.limite_art58 }) })
     } else {
         resultado = await llamarApi(`/api/conceptos/${concepto.id}/${boton.dataset.accion}`, { method: "PATCH" })
     }

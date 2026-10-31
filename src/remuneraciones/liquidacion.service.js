@@ -17,6 +17,7 @@ const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
 const { sumarDias, edadAl } = require("../shared/fechas.js")
 const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
 const { saludParaCcaf, codigoTasaSaludCcaf } = require("./ccaf.js")
+const { revisarArt58 } = require("./art58.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -614,6 +615,11 @@ async function prepararCalculo(periodo, trabajador) {
     const avisos = resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : []
+    // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
+    const art58 = revisarArt58(resultado.lineas, resultado.rentaImponible)
+    if (art58.exceso > 0) {
+        avisos.push(`Los descuentos voluntarios ($${art58.voluntarios.toLocaleString("es-CL")}) superan el 15 % de la remuneración imponible ($${art58.tope.toLocaleString("es-CL")}) que permite el art. 58 del Código del Trabajo, por $${art58.exceso.toLocaleString("es-CL")}. Se descuentan igual: revise los descuentos pactados`)
+    }
     const exceso = resultado.ahorros.depositoConvenido?.exceso ?? 0
     if (exceso > 0) {
         avisos.push(`El depósito convenido del año supera las 900 UF: $${exceso.toLocaleString("es-CL")} de este mes pasan a ser renta tributable y pagan impuesto único (art. 20 del D.L. 3.500)`)
@@ -671,6 +677,7 @@ async function prepararCalculo(periodo, trabajador) {
         // APV y depósito convenido (institución, contrato, forma de pago, régimen y montos) y caja de la empresa.
         apv: resultado.ahorros,
         ccaf: { caja: empresa.ccaf ?? null, saludCcaf, tasa: tasaSaludCcaf },
+        art58,
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).

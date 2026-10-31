@@ -187,6 +187,7 @@ function mostrarDetalle(liquidacion) {
             </table>
         </div>
         <p class="liquido">Líquido a pagar: <strong>${escaparHtml(pesos(liquidacion.liquido_a_pagar))}</strong></p>
+        ${liquidacion.detalle_calculo?.art58?.exceso > 0 ? `<p class="aviso-art58"><span class="insignia advertencia">Art. 58</span> Los descuentos voluntarios (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.voluntarios))}) superan el 15 % de la remuneración imponible (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.tope))}) por ${escaparHtml(pesos(liquidacion.detalle_calculo.art58.exceso))}.</p>` : ""}
         <p class="texto-suave">El detalle completo, con todos los conceptos, está en el PDF.</p>`
     panel.hidden = false
     panel.querySelector("#cerrarDetalle").addEventListener("click", () => { panel.hidden = true })
