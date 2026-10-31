@@ -458,7 +458,8 @@ async function prepararCalculo(periodo, trabajador) {
 
     // APV individual, APV colectivo y depósito convenido vigentes en el mes (ficha de la persona).
     const { ahorrosEnMes } = require("../trabajadores/ahorro_voluntario.service.js")
-    const ahorrosDelMes = await ahorrosEnMes(persona.id, periodo.anio, periodo.mes)
+    // Con dos relaciones en el mes, el APV y el depósito convenido se descuentan una sola vez, en la última relación.
+    const ahorrosDelMes = hayPosterior ? [] : await ahorrosEnMes(persona.id, periodo.anio, periodo.mes)
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)

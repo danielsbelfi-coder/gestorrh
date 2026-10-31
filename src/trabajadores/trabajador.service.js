@@ -5,6 +5,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { CAUSALES_TERMINO } = require("../shared/causales_termino.js")
+const { exigirSinCruce } = require("./relaciones.js")
 
 
 async function crearTrabajador(datos, empresasPermitidas, usuarioId) {
@@ -22,16 +23,11 @@ async function crearTrabajador(datos, empresasPermitidas, usuarioId) {
         throw new NotFoundError("Persona no encontrada")
     }
 
-    const trabajadorExistente = await Trabajador.findOne({
-        where: {
-            persona_id: datos.persona_id,
-            empresa_id: empresaId,
-            estado: "activo"
-        }
-    })
-    if (trabajadorExistente !== null) {
-        throw new ConflictError("Trabajador ya tiene un vinculo laboral existente")
+    if (!esFechaValida(datos.fecha_ingreso)) {
+        throw new ValidationError("Fecha de ingreso inválida")
     }
+    // Una relación nueva no se cruza con otra de la misma persona (por ejemplo, una recontratación empieza después del término).
+    await exigirSinCruce(Trabajador, { personaId: persona.id, empresaId, desde: datos.fecha_ingreso })
 
     return await Trabajador.create(datos, {
         fields: ["persona_id", "empresa_id", "fecha_ingreso"]
@@ -91,6 +87,13 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
         throw new ValidationError("La fecha de término no puede ser anterior a la fecha de ingreso")
     }
 
+    if (despues.fecha_ingreso !== antes.fecha_ingreso || despues.fecha_termino !== antes.fecha_termino) {
+        await exigirSinCruce(Trabajador, { personaId: trabajador.persona_id, empresaId: trabajador.empresa_id, desde: despues.fecha_ingreso, hasta: despues.fecha_termino, excluirId: trabajador.id })
+    }
+    if (despues.fecha_ingreso !== antes.fecha_ingreso) {
+        await exigirIngresoCorregible(trabajador)
+    }
+
     const meses = mesesQueSuma(antes, despues)
 
     if (meses.length === 0) {
@@ -101,6 +104,18 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
 
     return await conLimiteTrabajadores(empresa.cuenta_id, meses, (transaction) =>
         trabajador.update(datos, { fields: campos, transaction }))
+}
+
+// La fecha de ingreso solo se corrige si no hay liquidaciones de meses cerrados (esos días ya se pagaron y declararon).
+async function exigirIngresoCorregible(trabajador) {
+    const { Liquidacion, PeriodoRemuneracion } = require("../shared/associations.js")
+    const cerradas = await Liquidacion.count({
+        where: { trabajador_id: trabajador.id },
+        include: [{ model: PeriodoRemuneracion, where: { estado: "cerrado" }, required: true }]
+    })
+    if (cerradas > 0) {
+        throw new ConflictError("La fecha de ingreso no se puede cambiar: el trabajador tiene liquidaciones de meses cerrados")
+    }
 }
 
 async function desactivarTrabajador(id, empresasPermitidas, usuarioId) {

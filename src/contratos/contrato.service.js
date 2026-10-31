@@ -11,6 +11,7 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { esFechaValida } = require("../shared/fechas.js")
+const { exigirSinCruce } = require("../trabajadores/relaciones.js")
 
 
 async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null) {
@@ -84,8 +85,18 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
     ]
 
     if (trabajador.estado !== "postulante") {
+        if (typeof datos.fecha_inicio === "string" && datos.fecha_inicio < trabajador.fecha_ingreso) {
+            throw new ValidationError("El contrato no puede empezar antes de la fecha de ingreso del trabajador")
+        }
         return await ContratoTrabajo.create(datos, { fields: campos })
     }
+
+    // Primer contrato de un postulante: la fecha de ingreso de la relación pasa a ser el inicio del contrato
+    // (la del postulante era tentativa). No puede cruzarse con otra relación de la persona.
+    if (typeof datos.fecha_inicio !== "string" || !esFechaValida(datos.fecha_inicio)) {
+        throw new ValidationError("Fecha de inicio del contrato inválida")
+    }
+    await exigirSinCruce(Trabajador, { personaId: trabajador.persona_id, empresaId: trabajador.empresa_id, desde: datos.fecha_inicio, excluirId: trabajador.id })
 
     const antes = {
         estado: trabajador.estado,
@@ -97,7 +108,7 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
 
     return await conLimiteTrabajadores(empresa.cuenta_id, meses, async (transaction) => {
         const contrato = await ContratoTrabajo.create(datos, { fields: campos, transaction })
-        await trabajador.update({ estado: "activo" }, { transaction })
+        await trabajador.update({ estado: "activo", fecha_ingreso: datos.fecha_inicio }, { transaction })
         return contrato
     })
 }

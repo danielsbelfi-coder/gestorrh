@@ -57,6 +57,19 @@ async function cargarFicha() {
         dato("Sueldo base actual", escaparHtml(vigente ? pesos(vigente.sueldo_base) : "—"))
     ].join("")
 
+    // La fecha de ingreso de la relación debe ser el inicio de su primer contrato. Si no coinciden (por ejemplo, un
+    // postulante creado con otra fecha antes de este cambio), se ofrece corregirla.
+    const primero = [...contratos].filter((c) => c.estado !== "anulado").sort((a, b) => String(a.fecha_inicio).localeCompare(String(b.fecha_inicio)))[0]
+    const aviso = document.getElementById("avisoIngreso")
+    if (primero && primero.fecha_inicio !== trabajador.fecha_ingreso) {
+        aviso.hidden = false
+        aviso.innerHTML = `La fecha de ingreso (${escaparHtml(fechaCorta(trabajador.fecha_ingreso))}) no coincide con el inicio del primer contrato (${escaparHtml(fechaCorta(primero.fecha_inicio))}). Los días de asistencia y de la liquidación se cuentan desde el ingreso.
+            <button type="button" class="chico" id="corregirIngreso" data-fecha="${escaparHtml(primero.fecha_inicio)}">Usar ${escaparHtml(fechaCorta(primero.fecha_inicio))} como ingreso</button>`
+    } else {
+        aviso.hidden = true
+        aviso.innerHTML = ""
+    }
+
     const botonNuevo = document.getElementById("nuevoContrato")
     botonNuevo.hidden = Boolean(vigente) || Boolean(trabajador.fecha_termino)
     botonNuevo.href = `contratos.html?trabajador=${trabajador.id}`
@@ -283,4 +296,21 @@ document.addEventListener("empresa-lista", async function () {
             selector.value = trabajador.empresa_id
         }
     }
+})
+
+// Corrige la fecha de ingreso al inicio del primer contrato (el servidor revisa que no se cruce con otra relación
+// y que no haya liquidaciones de meses cerrados).
+document.getElementById("avisoIngreso").addEventListener("click", async function (evento) {
+    const boton = evento.target.closest("#corregirIngreso")
+    if (!boton || !confirm(`¿Cambiar la fecha de ingreso a ${fechaCorta(boton.dataset.fecha)}? Después vuelve a generar el resumen de asistencia y a calcular la liquidación del mes.`)) {
+        return
+    }
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/trabajadores/${trabajadorId}`, { method: "PATCH", body: JSON.stringify({ fecha_ingreso: boton.dataset.fecha }) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo corregir la fecha de ingreso")
+        return
+    }
+    await cargarFicha()
+    mensaje("info", "Fecha de ingreso corregida. Vuelve a generar el resumen de asistencia del mes y recalcula la liquidación.")
 })
