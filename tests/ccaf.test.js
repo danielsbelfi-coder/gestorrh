@@ -22,3 +22,8 @@ test("códigos de las cajas en Previred y el LRE", () => {
     assert.deepEqual(Object.values(c.CODIGO_PREVIRED), ["01", "02", "03", "06"])
     assert.deepEqual(Object.values(c.CODIGO_LRE), [1, 2, 3, 4])
 })
+
+test("codigoTasaSaludCcaf: pensionados con su propia tasa (1 %), el resto la general (4,2 %)", () => {
+    assert.equal(c.codigoTasaSaludCcaf(true), "TASA_SALUD_CCAF_PENSIONADOS")
+    assert.equal(c.codigoTasaSaludCcaf(false), "TASA_SALUD_CCAF")
+})

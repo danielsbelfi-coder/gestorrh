@@ -84,7 +84,7 @@ En la ficha de la persona, sección **Ahorro previsional voluntario**, se regist
 - El aporte del empleador al APV colectivo va con los aportes del empleador.
 
 ### Caja de compensación (CCAF)
-Si la empresa tiene caja (ficha de la empresa), Previred informa la caja, reparte el 7 % de Fonasa entre la caja (4,2 %) y Fonasa (2,8 %) e informa la asignación familiar pagada para que se compense. La liquidación no cambia. Los **descuentos de la caja** (crédito personal, dental, leasing, seguro de vida y otros) se ingresan cada mes como **variables**, según lo que informa la caja. Previred avisa si un descuento no lo recibe la caja de la empresa (por ejemplo, el dental solo lo recibe Los Héroes).
+Si la empresa tiene caja (ficha de la empresa), Previred informa la caja, reparte el 7 % de Fonasa entre la caja (4,2 %; 1 % si es pensionado) y Fonasa (2,8 %; 6 % si es pensionado) e informa la asignación familiar pagada para que se compense. La liquidación no cambia. Los **descuentos de la caja** (crédito personal, dental, leasing, seguro de vida y otros) se ingresan cada mes como **variables**, según lo que informa la caja. Previred avisa si un descuento no lo recibe la caja de la empresa (por ejemplo, el dental solo lo recibe Los Héroes).
 
 Si los descuentos dejan el líquido en negativo, la liquidación se calcula igual, avisa y el saldo se descuenta el mes siguiente.
 

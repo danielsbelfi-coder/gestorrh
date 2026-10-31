@@ -26,6 +26,11 @@ function saludParaCcaf({ caja, sistemaSalud, baseCotizaciones, saludLegal, tasa 
     return Math.min(Math.round(baseCotizaciones * tasa / 100), saludLegal)
 }
 
+// Parámetro de la parte del 7 % de Fonasa que va a la caja: pensionados 1 %, el resto 4,2 % (indicadores Previred).
+function codigoTasaSaludCcaf(pensionado) {
+    return pensionado ? "TASA_SALUD_CCAF_PENSIONADOS" : "TASA_SALUD_CCAF"
+}
+
 // Problemas de una liquidación con descuentos de caja: sin caja, o un descuento que su caja no recibe.
 // montos = { CODIGO: monto }.
 function problemasDescuentosCcaf(caja, montos) {
@@ -43,4 +48,4 @@ function problemasDescuentosCcaf(caja, montos) {
     return problemas
 }
 
-module.exports = { CODIGO_PREVIRED, CODIGO_LRE, DESCUENTOS_CCAF, saludParaCcaf, problemasDescuentosCcaf }
+module.exports = { CODIGO_PREVIRED, CODIGO_LRE, DESCUENTOS_CCAF, saludParaCcaf, codigoTasaSaludCcaf, problemasDescuentosCcaf }

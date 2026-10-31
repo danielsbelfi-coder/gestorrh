@@ -16,7 +16,7 @@ const { contratoDelMes } = require("./contrato_del_mes.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
 const { sumarDias, edadAl } = require("../shared/fechas.js")
 const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
-const { saludParaCcaf } = require("./ccaf.js")
+const { saludParaCcaf, codigoTasaSaludCcaf } = require("./ccaf.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -564,13 +564,17 @@ async function prepararCalculo(periodo, trabajador) {
         conceptos
     })
 
-    // Caja de compensación de la empresa al calcular: Previred reparte el 7 % de Fonasa entre la caja y Fonasa.
+    // Caja de compensación de la empresa al calcular: Previred reparte el 7 % de Fonasa entre la caja y Fonasa
+    // (activos 4,2 %; pensionados 1 %).
     let saludCcaf = 0
+    let tasaSaludCcaf = null
     if (empresa.ccaf) {
-        const tasaCcaf = await obtenerParametroVigente("TASA_SALUD_CCAF", primerDia)
+        const codigoTasa = codigoTasaSaludCcaf(situacion.pensionado)
+        const tasaCcaf = await obtenerParametroVigente(codigoTasa, primerDia)
         if (tasaCcaf === null) {
-            throw new ConflictError("No existe un parámetro TASA_SALUD_CCAF vigente para la fecha del periodo")
+            throw new ConflictError(`No existe un parámetro ${codigoTasa} vigente para la fecha del periodo`)
         }
+        tasaSaludCcaf = Number(tasaCcaf.valor)
         saludCcaf = saludParaCcaf({
             caja: empresa.ccaf,
             sistemaSalud: prevision.sistema_salud,
@@ -634,7 +638,7 @@ async function prepararCalculo(periodo, trabajador) {
         asignacionFamiliar,
         // APV y depósito convenido (institución, contrato, forma de pago, régimen y montos) y caja de la empresa.
         apv: resultado.ahorros,
-        ccaf: { caja: empresa.ccaf ?? null, saludCcaf },
+        ccaf: { caja: empresa.ccaf ?? null, saludCcaf, tasa: tasaSaludCcaf },
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
