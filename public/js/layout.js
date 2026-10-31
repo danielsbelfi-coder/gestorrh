@@ -97,7 +97,7 @@ function gruposDeEmpresa(usuario, conInicio, empresa = [["empresas.html", "Empre
                 ["conceptos.html", "Conceptos", "conceptos"],
                 ["liquidaciones.html", "Liquidaciones", "liquidaciones"],
                 ["finiquitos.html", "Finiquitos", "finiquitos"],
-                ["legales.html", "Previred y LRE", "legales"]
+                ["legales.html", "Archivos legales", "legales"]
             ]
         },
         ...(conInicio ? [{ titulo: "Parámetros", enlaces: [["parametros.html", "Parámetros legales", "parametros"], ["feriados.html", "Feriados", "feriados"]] }] : [])

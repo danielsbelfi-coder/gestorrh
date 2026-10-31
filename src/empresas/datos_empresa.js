@@ -18,7 +18,7 @@ const CAMPOS_EMPRESA = [
     "tipo_empleador", "razon_social", "nombre_fantasia", "nombres", "apellido_paterno", "apellido_materno",
     "giro", "codigo_actividad", "direccion", "comuna", "telefono", "email",
     "representante_legal_nombre", "representante_legal_rut", "representante_legal_email",
-    "mutualidad_id", "tasa_adicional_mutual", "ccaf", "ccaf_agencia", "ccaf_numero_socio"
+    "mutualidad_id", "tasa_adicional_mutual", "ccaf", "ccaf_agencia", "ccaf_numero_socio", "es_agricola"
 ]
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -90,6 +90,10 @@ function validarDatosEmpresa(entrada) {
         } else {
             datos.representante_legal_rut = formatearRut(rut, dv)
         }
+    }
+
+    if ("es_agricola" in datos && typeof datos.es_agricola !== "boolean") {
+        errores.push("«Empresa agrícola» debe ser sí o no")
     }
 
     if (datos.ccaf !== undefined && datos.ccaf !== null && CCAF[datos.ccaf] === undefined) {

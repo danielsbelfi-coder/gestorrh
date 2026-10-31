@@ -34,6 +34,8 @@ const feriadoRoutes = require("./calendario/feriado.routes")
 const soporteRoutes = require("./soporte/soporte.routes")
 const accesoCuentaRoutes = require("./soporte/acceso_cuenta.routes")
 const pendienteRoutes = require("./pendientes/pendiente.routes")
+const factorActualizacionRoutes = require("./remuneraciones/factor_actualizacion.routes")
+const dj1887Routes = require("./remuneraciones/dj1887.routes")
 
 // Detrás de un proxy (Render, Railway, Nginx...) la IP real del cliente viene en X-Forwarded-For.
 // TRUST_PROXY = cuántos proxies hay delante del servidor (normalmente 1). Sin definir, se ignora esa cabecera.
@@ -84,6 +86,8 @@ app.use("/api/mutualidades", verificarSesion, mutualidadRoutes)
 app.use("/api/jornadas", verificarSesion, jornadaRoutes)
 app.use("/api/feriados", verificarSesion, feriadoRoutes)
 app.use("/api/pendientes", verificarSesion, pendienteRoutes)
+app.use("/api/factores-actualizacion", verificarSesion, factorActualizacionRoutes)
+app.use("/api/dj1887", verificarSesion, dj1887Routes)
 // Catálogo de bancos para la ficha de la persona y la nómina bancaria.
 app.get("/api/bancos", verificarSesion, (req, res) => {
     const { BANCOS } = require("./shared/bancos.js")

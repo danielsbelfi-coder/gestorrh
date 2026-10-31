@@ -1700,3 +1700,26 @@ button.chico.peligro:hover { background: var(--peligro); color: #fff; border-col
 .sin-corte {
     white-space: nowrap;
 }
+
+/* Factores de actualización de la DJ 1887 en Parámetros legales */
+.factores-dj {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+}
+
+.factores-dj output {
+    display: block;
+    padding: 8px 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.archivo-legal .acciones-grupo {
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.archivo-legal .acciones-grupo button {
+    margin-top: 0;
+}

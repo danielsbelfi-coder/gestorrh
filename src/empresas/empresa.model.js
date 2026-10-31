@@ -105,6 +105,12 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.DATEONLY,
     allowNull: true
   },
+  // DJ 1887: los meses se informan con código A/B (agrícola) en vez de C/P.
+  es_agricola: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
 }, {
   tableName: "empresas"
 })

@@ -56,6 +56,7 @@ function mostrarEmpresa(empresa) {
     if (!empresa.tipo_empleador) {
         document.getElementById("tipo_empleador").value = "juridica"
     }
+    document.getElementById("es_agricola").checked = empresa.es_agricola === true
     campoComuna.value = OPCIONES_COMUNA.find((opcion) => opcion.id === empresa.comuna)?.texto ?? ""
     mostrarSegunTipo()
 }
@@ -140,7 +141,8 @@ formulario.addEventListener("submit", async function (evento) {
         mutualidad_id: valor("mutualidad_id") === "" ? null : Number(valor("mutualidad_id")),
         ccaf: valor("ccaf"),
         ccaf_agencia: valor("ccaf_agencia"),
-        ccaf_numero_socio: valor("ccaf_numero_socio")
+        ccaf_numero_socio: valor("ccaf_numero_socio"),
+        es_agricola: document.getElementById("es_agricola").checked
     }
     if (valor("tasa_adicional_mutual") !== "") {
         datos.tasa_adicional_mutual = Number(valor("tasa_adicional_mutual"))

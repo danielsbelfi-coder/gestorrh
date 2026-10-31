@@ -97,7 +97,7 @@ En el pie del menú, **Mi seguridad** reúne:
 - **El administrador principal** solo lo restablece soporte, después de comprobar su identidad; queda en el registro que ve la cuenta.
 
 ### 6.1 Parámetros (soporte, una vez por mes)
-En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**. Después corrige con valores oficiales la **UF del último día del mes**, la **UTM** y cualquier valor que haya cambiado por ley (**Corregir**). Sin esto no se pueden calcular liquidaciones.
+En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**. Después corrige con valores oficiales la **UF del último día del mes**, la **UTM** y cualquier valor que haya cambiado por ley (**Corregir**). Sin esto no se pueden calcular liquidaciones. Una vez al año (diciembre) carga también los **factores de actualización** de la DJ 1887 que publica el SII, al final de la misma pantalla.
 
 ### 6.2 Periodo
 **Periodos → Abrir periodo** (mes, año, fecha de apertura).
@@ -132,6 +132,8 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 
 ### 6.7 Archivos legales
 **Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan los pensionados afiliados a una caja (1 %) ni controlan el tope anual del depósito convenido.
+
+**DJ 1887 y certificados de sueldos** (en la misma pantalla, una vez al año): elige el **año comercial** y presiona **Ver resumen**. Muestra los totales que se escriben en el formulario del SII (Sección C actualizada y el cuadro de montos sin actualizar, con leyes sociales y remuneraciones imponibles) y la lista de trabajadores con el código de cada mes (C/P, o A/B si la empresa es agrícola; F en el mes del término). **Descargar archivo para el SII** genera el CSV para el Importador de Datos (una fila por trabajador, sumando todas sus relaciones del año) y **Certificados (PDF)** el Certificado N° 6 de todos; cada fila del resumen tiene su certificado individual. Requisitos: todos los periodos del año **cerrados** y los **12 factores de actualización** del año cargados (los ingresa soporte en Parámetros legales cuando el SII los publica, en diciembre). Si la empresa empezó a usar GestorRH a mitad de año, el resumen avisa qué meses no están en el sistema: esos se completan en el formulario del SII. Mayor retención (art. 88), renta exenta y zonas extremas van en 0. «Empresa agrícola» se marca en la ficha de la empresa.
 
 ### 6.8 Cerrar el mes
 **Periodos → Cerrar periodo**. Antes de cerrar, el sistema revisa cada trabajador (resumen aprobado, liquidación emitida, sin variables pendientes y finiquito emitido si terminó en el mes). Si falta algo, muestra la lista para resolverla.
@@ -187,4 +189,4 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 Para cada observación anota: pantalla, qué hiciste, qué esperabas y qué pasó (con captura si puedes). Envíalo por el canal acordado con el responsable. Los problemas de seguridad, solo por mensaje directo.
 
 ## Lo que todavía no existe
-Carga masiva de marcas, informes y estadísticas, Declaración Jurada 1887, nómina bancaria, carga automática de UF y UTM, pensiones alimenticias y re-finiquito. No los reportes como errores.
+Carga masiva de marcas, informes y estadísticas, carga automática de UF y UTM, pensiones alimenticias y re-finiquito. No los reportes como errores.

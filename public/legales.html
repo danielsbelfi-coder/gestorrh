@@ -4,17 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestorRH - Previred y LRE</title>
+    <title>GestorRH - Archivos legales</title>
     <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/app.css">
 </head>
 
 <body>
-    <main class="contenido" data-empresa data-titulo="Previred y LRE">
+    <main class="contenido" data-empresa data-titulo="Archivos legales">
         <div class="encabezado-pagina">
             <div>
                 <h1>Archivos legales</h1>
-                <p>Genera los archivos del periodo para subirlos a Previred y a la Dirección del Trabajo.</p>
+                <p>Genera los archivos del periodo para subirlos a Previred y a la Dirección del Trabajo, y la declaración jurada anual de sueldos para el SII.</p>
             </div>
             <label>Periodo<select id="periodo"></select></label>
         </div>
@@ -26,7 +26,6 @@
             <section class="tarjeta archivo-legal">
                 <h2>Archivo Previred</h2>
                 <p class="texto-suave">Cotizaciones previsionales del mes, en el formato de 105 campos separados por punto y coma.</p>
-                <p class="texto-suave">Todavía no se informan pensionados, cargas familiares, CCAF ni APV: revísalos antes de subir.</p>
                 <button type="button" id="btnPrevired">Descargar archivo Previred</button>
             </section>
 
@@ -36,7 +35,25 @@
                 <p class="texto-suave">Los aportes de la reforma previsional no se informan hasta que la Dirección del Trabajo publique sus códigos.</p>
                 <button type="button" id="btnLre">Descargar archivo LRE</button>
             </section>
+
+            <section class="tarjeta archivo-legal">
+                <h2>DJ 1887 y certificados de sueldos</h2>
+                <p class="texto-suave">Declaración jurada anual de sueldos (art. 42 N° 1) para el Importador de Datos del SII, y el Certificado N° 6 de cada trabajador. Se genera con todos los meses del año cerrados.</p>
+                <label>Año comercial<select id="anioDj"></select></label>
+                <div class="acciones-grupo">
+                    <button type="button" class="secundario" id="btnResumenDj">Ver resumen</button>
+                    <button type="button" id="btnArchivoDj">Descargar archivo para el SII</button>
+                    <button type="button" class="secundario" id="btnCertificados">Certificados (PDF)</button>
+                </div>
+            </section>
         </div>
+
+        <section id="panelDj" hidden>
+            <h2 id="tituloDj">DJ 1887</h2>
+            <div class="rejilla rejilla-ancha" id="cuadrosDj"></div>
+            <h3>Trabajadores informados (Sección B)</h3>
+            <div id="tablaDj"></div>
+        </section>
     </main>
 
     <script src="js/api.js"></script>

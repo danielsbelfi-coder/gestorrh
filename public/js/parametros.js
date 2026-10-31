@@ -78,12 +78,42 @@ async function cargarMes() {
     parametros = datos.parametros
     tabla.mostrar(parametros)
     tablaTramos.mostrar(datos.tramos)
+    await cargarFactores()
 
     const nombreMes = nombrePeriodo({ mes: Number(mesTexto().slice(5, 7)), anio: Number(mesTexto().slice(0, 4)) })
     document.getElementById("estadoMes").innerHTML = datos.faltantes.length === 0
         ? `<span class="insignia exito">Completo</span> ${escaparHtml(nombreMes)} tiene todos los parámetros que necesita el cálculo.`
         : `<span class="insignia peligro">Incompleto</span> A ${escaparHtml(nombreMes)} le faltan: <strong>${escaparHtml(datos.faltantes.join(", "))}</strong>. Sin ellos no se pueden calcular las liquidaciones de este mes.${esSoporte ? "" : " La plataforma los carga cada mes; si ya es tiempo de liquidar, escribe a soporte."}`
 }
+
+// ---------- Factores de actualización de la DJ 1887 (del año del mes elegido) ----------
+const NOMBRES_MES_FACTOR = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+async function cargarFactores() {
+    const anio = mesTexto().slice(0, 4)
+    document.getElementById("tituloFactores").textContent = `Factores de actualización DJ 1887 (año comercial ${anio})`
+    const resultado = await llamarApi(`/api/factores-actualizacion/${anio}`)
+    const factores = resultado.status === 200 ? resultado.datos.factores : {}
+    document.getElementById("factoresDj").innerHTML = NOMBRES_MES_FACTOR.map((nombre, i) => {
+        const valor = factores[i + 1]
+        return esSoporte
+            ? `<label>${nombre}<input type="number" step="0.001" min="0.001" max="2.999" data-mes="${i + 1}" value="${valor ?? ""}"></label>`
+            : `<label>${nombre}<output>${valor === undefined ? "—" : escaparHtml(valor.toFixed(3).replace(".", ","))}</output></label>`
+    }).join("")
+    document.getElementById("accionesFactores").hidden = !esSoporte
+}
+
+document.getElementById("btnGuardarFactores").addEventListener("click", async () => {
+    limpiarMensajes()
+    const factores = [...document.querySelectorAll("#factoresDj input")].map((campo) => campo.value === "" ? null : Number(campo.value))
+    const resultado = await llamarApi(`/api/factores-actualizacion/${mesTexto().slice(0, 4)}`, { method: "PUT", body: JSON.stringify({ factores }) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudieron guardar los factores")
+        return
+    }
+    await cargarFactores()
+    mensaje("info", "Factores guardados.")
+})
 
 async function abrirMes(confirmar) {
     limpiarMensajes()
