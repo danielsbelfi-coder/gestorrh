@@ -42,6 +42,16 @@ function botones(fila) {
     if (f) {
         lista.push(`<button type="button" class="chico secundario" data-accion="detalle" data-trabajador="${id}">Detalle</button>`)
     }
+    if (fila.mesCerrado) {
+        // Mes del término cerrado: solo ver y descargar.
+        if (f) {
+            lista.push(`<button type="button" class="chico secundario" data-accion="pdf" data-trabajador="${id}">PDF</button>`)
+        }
+        if (f?.estado === "emitido") {
+            lista.push(`<button type="button" class="chico" data-accion="pagar" data-trabajador="${id}">Marcar pagado</button>`)
+        }
+        return lista.join(" ")
+    }
     if (!f) {
         lista.push(`<button type="button" class="chico secundario" data-accion="calcular" data-trabajador="${id}">Calcular</button>`)
         lista.push(`<button type="button" class="chico secundario" data-accion="quitar-termino" data-trabajador="${id}">Quitar término</button>`)
@@ -70,11 +80,13 @@ async function cargarFiniquitos() {
     document.getElementById("panelCalculo").hidden = true
     document.getElementById("panelDetalle").hidden = true
 
-    const listas = await cargarListas(["/api/trabajadores", "/api/personas"])
+    const listas = await cargarListas(["/api/trabajadores", "/api/personas", "/api/periodos-remuneracion"])
     if (!listas) {
         return
     }
     const personaPorId = porId(listas[1])
+    // Estado del periodo del mes de término: con el mes cerrado, el finiquito solo se ve (para cambiarlo existe la reapertura).
+    const estadoPeriodo = new Map(deEmpresaActual(listas[2]).map((p) => [`${p.anio}-${String(p.mes).padStart(2, "0")}`, p.estado]))
     const trabajadores = deEmpresaActual(listas[0])
     const conTermino = trabajadores.filter((t) => t.fecha_termino)
 
@@ -87,6 +99,7 @@ async function cargarFiniquitos() {
         trabajador,
         persona: personaPorId.get(trabajador.persona_id),
         finiquito: finiquitos[i],
+        mesCerrado: estadoPeriodo.get(String(trabajador.fecha_termino).slice(0, 7)) === "cerrado",
         estado: finiquitos[i]?.estado ?? "sin_calcular"
     })).sort((a, b) => String(b.trabajador.fecha_termino).localeCompare(String(a.trabajador.fecha_termino)))
 
@@ -357,7 +370,7 @@ async function eliminarFiniquito(fila, nombre) {
     const emitido = fila.finiquito.estado === "emitido"
     let motivo = ""
     if (emitido) {
-        const respuesta = prompt(`El finiquito de ${nombre} está cerrado. Para eliminarlo, escribe el motivo (queda registrado):`)
+        const respuesta = prompt(`El finiquito de ${nombre} ya fue cerrado (emitido). Para eliminarlo, escribe el motivo; queda registrado:`)
         if (respuesta === null) {
             return
         }

@@ -70,7 +70,12 @@ const tabla = crearTabla({
         { titulo: "Pago en exceso", valor: (l) => Number(l.saldo_pago_exceso) + Number(l.saldo_anterior ?? 0), html: textoPagoExceso, numero: true },
         {
             titulo: "", orden: false, valor: () => "",
-            html: (l) => `
+            html: (l) => periodoElegido()?.estado !== "abierto"
+                // Periodo cerrado: solo ver. Para cambiar algo existe la reapertura de emergencia.
+                ? `<button type="button" class="chico secundario" data-accion="detalle" data-id="${l.id}">Detalle</button>
+                <button type="button" class="chico secundario" data-accion="pdf" data-id="${l.id}">PDF</button>
+                <button type="button" class="chico secundario" data-accion="pdf-aportes" data-id="${l.id}">PDF con aportes</button>`
+                : `
                 <button type="button" class="chico secundario" data-accion="detalle" data-id="${l.id}">Detalle</button>
                 ${l.estado === "calculada"
                     ? `<button type="button" class="chico" data-accion="emitir" data-id="${l.id}">Cerrar liquidación</button>`
@@ -306,7 +311,7 @@ document.getElementById("tablaLiquidaciones").addEventListener("click", async fu
         const nombre = nombreDe(liquidacion.trabajador_id)
         let motivo = ""
         if (liquidacion.estado === "emitida") {
-            const respuesta = prompt(`La liquidación de ${nombre} está cerrada. Para eliminarla (con todas sus versiones), escribe el motivo; queda registrado:`)
+            const respuesta = prompt(`La liquidación de ${nombre} ya fue cerrada (emitida). Para eliminarla con todas sus versiones, escribe el motivo; queda registrado:`)
             if (respuesta === null) {
                 return
             }
