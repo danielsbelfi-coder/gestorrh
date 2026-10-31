@@ -41,7 +41,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 3. Entrar a la empresa y completar la ficha: tipo de empleador, giro, código de actividad SII, comuna, **organismo administrador (mutual) y tasa adicional**, caja de compensación. Guardar cambios. Estos datos alimentan Previred y las liquidaciones.
 4. **Administración → Usuarios → Crear usuario**: nombre y correo. El sistema genera la contraseña inicial. Luego **Asignar rol** (ADMIN, JEFE_RRHH, RRHH...) por empresa. Crea al menos un usuario RRHH y uno JEFE_RRHH para probar la separación de funciones.
 5. **Consumo del plan** muestra cuántos trabajadores y usuarios quedan.
-6. **Pendientes** (junto a Inicio, con un número en el menú) reúne todo lo que espera firma o aprobación en tus empresas: contratos y anexos por firmar, marcas y correcciones de asistencia, variables del mes y resúmenes de asistencia por aprobar. ADMIN y JEFE_RRHH pueden firmar o aprobar ahí mismo, de a uno o seleccionando varios; RRHH ve la misma lista sin botones, para saber qué falta. **Ver** abre la pantalla de cada registro para revisarlo antes.
+6. **Pendientes** (junto a Inicio, con un número en el menú) reúne todo lo que espera firma o aprobación en tus empresas: contratos y anexos por firmar, marcas y correcciones de asistencia, variables del mes y resúmenes de asistencia por aprobar, y las liquidaciones que hay que recalcular porque cambió el saldo de pago en exceso del mes anterior. ADMIN y JEFE_RRHH pueden firmar o aprobar ahí mismo, de a uno o seleccionando varios; RRHH ve la misma lista sin botones, para saber qué falta. **Ver** abre la pantalla de cada registro para revisarlo antes.
 
 ## 4. Preparar la empresa (RRHH)
 
@@ -120,6 +120,8 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 ### 6.6 Liquidaciones
 **Liquidaciones**: elige el periodo y **Calcular** (un trabajador) o **Calcular todas**. Revisa el detalle, después **Cerrar liquidación** o **Cerrar todas**. Descarga **PDF de todas** o **PDF con aportes** (incluye aportes del empleador). Una liquidación cerrada ya no cambia.
 
+**Pago en exceso**: si los descuentos superan los haberes, la liquidación queda en $0 y el saldo se descuenta en la siguiente liquidación del trabajador (aunque haya un mes sin liquidación entremedio). La columna **Pago en exceso** muestra cuánto descuenta cada liquidación del mes anterior y cuánto queda para el siguiente. Si después se recalcula el mes anterior y su saldo cambia, la liquidación siguiente aparece con **Recalcular** (también en Pendientes) y no se puede cerrar hasta recalcularla.
+
 ### 6.7 Archivos legales
 **Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan los pensionados afiliados a una caja (1 %) ni controlan el tope anual del depósito convenido.
 
@@ -132,7 +134,7 @@ Si todo está listo, aparece una advertencia: después de cerrar no se pueden re
 
 ## 7. Término de la relación laboral
 El finiquito se calcula y emite mientras el periodo del mes de término esté abierto (o reabierto).
-**Finiquitos → Registrar término**: trabajador, fecha de término, causal, fecha del finiquito, lugar de firma, aviso previo, días de feriado tomados, días inhábiles e imputación del seguro de cesantía. **Calcular finiquito** muestra el detalle (se pueden agregar descuentos), luego **Cerrar finiquito**.
+**Finiquitos → Registrar término**: trabajador, fecha de término, causal, fecha del finiquito, lugar de firma, aviso previo, días de feriado tomados, días inhábiles e imputación del seguro de cesantía. **Calcular finiquito** muestra el detalle (se pueden agregar descuentos), luego **Cerrar finiquito**. Antes hay que calcular la liquidación del mes de término: si deja saldo de pago en exceso, el finiquito lo descuenta solo («Saldo de pago en exceso»), hasta dejarlo en $0, y avisa lo que no alcanzó a recuperarse.
 
 ## 8. Exportar datos
 En **Empresas** hay una exportación de los datos de la empresa. Si una cuenta se cancela, sus administradores solo pueden exportar; los datos se conservan un tiempo antes de eliminarse.

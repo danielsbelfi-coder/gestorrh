@@ -155,7 +155,8 @@ function abrirCalculo(fila) {
     document.getElementById("diasInhabiles").value = f?.dias_inhabiles ?? 0
     document.getElementById("imputacionAfc").value = f?.imputacion_afc ?? 0
     document.getElementById("listaDescuentos").innerHTML = ""
-    for (const descuento of f?.descuentos ?? []) {
+    // El saldo de pago en exceso lo agrega el servidor al calcular: no se edita a mano.
+    for (const descuento of (f?.descuentos ?? []).filter((d) => !d.automatico)) {
         agregarFilaDescuento(descuento)
     }
 
@@ -196,7 +197,11 @@ document.getElementById("formCalculo").addEventListener("submit", async function
         return
     }
 
-    mensaje("info", `Finiquito calculado: ${pesos(resultado.datos.total_a_pagar)}. Revísalo y ciérralo cuando la liquidación del mes esté cerrada.`)
+    const saldo = resultado.datos.detalle_calculo?.saldoPagoExceso
+    const textoSaldo = saldo?.descontado > 0
+        ? ` Se descontó el saldo de pago en exceso: ${pesos(saldo.descontado)}.` + (saldo.noRecuperado > 0 ? ` No alcanzó para ${pesos(saldo.noRecuperado)}: esa diferencia se gestiona fuera del sistema.` : "")
+        : ""
+    mensaje("info", `Finiquito calculado: ${pesos(resultado.datos.total_a_pagar)}.${textoSaldo} Revísalo y ciérralo cuando la liquidación del mes esté cerrada.`)
     await cargarFiniquitos()
     const fila = filas.find((f) => f.trabajador.id === resultado.datos.trabajador_id)
     if (fila) {

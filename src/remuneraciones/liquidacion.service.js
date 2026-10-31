@@ -103,23 +103,37 @@ async function obtenerVariablesDelMes(periodoId, trabajadorId) {
     return { aprobadas, pendientes: variables.length - aprobadas.length }
 }
 
+// Saldo de pago en exceso que queda por descontar: el de la última liquidación vigente del trabajador en un periodo
+// anterior (no solo el mes inmediatamente anterior: si un mes no tuvo liquidación, el saldo no se pierde).
 async function obtenerSaldoAnterior(periodo, trabajadorId) {
-    const mesAnterior = periodo.mes === 1 ? 12 : periodo.mes - 1
-    const anioAnterior = periodo.mes === 1 ? periodo.anio - 1 : periodo.anio
-
-    const periodoAnterior = await PeriodoRemuneracion.findOne({
-        where: { empresa_id: periodo.empresa_id, mes: mesAnterior, anio: anioAnterior }
-    })
-
-    if (periodoAnterior === null) {
-        return 0
-    }
-
     const liquidacionAnterior = await Liquidacion.findOne({
-        where: { periodo_id: periodoAnterior.id, trabajador_id: trabajadorId, vigente: true }
+        where: { trabajador_id: trabajadorId, vigente: true },
+        include: [{
+            model: PeriodoRemuneracion,
+            attributes: ["anio", "mes"],
+            required: true,
+            where: {
+                empresa_id: periodo.empresa_id,
+                [Op.or]: [{ anio: { [Op.lt]: periodo.anio } }, { anio: periodo.anio, mes: { [Op.lt]: periodo.mes } }]
+            }
+        }],
+        order: [[PeriodoRemuneracion, "anio", "DESC"], [PeriodoRemuneracion, "mes", "DESC"]]
     })
 
-    return liquidacionAnterior === null ? 0 : liquidacionAnterior.saldo_pago_exceso
+    return liquidacionAnterior === null ? 0 : Number(liquidacionAnterior.saldo_pago_exceso)
+}
+
+// ¿La liquidación se calculó con un saldo anterior distinto del que hay ahora? (por ejemplo, porque después se
+// recalculó el mes anterior). Se calcula al momento, para no guardar una marca que se pueda desincronizar.
+async function saldoDesactualizado(liquidacion, periodo) {
+    const guardado = Number(liquidacion.detalle_calculo?.saldoAnterior ?? 0)
+    const actual = await obtenerSaldoAnterior(periodo, liquidacion.trabajador_id)
+    return { desactualizado: guardado !== actual, guardado, actual }
+}
+
+function mensajeSaldoDesactualizado({ guardado, actual }) {
+    const pesos = (monto) => `$${monto.toLocaleString("es-CL")}`
+    return `Cambió el saldo de pago en exceso del mes anterior (${pesos(guardado)} → ${pesos(actual)}): recalcule la liquidación antes de emitirla`
 }
 
 async function rimaDeLicencia(licencia, empresaId) {
@@ -668,6 +682,11 @@ async function validarEmision(periodo, liquidacion) {
     if (cambiosVariables + cambiosResumen > 0) {
         throw new ConflictError("Hubo cambios en las variables o en la asistencia después del cálculo; recalcule antes de emitir")
     }
+
+    const saldo = await saldoDesactualizado(liquidacion, periodo)
+    if (saldo.desactualizado) {
+        throw new ConflictError(mensajeSaldoDesactualizado(saldo))
+    }
 }
 
 async function emitirLiquidacion(periodo_id, liquidacion_id, empresasPermitidas, usuarioId) {
@@ -737,8 +756,9 @@ async function emitirLiquidacionesPeriodo(periodo_id, empresasPermitidas, usuari
     return { emitidas: calculadas.length, problemas: [] }
 }
 
+// Cada liquidación con el saldo que descuenta del mes anterior y si ese saldo quedó desactualizado.
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
-    return await Liquidacion.findAll({
+    const liquidaciones = await Liquidacion.findAll({
         where: { periodo_id: periodo_id, vigente: true },
         include: [{
             model: PeriodoRemuneracion,
@@ -747,6 +767,18 @@ async function listarLiquidaciones(periodo_id, empresasPermitidas) {
             }, required: true
         }]
     })
+
+    const resultado = []
+    for (const liquidacion of liquidaciones) {
+        const saldo = await saldoDesactualizado(liquidacion, liquidacion.PeriodoRemuneracion)
+        resultado.push({
+            ...liquidacion.toJSON(),
+            saldo_anterior: saldo.guardado,
+            saldo_desactualizado: saldo.desactualizado,
+            saldo_anterior_actual: saldo.actual
+        })
+    }
+    return resultado
 }
 
 async function obtenerLiquidacionPorId(id, empresasPermitidas) {
@@ -776,5 +808,6 @@ module.exports = {
     recalcularLiquidacion,
     emitirLiquidacion,
     emitirLiquidacionesPeriodo,
+    saldoDesactualizado,
     CODIGOS_PARAMETROS
 }

@@ -14,6 +14,8 @@ const { armarFiniquito } = require("./armar_finiquito.js")
 const TOPE_UF_INDEMNIZACION = 90
 
 const CODIGOS_DESCUENTO_FINIQUITO = [3171, 3183, 3185, 3186, 3188]
+const GLOSA_SALDO_PAGO_EXCESO = "Saldo de pago en exceso"
+const CODIGO_LRE_PAGO_EXCESO = 3188
 
 async function montosMesesAnteriores(trabajador, anio, mes) {
     const liquidaciones = await Liquidacion.findAll({
@@ -73,7 +75,8 @@ function validarDatosFiniquito(datos, fechaTermino) {
         throw new ValidationError("La imputación del seguro de cesantía debe ser un monto entero de 0 o más")
     }
 
-    const descuentos = datos.descuentos ?? []
+    // El descuento del saldo de pago en exceso lo agrega el sistema: si la pantalla lo reenvía, se ignora.
+    const descuentos = Array.isArray(datos.descuentos) ? datos.descuentos.filter((d) => d?.automatico !== true) : (datos.descuentos ?? [])
     const descuentosValidos = Array.isArray(descuentos) && descuentos.every((d) =>
         typeof d.glosa === "string" && d.glosa.trim() !== "" && Number.isInteger(d.monto) && d.monto > 0
         && CODIGOS_DESCUENTO_FINIQUITO.includes(d.codigo_lre))
@@ -110,7 +113,14 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
         throw new ConflictError("Registre primero la fecha y la causal de término del trabajador")
     }
 
-    await exigirPeriodoAbierto(trabajador)
+    const periodo = await exigirPeriodoAbierto(trabajador)
+
+    // El finiquito descuenta el saldo de pago en exceso que deja la liquidación del mes de término: debe existir.
+    const liquidacionDelMes = await Liquidacion.findOne({ where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true } })
+    if (liquidacionDelMes === null) {
+        throw new ConflictError(`Calcule primero la liquidación de ${String(periodo.mes).padStart(2, "0")}-${periodo.anio} del trabajador: el finiquito descuenta el saldo de pago en exceso que deje`)
+    }
+    const saldoPendiente = Number(liquidacionDelMes.saldo_pago_exceso)
 
     const descuentos = validarDatosFiniquito(datos, trabajador.fecha_termino)
 
@@ -138,23 +148,32 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
         throw new ValidationError(`Los días tomados (${datos.dias_tomados}) superan los días ganados (${diasGanados})`)
     }
 
+    const calcularMontos = (lista) => montosFiniquito({
+        causal: trabajador.causal_termino,
+        avisoPrevioDado: datos.aviso_previo_dado,
+        tiempo,
+        baseIndemnizacion: bases.baseIndemnizacion,
+        baseFeriado: bases.baseFeriado,
+        topeUF: TOPE_UF_INDEMNIZACION,
+        valorUF: Number(uf.valor),
+        diasPendientes,
+        diasInhabiles: Number(datos.dias_inhabiles),
+        imputacionAfc: Number(datos.imputacion_afc ?? 0),
+        descuentos: lista
+    })
+
     let montos
     try {
-        montos = montosFiniquito({
-            causal: trabajador.causal_termino,
-            avisoPrevioDado: datos.aviso_previo_dado,
-            tiempo,
-            baseIndemnizacion: bases.baseIndemnizacion,
-            baseFeriado: bases.baseFeriado,
-            topeUF: TOPE_UF_INDEMNIZACION,
-            valorUF: Number(uf.valor),
-            diasPendientes,
-            diasInhabiles: Number(datos.dias_inhabiles),
-            imputacionAfc: Number(datos.imputacion_afc ?? 0),
-            descuentos
-        })
+        montos = calcularMontos(descuentos)
     } catch (error) {
         throw new ConflictError(error.message)
+    }
+
+    // Saldo de pago en exceso: se descuenta hasta dejar el finiquito en cero; lo que no alcanza queda informado.
+    const saldoDescontado = Math.min(saldoPendiente, montos.totalAPagar)
+    if (saldoDescontado > 0) {
+        descuentos.push({ glosa: GLOSA_SALDO_PAGO_EXCESO, monto: saldoDescontado, codigo_lre: CODIGO_LRE_PAGO_EXCESO, automatico: true })
+        montos = calcularMontos(descuentos)
     }
 
     const campos = {
@@ -182,7 +201,8 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
             valorUF: Number(uf.valor),
             topeUF: TOPE_UF_INDEMNIZACION,
             baseTopada: montos.baseTopada,
-            feriado: { diasGanados, diasTomados: Number(datos.dias_tomados), diasPendientes, diasInhabiles: Number(datos.dias_inhabiles), diasPorPagar: montos.diasFeriado }
+            feriado: { diasGanados, diasTomados: Number(datos.dias_tomados), diasPendientes, diasInhabiles: Number(datos.dias_inhabiles), diasPorPagar: montos.diasFeriado },
+            saldoPagoExceso: { saldo: saldoPendiente, descontado: saldoDescontado, noRecuperado: saldoPendiente - saldoDescontado }
         }
     }
 
@@ -227,6 +247,9 @@ async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
     }
 
     const detalle = finiquito.detalle_calculo
+    if (Number(liquidacion.saldo_pago_exceso) !== Number(detalle.saldoPagoExceso?.saldo ?? 0)) {
+        throw new ConflictError("El saldo de pago en exceso de la liquidación del mes cambió después del cálculo; recalcule el finiquito antes de emitirlo")
+    }
     if (detalle.fechaTermino !== finiquito.Trabajador.fecha_termino || detalle.causal !== finiquito.Trabajador.causal_termino) {
         throw new ConflictError("La fecha o la causal de término cambiaron después del cálculo; recalcule el finiquito antes de emitirlo")
     }

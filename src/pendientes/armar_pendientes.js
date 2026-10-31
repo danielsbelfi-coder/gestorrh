@@ -8,7 +8,8 @@ const TIPOS = {
     marca: "Marca de asistencia",
     correccion: "Corrección de asistencia",
     variable: "Variable del mes",
-    resumen: "Resumen de asistencia"
+    resumen: "Resumen de asistencia",
+    saldo: "Liquidación con saldo desactualizado"
 }
 
 const TIPO_CONTRATO = { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
@@ -137,6 +138,25 @@ function deResumen(resumen) {
     })
 }
 
+// Liquidación calculada con un saldo de pago en exceso que después cambió (se recalculó el mes anterior).
+// En borrador se vuelve a calcular; emitida, se recalcula como una versión nueva con un motivo fijo.
+const MOTIVO_SALDO = "Cambió el saldo de pago en exceso del mes anterior"
+
+function deSaldo(liquidacion, saldo) {
+    const periodo = liquidacion.PeriodoRemuneracion
+    const pesos = (monto) => `$${Number(monto).toLocaleString("es-CL")}`
+    const ruta = `/api/periodos-remuneracion/${periodo.id}/liquidaciones`
+    return base("saldo", liquidacion.id, liquidacion.Trabajador, {
+        detalle: `Mes ${nombreMes(periodo)}: se calculó con un saldo anterior de ${pesos(saldo.guardado)} y ahora es ${pesos(saldo.actual)}`,
+        fecha: inicioDelPeriodo(periodo),
+        enlace: enlace("liquidaciones.html", { periodo: periodo.id, empresa: periodo.empresa_id }),
+        accion: liquidacion.estado === "calculada"
+            ? { texto: "Recalcular", metodo: "POST", ruta, cuerpo: { trabajador_id: liquidacion.trabajador_id } }
+            : { texto: "Recalcular", metodo: "POST", ruta: `${ruta}/${liquidacion.id}/recalcular`, cuerpo: { motivo: MOTIVO_SALDO } },
+        permiso: "CALCULAR_LIQUIDACION"
+    })
+}
+
 // rolesPorEmpresa: { [empresa_id]: "ADMIN" | "JEFE_RRHH" | "RRHH" }. Sin rol en esa empresa (por ejemplo soporte), no actúa.
 // permisos: la matriz PERMISOS de src/shared/permisos.js (se recibe como parámetro para que esta función no toque la base).
 function puedeActuar(item, rolesPorEmpresa, permisos) {
@@ -149,4 +169,4 @@ function ordenar(items) {
     return [...items].sort((a, b) => String(a.fecha ?? "").localeCompare(String(b.fecha ?? "")) || a.clave.localeCompare(b.clave))
 }
 
-module.exports = { TIPOS, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, puedeActuar, ordenar, nombrePersona, fechaCorta }
+module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }

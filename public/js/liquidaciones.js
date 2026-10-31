@@ -35,6 +35,21 @@ function rutDe(trabajadorId) {
     return persona ? formatearRut(persona.rut, persona.dv) : ""
 }
 
+// Saldo de pago en exceso: lo que descuenta del mes anterior, lo que queda para el siguiente y si quedó desactualizado.
+function textoPagoExceso(l) {
+    const partes = []
+    if (Number(l.saldo_anterior) > 0) {
+        partes.push(`Descuenta ${escaparHtml(pesos(l.saldo_anterior))}`)
+    }
+    if (Number(l.saldo_pago_exceso) > 0) {
+        partes.push(`Queda ${escaparHtml(pesos(l.saldo_pago_exceso))}`)
+    }
+    if (l.saldo_desactualizado) {
+        partes.push(`<span class="insignia peligro" title="El saldo del mes anterior cambió a ${escaparHtml(pesos(l.saldo_anterior_actual))}: recalcula esta liquidación">Recalcular</span>`)
+    }
+    return partes.length > 0 ? partes.join("<br>") : `<span class="texto-suave">—</span>`
+}
+
 const tabla = crearTabla({
     contenedor: "tablaLiquidaciones",
     textoBuscar: "Buscar por nombre o RUT…",
@@ -47,6 +62,7 @@ const tabla = crearTabla({
         { titulo: "Haberes", valor: (l) => Number(l.total_haberes), html: (l) => escaparHtml(pesos(l.total_haberes)), numero: true },
         { titulo: "Descuentos", valor: (l) => Number(l.total_descuentos), html: (l) => escaparHtml(pesos(l.total_descuentos)), numero: true },
         { titulo: "Líquido", valor: (l) => Number(l.liquido_a_pagar), html: (l) => `<strong>${escaparHtml(pesos(l.liquido_a_pagar))}</strong>`, numero: true },
+        { titulo: "Pago en exceso", valor: (l) => Number(l.saldo_pago_exceso) + Number(l.saldo_anterior ?? 0), html: textoPagoExceso, numero: true },
         {
             titulo: "", orden: false, valor: () => "",
             html: (l) => `

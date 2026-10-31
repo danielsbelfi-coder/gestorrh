@@ -94,7 +94,7 @@ async function cargar() {
 // Ejecuta la acción de un pendiente. Devuelve null si salió bien o el texto del error.
 async function actuar(item) {
     const resultado = await llamarApi(item.accion.ruta, { method: item.accion.metodo, body: JSON.stringify(item.accion.cuerpo ?? {}) })
-    return resultado.status === 200 ? null : (resultado.datos?.error ?? `Error ${resultado.status}`)
+    return resultado.status === 200 || resultado.status === 201 ? null : (resultado.datos?.error ?? `Error ${resultado.status}`)
 }
 
 document.getElementById("tablaPendientes").addEventListener("change", (evento) => {

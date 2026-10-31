@@ -1,7 +1,7 @@
 // Pendientes: todo lo que espera firma o aprobación en las empresas del usuario. Ver «Módulo Pendientes» en el SPEC.
 const { Op } = require("sequelize")
 const {
-    ContratoTrabajo, ContratoAnexo, Asistencia, AsistenciaCorreccion, VariablePeriodo, ResumenAsistencia,
+    ContratoTrabajo, ContratoAnexo, Asistencia, AsistenciaCorreccion, VariablePeriodo, ResumenAsistencia, Liquidacion,
     PeriodoRemuneracion, Trabajador, Persona, Empresa, ConceptoRemuneracion, UsuarioEmpresaRol, Rol
 } = require("../shared/associations.js")
 const { PERMISOS, ROLES_ASIGNABLES } = require("../shared/permisos.js")
@@ -25,6 +25,24 @@ async function mesesCerrados(empresas) {
     return new Set(periodos.map((p) => `${p.empresa_id}-${p.anio}-${String(p.mes).padStart(2, "0")}`))
 }
 
+// Liquidaciones de periodos abiertos cuyo saldo de pago en exceso cambió después del cálculo.
+async function saldosDesactualizados(empresas) {
+    const { saldoDesactualizado } = require("../remuneraciones/liquidacion.service.js")
+    const liquidaciones = await Liquidacion.findAll({
+        where: { vigente: true },
+        attributes: ["id", "trabajador_id", "estado", "detalle_calculo"],
+        include: [periodoAbiertoDe(empresas), trabajadorDe(empresas)]
+    })
+    const resultado = []
+    for (const liquidacion of liquidaciones) {
+        const saldo = await saldoDesactualizado(liquidacion, liquidacion.PeriodoRemuneracion)
+        if (saldo.desactualizado) {
+            resultado.push({ liquidacion, saldo })
+        }
+    }
+    return resultado
+}
+
 async function rolesPorEmpresa(usuarioId) {
     const vinculos = await UsuarioEmpresaRol.findAll({
         where: { usuario_id: usuarioId, estado: "activo" },
@@ -39,7 +57,7 @@ async function listarPendientes(usuario, empresasPermitidas) {
         return { items: [], total: 0, accionables: 0 }
     }
 
-    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles] = await Promise.all([
+    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles, saldos] = await Promise.all([
         ContratoTrabajo.findAll({ where: { estado_firma: "pendiente", estado: "vigente" }, include: [trabajadorDe(empresas)] }),
         ContratoAnexo.findAll({
             where: { estado_firma: "pendiente" },
@@ -56,7 +74,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         }),
         ResumenAsistencia.findAll({ where: { estado: "pendiente" }, include: [periodoAbiertoDe(empresas), trabajadorDe(empresas)] }),
         mesesCerrados(empresas),
-        rolesPorEmpresa(usuario.id)
+        rolesPorEmpresa(usuario.id),
+        saldosDesactualizados(empresas)
     ])
 
     const marcasAbiertas = marcas.filter((marca) => !cerrados.has(`${marca.Trabajador.empresa_id}-${String(marca.fecha).slice(0, 7)}`))
@@ -67,7 +86,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         ...marcasAbiertas.map(armar.deMarca),
         ...correcciones.map(armar.deCorreccion),
         ...variables.map(armar.deVariable),
-        ...resumenes.map(armar.deResumen)
+        ...resumenes.map(armar.deResumen),
+        ...saldos.map(({ liquidacion, saldo }) => armar.deSaldo(liquidacion, saldo))
     ]).map((item) => ({ ...item, puede_actuar: armar.puedeActuar(item, roles, PERMISOS) }))
 
     return { items, total: items.length, accionables: items.filter((item) => item.puede_actuar).length }

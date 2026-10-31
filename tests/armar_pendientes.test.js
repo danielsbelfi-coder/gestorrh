@@ -69,3 +69,17 @@ test("ordenar: más antiguos primero", () => {
     const lista = [{ fecha: "2027-08-01", clave: "a-1" }, { fecha: "2027-07-01", clave: "b-2" }, { fecha: "2027-07-01", clave: "a-3" }]
     assert.deepEqual(p.ordenar(lista).map((i) => i.clave), ["a-3", "b-2", "a-1"])
 })
+
+test("deSaldo: borrador se vuelve a calcular; emitida se recalcula con motivo fijo", () => {
+    const armarP = require("../src/pendientes/armar_pendientes.js")
+    const trabajador = { id: 7, empresa_id: 3, Persona: { nombres: "Ana", apellido_paterno: "Soto" }, Empresa: { razon_social: "Emp" } }
+    const periodo = { id: 12, empresa_id: 3, mes: 10, anio: 2026 }
+    const borrador = armarP.deSaldo({ id: 50, trabajador_id: 7, estado: "calculada", Trabajador: trabajador, PeriodoRemuneracion: periodo }, { guardado: 0, actual: 120000 })
+    assert.equal(borrador.tipo, "saldo")
+    assert.equal(borrador.permiso, "CALCULAR_LIQUIDACION")
+    assert.deepEqual(borrador.accion, { texto: "Recalcular", metodo: "POST", ruta: "/api/periodos-remuneracion/12/liquidaciones", cuerpo: { trabajador_id: 7 } })
+    assert.match(borrador.detalle, /\$0 y ahora es \$120\.000/)
+    const emitida = armarP.deSaldo({ id: 50, trabajador_id: 7, estado: "emitida", Trabajador: trabajador, PeriodoRemuneracion: periodo }, { guardado: 0, actual: 1 })
+    assert.equal(emitida.accion.ruta, "/api/periodos-remuneracion/12/liquidaciones/50/recalcular")
+    assert.equal(emitida.accion.cuerpo.motivo, armarP.MOTIVO_SALDO)
+})
