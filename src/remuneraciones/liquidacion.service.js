@@ -56,7 +56,7 @@ const CODIGOS_SISTEMA = [
     "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
     "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA",
-    "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC"
+    "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC"
 ]
 
 async function obtenerConceptosSistema() {
@@ -105,6 +105,30 @@ async function obtenerVariablesDelMes(periodoId, trabajadorId) {
 
 // Saldo de pago en exceso que queda por descontar: el de la última liquidación vigente del trabajador en un periodo
 // anterior (no solo el mes inmediatamente anterior: si un mes no tuvo liquidación, el saldo no se pierde).
+// Depósito convenido ya enterado en el año por la persona en la empresa (todas sus relaciones), en los meses
+// anteriores y en otra relación del mismo mes. Sirve para el tope anual de 900 UF.
+async function depositoConvenidoDelAnio(periodo, trabajador) {
+    const relaciones = await Trabajador.findAll({ where: { persona_id: trabajador.persona_id, empresa_id: trabajador.empresa_id }, attributes: ["id"] })
+    const periodos = await PeriodoRemuneracion.findAll({
+        where: { empresa_id: periodo.empresa_id, anio: periodo.anio, mes: { [Op.lte]: periodo.mes } },
+        attributes: ["id", "mes"]
+    })
+    const mesDe = new Map(periodos.map((p) => [p.id, p.mes]))
+    const liquidaciones = await Liquidacion.findAll({
+        where: { periodo_id: [...mesDe.keys()], trabajador_id: relaciones.map((r) => r.id), vigente: true },
+        attributes: ["id", "periodo_id", "trabajador_id"]
+    })
+    const previas = liquidaciones.filter((l) => mesDe.get(l.periodo_id) < periodo.mes || l.trabajador_id !== trabajador.id)
+    if (previas.length === 0) {
+        return 0
+    }
+    const lineas = await LiquidacionLinea.findAll({
+        where: { liquidacion_id: previas.map((l) => l.id), codigo: ["DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO"] },
+        attributes: ["monto"]
+    })
+    return lineas.reduce((suma, linea) => suma + Number(linea.monto), 0)
+}
+
 async function obtenerSaldoAnterior(periodo, trabajadorId) {
     const liquidacionAnterior = await Liquidacion.findOne({
         where: { trabajador_id: trabajadorId, vigente: true },
@@ -470,6 +494,9 @@ async function prepararCalculo(periodo, trabajador) {
     const { ahorrosEnMes } = require("../trabajadores/ahorro_voluntario.service.js")
     // Con dos relaciones en el mes, el APV y el depósito convenido se descuentan una sola vez, en la última relación.
     const ahorrosDelMes = hayPosterior ? [] : await ahorrosEnMes(persona.id, periodo.anio, periodo.mes)
+    const depositoConvenidoAcumulado = ahorrosDelMes.some((a) => a.tipo === "deposito_convenido")
+        ? await depositoConvenidoDelAnio(periodo, trabajador)
+        : 0
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)
@@ -542,6 +569,7 @@ async function prepararCalculo(periodo, trabajador) {
         saldoPendiente,
         relacionAnterior,
         ahorros: ahorrosDelMes,
+        depositoConvenidoAcumulado,
         conceptos
     }
 
@@ -586,6 +614,10 @@ async function prepararCalculo(periodo, trabajador) {
     const avisos = resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : []
+    const exceso = resultado.ahorros.depositoConvenido?.exceso ?? 0
+    if (exceso > 0) {
+        avisos.push(`El depósito convenido del año supera las 900 UF: $${exceso.toLocaleString("es-CL")} de este mes pasan a ser renta tributable y pagan impuesto único (art. 20 del D.L. 3.500)`)
+    }
 
     // Saldo de pago en exceso que quedó sin recuperar en el finiquito de una relación anterior: no se descuenta solo
     // (es otra relación laboral; requiere la autorización firmada del trabajador), pero se avisa.

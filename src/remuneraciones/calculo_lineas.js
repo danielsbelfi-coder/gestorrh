@@ -1,5 +1,5 @@
 const { DIAS_MES_COMERCIAL } = require("./dias_pago.js")
-const { calcularAhorros } = require("./ahorro_voluntario.js")
+const { calcularAhorros, repartirDepositoConvenido } = require("./ahorro_voluntario.js")
 
 function valorHoraOrdinaria(sueldoBase, horasSemanales) {
     return (sueldoBase / 30 * 28) / (horasSemanales * 4)
@@ -133,6 +133,14 @@ function calcularLiquidacionPorLineas(datos) {
     // APV y depósito convenido vigentes en el mes; el APV régimen B rebaja la base tributable hasta 50 UF.
     const ahorros = calcularAhorros(datos.ahorros ?? [], { valorUF, rentaImponible })
 
+    // Depósito convenido: lo que pasa de 900 UF en el año es un haber tributable (no imponible) y paga impuesto este mes.
+    if (ahorros.depositoConvenido) {
+        Object.assign(ahorros.depositoConvenido, repartirDepositoConvenido(ahorros.depositoConvenido.monto, Number(datos.depositoConvenidoAcumulado ?? 0), valorUF))
+        if (ahorros.depositoConvenido.exceso > 0) {
+            lineas.push({ concepto: conceptos.DEPOSITO_CONVENIDO_EXCESO, cantidad: null, monto: ahorros.depositoConvenido.exceso })
+        }
+    }
+
     const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoSaludLegal + descuentoCesantia) - ahorros.rebajaTributable)
     const baseTributableMes = baseTributable + Number(anterior?.baseTributable ?? 0)
     const baseEnUTM = baseTributableMes / valorUTM
@@ -156,9 +164,10 @@ function calcularLiquidacionPorLineas(datos) {
         }
     }
 
-    // El depósito convenido es un haber (no imponible ni tributable) que se descuenta completo para enviarlo a la institución.
-    if (ahorros.depositoConvenido?.monto > 0) {
-        lineas.push({ concepto: conceptos.DEPOSITO_CONVENIDO, cantidad: null, monto: ahorros.depositoConvenido.monto })
+    // El depósito convenido es un haber (no imponible ni tributable hasta el tope anual) que se descuenta completo
+    // para enviarlo a la institución; el exceso ya se agregó como haber tributable.
+    if (ahorros.depositoConvenido?.exento > 0) {
+        lineas.push({ concepto: conceptos.DEPOSITO_CONVENIDO, cantidad: null, monto: ahorros.depositoConvenido.exento })
     }
 
     const sumarTipo = (tipo) => lineas.filter((l) => l.concepto.tipo === tipo).reduce((suma, l) => suma + l.monto, 0)

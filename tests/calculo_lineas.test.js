@@ -295,3 +295,33 @@ test("dos relaciones en el mes: topes compartidos e impuesto reliquidado", () =>
     assert.strictEqual(impuesto(segunda), total - impuesto(primera))
     assert.ok(sola)
 })
+
+test("depósito convenido sobre 900 UF en el año: el exceso es haber tributable (no imponible) y paga impuesto", () => {
+    const conceptos = {
+        ...CONCEPTOS,
+        DEPOSITO_CONVENIDO: concepto("DEPOSITO_CONVENIDO", "haber"),
+        DEPOSITO_CONVENIDO_EXCESO: concepto("DEPOSITO_CONVENIDO_EXCESO", "haber", { tributable: true }),
+        DESCUENTO_DEPOSITO_CONVENIDO: concepto("DESCUENTO_DEPOSITO_CONVENIDO", "descuento")
+    }
+    const datos = {
+        sueldoBase: 1500000, horasSemanales: 42, diasPagados: 30, variables: [], minutosAtraso: 0, ingresoMinimoMensual: 553553,
+        tasaAfp: 11.44, tasaSalud: 7, planSaludUF: 0, topeImponibleUF: 90, valorUF: 40000, valorUTM: 70000, tasaCesantia: 0.6, topeCesantiaUF: 135.2,
+        tramos: [{ desdeUTM: 0, hastaUTM: 13.5, tasa: 0, rebajaUTM: 0 }, { desdeUTM: 13.5, hastaUTM: 30, tasa: 4, rebajaUTM: 0.54 }, { desdeUTM: 30, hastaUTM: null, tasa: 8, rebajaUTM: 1.74 }],
+        saldoPendiente: 0, conceptos,
+        ahorros: [{ tipo: "deposito_convenido", institucion_codigo: "033", institucion_nombre: "AFP Capital", forma_pago: 1, regimen: null, modalidad: "pesos", monto: "3000000" }]
+    }
+    const monto = (r, codigo) => r.lineas.filter((l) => l.concepto.codigo === codigo).reduce((s, l) => s + l.monto, 0)
+    const dentro = calcularLiquidacionPorLineas({ ...datos, depositoConvenidoAcumulado: 0 })
+    // Tope: 900 × 40.000 = 36.000.000; ya van 34.000.000 → quedan 2.000.000 exentos y 1.000.000 tributan.
+    const pasa = calcularLiquidacionPorLineas({ ...datos, depositoConvenidoAcumulado: 34000000 })
+
+    assert.strictEqual(monto(dentro, "DEPOSITO_CONVENIDO"), 3000000)
+    assert.strictEqual(monto(dentro, "DEPOSITO_CONVENIDO_EXCESO"), 0)
+    assert.strictEqual(monto(pasa, "DEPOSITO_CONVENIDO"), 2000000)
+    assert.strictEqual(monto(pasa, "DEPOSITO_CONVENIDO_EXCESO"), 1000000)
+    assert.strictEqual(monto(pasa, "DESCUENTO_DEPOSITO_CONVENIDO"), 3000000)
+    assert.strictEqual(pasa.baseTributable, dentro.baseTributable + 1000000)
+    assert.strictEqual(pasa.rentaImponible, dentro.rentaImponible)
+    assert.ok(monto(pasa, "IMPUESTO_UNICO") > monto(dentro, "IMPUESTO_UNICO"))
+    assert.deepStrictEqual({ tope: pasa.ahorros.depositoConvenido.tope, exceso: pasa.ahorros.depositoConvenido.exceso }, { tope: 36000000, exceso: 1000000 })
+})

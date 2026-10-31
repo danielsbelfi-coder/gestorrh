@@ -66,3 +66,10 @@ test("calcularAhorros: pesos, UF y porcentaje; rebaja del régimen B con tope de
     assert.equal(a.calcularAhorros([{ ...filas[0], regimen: "A" }], valores).rebajaTributable, 0)
     assert.deepEqual(a.calcularAhorros([], valores), { apvi: null, apvc: null, depositoConvenido: null, rebajaTributable: 0 })
 })
+
+test("repartirDepositoConvenido: dentro del tope, en el borde y todo sobre el tope", () => {
+    const { repartirDepositoConvenido } = require("../src/remuneraciones/ahorro_voluntario.js")
+    assert.deepEqual(repartirDepositoConvenido(500000, 0, 40000), { tope: 36000000, acumulado: 0, exento: 500000, exceso: 0 })
+    assert.deepEqual(repartirDepositoConvenido(500000, 35800000, 40000), { tope: 36000000, acumulado: 35800000, exento: 200000, exceso: 300000 })
+    assert.deepEqual(repartirDepositoConvenido(500000, 37000000, 40000), { tope: 36000000, acumulado: 37000000, exento: 0, exceso: 500000 })
+})

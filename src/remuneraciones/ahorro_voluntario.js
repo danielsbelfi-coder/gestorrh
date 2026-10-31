@@ -7,6 +7,8 @@ const MODALIDADES = ["pesos", "uf", "porcentaje"]
 const FORMAS_PAGO = [1, 2] // 1 directa, 2 indirecta (tabla 12 de Previred)
 // El APV régimen B descontado por planilla rebaja la base del impuesto único hasta este tope mensual (art. 42 bis LIR).
 const TOPE_REBAJA_APV_B_UF = 50
+// Art. 20 del D.L. 3.500: el depósito convenido no es renta hasta 900 UF por año calendario; el exceso tributa.
+const TOPE_DEPOSITO_CONVENIDO_UF = 900
 
 const NOMBRES_TIPO = { apvi: "APV individual", apvc: "APV colectivo", deposito_convenido: "Depósito convenido" }
 
@@ -161,6 +163,14 @@ function calcularAhorros(ahorros, { valorUF, rentaImponible }) {
     return { apvi, apvc, depositoConvenido, rebajaTributable }
 }
 
+// Parte del depósito convenido del mes que queda dentro del tope anual (no tributable) y el exceso (tributable).
+// acumulado: lo depositado antes en el año por la persona en la empresa; tope con la UF del mes de cálculo.
+function repartirDepositoConvenido(monto, acumulado, valorUF) {
+    const tope = Math.round(TOPE_DEPOSITO_CONVENIDO_UF * valorUF)
+    const exento = Math.max(0, Math.min(monto, tope - acumulado))
+    return { tope, acumulado, exento, exceso: monto - exento }
+}
+
 // Meses "AAAA-MM" cerrados que caen dentro de [desde, hasta] (hasta null = sin término).
 function mesesCerradosEnRango(desde, hasta, mesesCerrados) {
     const desdeMes = mes(desde)
@@ -175,6 +185,8 @@ module.exports = {
     MODALIDADES,
     NOMBRES_TIPO,
     TOPE_REBAJA_APV_B_UF,
+    TOPE_DEPOSITO_CONVENIDO_UF,
+    repartirDepositoConvenido,
     validarAhorro,
     normalizarAhorro,
     ahorrosDelMes,

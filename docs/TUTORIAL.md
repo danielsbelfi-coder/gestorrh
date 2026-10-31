@@ -80,7 +80,7 @@ La asignación se paga por **mes completo**: cuenta toda carga vigente al menos 
 ### Ahorro previsional voluntario (ficha de la persona)
 En la ficha de la persona, sección **Ahorro previsional voluntario**, se registran el **APV individual**, el **APV colectivo** y el **depósito convenido** que se descuentan por planilla: institución (una AFP de la lista u otra con su código Previred de 3 dígitos), número de contrato, forma de pago (directa o indirecta), régimen A o B, monto en pesos, UF o porcentaje de la renta imponible, aporte del empleador (solo APV colectivo) y mes desde y hasta. Solo puede haber uno de cada tipo vigente por mes.
 - El APV **régimen B** rebaja la base del impuesto único del mes, hasta 50 UF.
-- El **depósito convenido** aparece como haber y como descuento del mismo monto (no cambia el líquido).
+- El **depósito convenido** aparece como haber y como descuento del mismo monto (no cambia el líquido). Hasta 900 UF en el año (sumando todas las relaciones de la persona en la empresa, con la UF del mes) no tributa; lo que pase de ese tope aparece como «Depósito convenido sobre 900 UF», paga impuesto único ese mes y la liquidación lo avisa.
 - El aporte del empleador al APV colectivo va con los aportes del empleador.
 
 ### Caja de compensación (CCAF)
