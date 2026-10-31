@@ -11,15 +11,16 @@ function fijar(persona, campo, valor) {
 
 async function aplicarPrevisionGuardada(liquidaciones) {
     const lista = (Array.isArray(liquidaciones) ? liquidaciones : [liquidaciones])
-        .filter((liquidacion) => liquidacion?.detalle_calculo?.afp?.id && liquidacion.Trabajador?.Persona)
+        .filter((liquidacion) => liquidacion?.detalle_calculo?.afp && liquidacion.Trabajador?.Persona)
 
     if (lista.length === 0) {
         return
     }
 
-    const idsAfp = [...new Set(lista.map((liquidacion) => liquidacion.detalle_calculo.afp.id))]
+    // Sin AFP (técnico extranjero): id nulo.
+    const idsAfp = [...new Set(lista.map((liquidacion) => liquidacion.detalle_calculo.afp.id).filter(Boolean))]
     const idsIsapre = [...new Set(lista.map((liquidacion) => liquidacion.detalle_calculo.salud?.isapre_id).filter(Boolean))]
-    const afps = new Map((await Afp.findAll({ where: { id: idsAfp } })).map((afp) => [afp.id, afp]))
+    const afps = new Map((idsAfp.length ? await Afp.findAll({ where: { id: idsAfp } }) : []).map((afp) => [afp.id, afp]))
     const isapres = new Map((idsIsapre.length ? await Isapre.findAll({ where: { id: idsIsapre } }) : []).map((isapre) => [isapre.id, isapre]))
 
     for (const liquidacion of lista) {

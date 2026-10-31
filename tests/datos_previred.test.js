@@ -155,3 +155,20 @@ test("CCAF y APV: una liquidación antigua no informa caja ni APV", () => {
     assert.strictEqual(datos.ccaf.codigo, null)
     assert.deepStrictEqual(datos.ahorro, { apvi: null, apvc: null })
 })
+
+test("técnico extranjero (Ley 18.156): SIP, AFP 00, sin renta de AFP; salud con su renta", () => {
+    const sinAfp = lineas.filter((l) => !["AFP", "APORTE_CUENTA_INDIVIDUAL", "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_RENTABILIDAD_PROTEGIDA"].includes(l.codigo))
+    const tecnico = {
+        ...entrada,
+        liquidacion: {
+            ...entrada.liquidacion,
+            LiquidacionLineas: sinAfp,
+            detalle_calculo: { ...entrada.liquidacion.detalle_calculo, cotizante: { tipo: 8, tecnicoExtranjero: true } },
+            Trabajador: { ...entrada.liquidacion.Trabajador, Persona: { ...entrada.liquidacion.Trabajador.Persona, nacionalidad: "extranjera", Afp: null } }
+        }
+    }
+    const [principal] = lineasTrabajador(datosPrevired(tecnico)).map((linea) => linea.split(";"))
+    assert.deepStrictEqual([principal[10], principal[11], principal[25], principal[26], principal[27], principal[28]], ["SIP", "8", "00", "0", "0", "0"])
+    assert.strictEqual(principal[63], "1072299")
+    assert.deepStrictEqual(problemasPrevired({ liquidacion: tecnico.liquidacion, primerDia: "2027-07-01", fechasInasistencia: entrada.fechasInasistencia, fechasPermisoSinGoce: [] }), [])
+})

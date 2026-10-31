@@ -41,7 +41,7 @@ function camposTrabajador(datos) {
         7: datos.nacionalidad === "chilena" ? 0 : 1,
         8: "01",
         9: `${String(datos.mes).padStart(2, "0")}${datos.anio}`,
-        11: "AFP",
+        11: datos.regimen ?? "AFP",
         12: datos.tipoCotizante,
         13: datos.diasTrabajados,
         18: datos.tramo,
@@ -60,7 +60,7 @@ function camposPrevision(datos) {
 
     const campos = {
         26: datos.codigoAfp,
-        27: renta,
+        27: datos.rentaAfp ?? renta,
         28: datos.afp + datos.cuentaIndividual,
         29: datos.sis
     }

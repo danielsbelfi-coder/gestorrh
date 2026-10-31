@@ -152,3 +152,10 @@ test("identificación: caja de compensación y marcas de APVI y APVC", () => {
     const sin = camposIdentificacionLre(ana)
     assert.deepStrictEqual([sin[1110], sin[1155], sin[1157]], [0, 0, 0])
 })
+
+test("técnico extranjero: 1141 = 100 (no está en AFP) y 1146 = 1", () => {
+    const campos = camposIdentificacionLre({ ...ana, afpLre: 100, tecnicoExtranjero: true })
+    assert.equal(campos[1141], 100)
+    assert.equal(campos[1146], 1)
+    assert.equal(camposIdentificacionLre(ana)[1146], 0)
+})

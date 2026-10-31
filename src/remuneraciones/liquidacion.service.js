@@ -418,10 +418,14 @@ async function prepararCalculo(periodo, trabajador) {
     const { previsionEnMes } = require("../trabajadores/prevision_persona.service.js")
     const prevision = await previsionEnMes(persona, periodo.anio, periodo.mes)
 
-    if (!prevision.afp) {
+    // El técnico extranjero (Ley 18.156) no cotiza en la AFP: puede no tener una asignada.
+    const situacionesPersona = await SituacionPrevisional.findAll({ where: { persona_id: persona.id } })
+    const situacionInicioMes = situacionDelMes(situacionesPersona.map((s) => s.toJSON()), `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`)
+    const tecnicoExtranjero = situacionInicioMes.tecnico_extranjero === true
+    if (!prevision.afp && !tecnicoExtranjero) {
         throw new ConflictError("El trabajador no tiene una AFP asignada para este mes")
     }
-    if (prevision.afp.comision === null) {
+    if (prevision.afp && prevision.afp.comision === null && !tecnicoExtranjero) {
         throw new ConflictError("La AFP del trabajador no tiene comisión registrada")
     }
     if (!prevision.sistema_salud) {
@@ -619,12 +623,12 @@ async function prepararCalculo(periodo, trabajador) {
             minutosAtraso: resumen.minutos_atraso
         },
         sueldo: { tramos: tramosConDias },
-        cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension },
+        cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
         // Los identificadores permiten que el PDF, el LRE y Previred usen la previsión de este mes aunque la persona cambie después.
-        afp: { id: prevision.afp.id, codigo: prevision.afp.codigo, tasa: datos.tasaAfp },
+        afp: { id: prevision.afp?.id ?? null, codigo: prevision.afp?.codigo ?? null, tasa: datos.tasaAfp },
         salud: { sistema: prevision.sistema_salud, isapre_id: prevision.sistema_salud === "Isapre" ? prevision.isapre?.id ?? null : null, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
         // Tramo y número de cargas del mes: Previred y el LRE los informan aunque la persona cambie después.
         asignacionFamiliar,

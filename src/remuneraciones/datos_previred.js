@@ -48,9 +48,11 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
     const monto = (codigo) => montoLinea(liquidacion.LiquidacionLineas, codigo)
     const renta = detalle.cotizaciones.baseCotizaciones
     const licencias = detalle.licencias ?? []
+    const tecnico = detalle.cotizante?.tecnicoExtranjero === true
 
     return {
         trabajador: {
+            regimen: tecnico ? "SIP" : "AFP",
             rut: persona.rut,
             dv: persona.dv,
             apellidoPaterno: persona.apellido_paterno,
@@ -68,8 +70,10 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
             reintegroCargas: monto("REINTEGRO_CARGAS_FAMILIARES")
         },
         prevision: {
-            codigoAfp: persona.Afp.codigo_previred,
+            // Técnico extranjero (Ley 18.156): sin institución previsional, AFP 00 y sin renta imponible de AFP.
+            codigoAfp: tecnico ? "00" : persona.Afp.codigo_previred,
             rentaImponible: renta,
+            rentaAfp: tecnico ? 0 : renta,
             afp: monto("AFP"),
             cuentaIndividual: monto("APORTE_CUENTA_INDIVIDUAL"),
             sis: monto("APORTE_SIS"),
@@ -129,7 +133,7 @@ function problemasPrevired({ liquidacion, primerDia, fechasInasistencia, fechasP
     if (persona.sexo_genero === null) {
         problemas.push("La persona no tiene sexo registrado")
     }
-    if (!persona.Afp?.codigo_previred) {
+    if (!detalle.cotizante.tecnicoExtranjero && !persona.Afp?.codigo_previred) {
         problemas.push("La AFP de la persona no tiene código Previred")
     }
     if (detalle.salud.sistema === "Isapre" && !persona.Isapre?.codigo_previred) {

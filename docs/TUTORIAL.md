@@ -67,6 +67,9 @@ Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **
 ### Historial de previsión (ficha de la persona)
 La AFP, el sistema de salud y el plan de isapre se registran **por mes** en la ficha de la persona, sección **Historial de previsión**: «Registrar cambio» indicando desde qué mes rige. Cada liquidación se calcula con la previsión que regía en su mes, y el PDF, el LRE y Previred de meses anteriores siguen mostrando la de ese mes aunque la persona cambie después. Arriba, en «Previsión y salud», se ve la vigente hoy. No se aceptan cambios que alcancen meses ya cerrados: en ese caso se reabre el periodo o se regulariza en Previred o con la isapre.
 
+### Técnico extranjero, Ley 18.156 (ficha de la persona)
+En **Situación previsional**, marca **Técnico extranjero (Ley 18.156)** desde el mes en que rige. No cotiza en la AFP y no se pagan el SIS ni los aportes de la reforma; sí la salud (7 %), el seguro de cesantía (trabajador y empleador) y la mutual. En el historial de previsión la AFP puede quedar en «Sin AFP (técnico extranjero)». En Previred va con régimen SIP, tipo 8 y AFP 00; en el LRE con «No está en AFP» y la marca de técnico extranjero. Si la situación rige al inicio del contrato, el PDF del contrato incluye la cláusula en que el trabajador mantiene su afiliación extranjera. Guarda en la carpeta del trabajador el título legalizado o apostillado y el certificado de afiliación de su país.
+
 ### Cargas familiares (ficha de la persona)
 En la ficha de la persona, sección **Cargas familiares**, se registra lo que dice el documento que presenta el trabajador (resolución de la CCAF o del IPS):
 - **Tramo de asignación familiar** (A, B, C o D) desde un mes, con el número del documento. Sin tramo registrado se informa D (sin derecho). Si la persona tiene cargas vigentes y no tiene tramo, la liquidación avisa y no se calcula.

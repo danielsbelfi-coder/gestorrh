@@ -29,11 +29,12 @@ test("desdeDeTexto: AAAA-MM o «siempre»", () => {
     }
 })
 
-test("validarPrevision: AFP y salud obligatorias; isapre con plan en UF", () => {
+test("validarPrevision: salud obligatoria, AFP válida u omitida (técnico extranjero); isapre con plan en UF", () => {
     assert.deepEqual(p.validarPrevision({ desde: "2027-03", afp_id: 2, sistema_salud: "Fonasa" }), [])
     assert.deepEqual(p.validarPrevision({ desde: "2027-03", afp_id: "2", sistema_salud: "Isapre", isapre_id: "4", plan_isapre_uf: "3,25" }), [])
     assert.equal(p.validarPrevision({ desde: "marzo", afp_id: 2, sistema_salud: "Fonasa" }).length, 1)
-    assert.match(p.validarPrevision({ desde: "2027-03", sistema_salud: "Fonasa" })[0], /AFP/)
+    assert.deepEqual(p.validarPrevision({ desde: "2027-03", afp_id: null, sistema_salud: "Fonasa" }), [])
+    assert.match(p.validarPrevision({ desde: "2027-03", afp_id: "x", sistema_salud: "Fonasa" })[0], /AFP/)
     assert.match(p.validarPrevision({ desde: "2027-03", afp_id: 2, sistema_salud: "otro" })[0], /Fonasa o Isapre/)
     assert.deepEqual(p.validarPrevision({ desde: "2027-03", afp_id: 2, sistema_salud: "Isapre", plan_isapre_uf: 0 }), ["Debe indicar la isapre", "El plan de isapre debe ser un número mayor que 0 (en UF)"])
 })
@@ -43,6 +44,7 @@ test("normalizarPrevision: Fonasa sin isapre ni plan; plan con coma decimal", ()
         { desde: "2027-03-01", afp_id: 2, sistema_salud: "Fonasa", isapre_id: null, plan_isapre_uf: null })
     assert.deepEqual(p.normalizarPrevision({ desde: "siempre", afp_id: 1, sistema_salud: "Isapre", isapre_id: "4", plan_isapre_uf: "3,25" }),
         { desde: "1900-01-01", afp_id: 1, sistema_salud: "Isapre", isapre_id: 4, plan_isapre_uf: 3.25 })
+    assert.equal(p.normalizarPrevision({ desde: "2027-03", afp_id: "", sistema_salud: "Fonasa" }).afp_id, null)
 })
 
 test("mesesCerradosAlcanzados: solo los meses cerrados desde el cambio en adelante", () => {

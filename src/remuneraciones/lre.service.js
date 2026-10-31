@@ -13,6 +13,9 @@ const { CODIGO_LRE } = require("./ccaf.js")
 const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
 const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
 
+// LRE 1141: «No está en AFP» (técnico extranjero, Ley 18.156).
+const AFP_LRE_SIN_AFP = 100
+
 async function contratoDelTrabajador(trabajadorId, periodo, primerDia) {
     const vigente = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajadorId, estado: "vigente" } })
 
@@ -107,7 +110,7 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
         if (terminoEnElMes && trabajador.causal_termino === null) {
             motivos.push("Tiene fecha de término pero no causal de término")
         }
-        if (persona.Afp?.codigo_lre === null || persona.Afp?.codigo_lre === undefined) {
+        if (!detalle.cotizante.tecnicoExtranjero && (persona.Afp?.codigo_lre === null || persona.Afp?.codigo_lre === undefined)) {
             motivos.push("La AFP de la persona no tiene código LRE")
         }
         if (detalle.salud.sistema === "Isapre" && (persona.Isapre?.codigo_lre === null || persona.Isapre?.codigo_lre === undefined)) {
@@ -161,7 +164,8 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             comuna: contrato.comuna_prestacion,
             tipoJornada: contrato.tipo_jornada,
             tipoPension: detalle.cotizante.tipoPension,
-            afpLre: persona.Afp.codigo_lre,
+            afpLre: detalle.cotizante.tecnicoExtranjero ? AFP_LRE_SIN_AFP : persona.Afp.codigo_lre,
+            tecnicoExtranjero: detalle.cotizante.tecnicoExtranjero === true,
             sistemaSalud: detalle.salud.sistema,
             isapreLre: persona.Isapre?.codigo_lre ?? null,
             cotizaCesantia: montoDe("CESANTIA") + montoDe("APORTE_CESANTIA") > 0,

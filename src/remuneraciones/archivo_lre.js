@@ -42,7 +42,7 @@ function camposIdentificacionLre(datos) {
         1105: comuna.region,
         1106: Number(datos.comuna),
         1170: 1,
-        1146: 0,
+        1146: datos.tecnicoExtranjero ? 1 : 0,
         1107: JORNADA_LRE[datos.tipoJornada],
         1108: INVALIDEZ_LRE[datos.tipoPension] ?? 0,
         1109: datos.tipoPension === "vejez" ? 1 : 0,

@@ -133,7 +133,7 @@
             <div id="previsiones"></div>
             <form id="formPrevision">
                 <label>Desde (mes)<input type="month" id="prevDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
-                <label>AFP<select id="prevAfp" required></select></label>
+                <label>AFP<select id="prevAfp"></select></label>
                 <label>Sistema de salud
                     <select id="prevSistema" required>
                         <option value="Fonasa">Fonasa</option>
@@ -252,7 +252,7 @@
 
         <section class="tarjeta" id="seccionSituacion" hidden>
             <h2>Situación previsional</h2>
-            <p class="texto-suave">Historial por mes: pensionado, si sigue cotizando en la AFP y tipo de pensión. Cada registro rige desde su mes hasta el siguiente registro.</p>
+            <p class="texto-suave">Historial por mes: pensionado, si sigue cotizando en la AFP y tipo de pensión, o técnico extranjero. Cada registro rige desde su mes hasta el siguiente registro.</p>
             <div id="situaciones"></div>
             <form id="formSituacion">
                 <label>Desde (mes)<input type="month" id="sitDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
@@ -268,6 +268,7 @@
                         <option value="false">No</option>
                     </select>
                 </label>
+                <label class="casilla"><input type="checkbox" id="sitTecnico"> Técnico extranjero (Ley 18.156)</label>
                 <label>Tipo de pensión
                     <select id="sitTipo" disabled>
                         <option value="">—</option>
@@ -279,6 +280,7 @@
                 </label>
                 <button type="submit">Agregar</button>
             </form>
+            <p class="texto-suave nota-ficha" id="notaTecnico" hidden>Técnico extranjero: no cotiza en la AFP ni se pagan el SIS y los aportes de la reforma; sí la salud (7 %), el seguro de cesantía y la mutual. Respaldo en la carpeta del trabajador: título técnico o profesional obtenido en el extranjero, legalizado o apostillado; certificado de afiliación a la seguridad social de su país (enfermedad, invalidez, vejez y muerte); y la cláusula del contrato en que manifiesta mantener esa afiliación (el PDF del contrato la incluye si la situación rige al inicio del contrato). En la previsión puede quedar «Sin AFP».</p>
         </section>
     </main>
 

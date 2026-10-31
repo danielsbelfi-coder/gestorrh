@@ -45,8 +45,8 @@ async function sincronizarPersona(personaId, transaction, hoy = new Date()) {
 }
 
 async function exigirInstituciones(datos) {
-    const afp = await Afp.findByPk(datos.afp_id)
-    if (afp === null || afp.estado === "inactivo") {
+    const afp = datos.afp_id === null ? null : await Afp.findByPk(datos.afp_id)
+    if (datos.afp_id !== null && (afp === null || afp.estado === "inactivo")) {
         throw new ValidationError("La AFP indicada no existe o no está activa")
     }
     if (datos.sistema_salud === "Isapre") {

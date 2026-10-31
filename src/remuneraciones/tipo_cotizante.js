@@ -1,4 +1,4 @@
-const SIN_SITUACION = { pensionado: false, cotiza_afp: true, tipo_pension: null }
+const SIN_SITUACION = { pensionado: false, cotiza_afp: true, tipo_pension: null, tecnico_extranjero: false }
 
 const REGLAS = {
     0: { afp: true, seguroSocial: true, cesantia: true },

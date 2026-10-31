@@ -18,6 +18,12 @@ const SituacionPrevisional = sequelize.define("SituacionPrevisional", {
         type: DataTypes.BOOLEAN,
         allowNull: false
     },
+    // Ley 18.156: no cotiza en la AFP ni paga SIS ni aportes de la reforma; sí salud, cesantía y mutual.
+    tecnico_extranjero: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     tipo_pension: {
         type: DataTypes.ENUM("vejez", "invalidez_total", "invalidez_parcial", "sobrevivencia"),
         allowNull: true

@@ -32,8 +32,10 @@ function validarPrevision(datos) {
     if (desdeDeTexto(datos?.desde) === null) {
         errores.push("El mes desde el que rige debe tener el formato AAAA-MM")
     }
-    if (!Number.isInteger(Number(datos?.afp_id)) || Number(datos?.afp_id) <= 0) {
-        errores.push("Debe indicar la AFP")
+    // Sin AFP (null o vacío) solo corresponde al técnico extranjero (Ley 18.156); el cálculo lo exige en los demás.
+    const sinAfp = datos?.afp_id === null || datos?.afp_id === undefined || datos?.afp_id === ""
+    if (!sinAfp && (!Number.isInteger(Number(datos.afp_id)) || Number(datos.afp_id) <= 0)) {
+        errores.push("La AFP indicada no es válida")
     }
     if (datos?.sistema_salud !== "Fonasa" && datos?.sistema_salud !== "Isapre") {
         errores.push("El sistema de salud debe ser Fonasa o Isapre")
@@ -55,7 +57,7 @@ function normalizarPrevision(datos) {
     const isapre = datos.sistema_salud === "Isapre"
     return {
         desde: desdeDeTexto(datos.desde),
-        afp_id: Number(datos.afp_id),
+        afp_id: datos.afp_id === null || datos.afp_id === undefined || datos.afp_id === "" ? null : Number(datos.afp_id),
         sistema_salud: datos.sistema_salud,
         isapre_id: isapre ? Number(datos.isapre_id) : null,
         plan_isapre_uf: isapre ? Number(String(datos.plan_isapre_uf).replace(",", ".")) : null

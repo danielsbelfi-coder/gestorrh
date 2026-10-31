@@ -22,13 +22,22 @@ async function crearSituacion(personaId, datos, empresasPermitidas, usuarioId) {
     if (!datos.pensionado && datos.tipo_pension) {
         throw new ValidationError("El tipo de pensión solo se indica si es pensionado")
     }
+    const tecnico = datos.tecnico_extranjero ?? false
+    if (typeof tecnico !== "boolean") {
+        throw new ValidationError("«Técnico extranjero» debe ser true o false")
+    }
+    if (tecnico && datos.pensionado) {
+        throw new ValidationError("Un técnico extranjero (Ley 18.156) no se registra como pensionado")
+    }
 
     try {
         return await SituacionPrevisional.create({
             persona_id: persona.id,
             desde: `${datos.desde}-01`,
             pensionado: datos.pensionado,
-            cotiza_afp: datos.cotiza_afp,
+            // El técnico extranjero no cotiza en la AFP (Ley 18.156).
+            cotiza_afp: tecnico ? false : datos.cotiza_afp,
+            tecnico_extranjero: tecnico,
             tipo_pension: datos.pensionado ? datos.tipo_pension : null,
             usuario_registro_id: usuarioId
         })

@@ -90,11 +90,15 @@ function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isa
         "Se prohíbe al TRABAJADOR presentarse a trabajar o permanecer en el lugar de trabajo bajo la influencia del alcohol o de drogas. Su infracción constituye incumplimiento grave de las obligaciones que impone el contrato.",
         [
             "El TRABAJADOR declara que su afiliación previsional es la siguiente, para que el EMPLEADOR efectúe las cotizaciones correspondientes; cualquier error en esta declaración será de su exclusiva responsabilidad:",
-            `a) AFP: ${afp?.nombre ?? "No informada"}.`,
+            situacion?.tecnico_extranjero ? "a) AFP: no cotiza (técnico extranjero, Ley N° 18.156)." : `a) AFP: ${afp?.nombre ?? "No informada"}.`,
             `b) Salud: ${salud}.`,
             `c) Seguro de cesantía (Ley N° 19.728): ${persona.afiliado_afc === false ? "No afiliado" : "Afiliado"}.`,
             `d) Calidad de cotizante: ${situacion?.pensionado ? "Pensionado" : "Activo"}.`
         ].join("\n"),
+        // Ley 18.156: la exención exige que el contrato exprese la voluntad de mantener la afiliación extranjera.
+        situacion?.tecnico_extranjero
+            ? "El TRABAJADOR, en su calidad de técnico extranjero, manifiesta expresamente su voluntad de mantener su afiliación al régimen de previsión o seguridad social de su país de origen, que le otorga prestaciones a lo menos en casos de enfermedad, invalidez, vejez y muerte, por lo que, conforme a la Ley N° 18.156, el EMPLEADOR no efectuará cotizaciones al sistema de pensiones chileno. Se mantienen la cotización de salud, el seguro de cesantía y el seguro de la Ley N° 16.744."
+            : null,
         textoDuracion(contrato),
         "Este contrato deja sin efecto cualquier otro suscrito anteriormente entre las partes. Sus modificaciones deberán constar en anexos firmados por ambas partes.",
         `Se deja constancia de que el TRABAJADOR ingresó al servicio del EMPLEADOR el ${fechaEnTexto(trabajador.fecha_ingreso)}.`,
@@ -107,7 +111,7 @@ function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isa
         lugarFecha: `En ${comunaEmpresa ?? "____________"}, a ${fechaEnTexto(contrato.fecha_inicio)}`,
         empleador: `${empresa.razon_social}, RUT N° ${rutEmpresa}, representada por ${empresa.representante_legal_nombre}, cédula de identidad N° ${empresa.representante_legal_rut}, ambos con domicilio en ${empresa.direccion}${comunaEmpresa ? `, comuna de ${comunaEmpresa}` : ""}, en adelante el "EMPLEADOR".`,
         trabajador: `${datosTrabajador.charAt(0).toUpperCase()}${datosTrabajador.slice(1)}, en adelante el "TRABAJADOR".`,
-        clausulas: cuerpo.map((texto, i) => ({ ordinal: ORDINALES[i], texto })),
+        clausulas: cuerpo.filter(Boolean).map((texto, i) => ({ ordinal: ORDINALES[i], texto })),
         firmas: {
             trabajador: { nombre, rut: rutTrabajador },
             empleador: { nombre: empresa.razon_social, representante: empresa.representante_legal_nombre, rut: rutEmpresa }

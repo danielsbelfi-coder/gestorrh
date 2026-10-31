@@ -93,7 +93,7 @@ async function cargarCatalogos() {
     const activas = (lista) => lista.filter((x) => x.estado !== "inactivo").sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     llenarSelect(document.getElementById("afp_id"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Sin AFP / no informada")
     llenarSelect(document.getElementById("isapre_id"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
-    llenarSelect(document.getElementById("prevAfp"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Elige la AFP")
+    llenarSelect(document.getElementById("prevAfp"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Sin AFP (técnico extranjero)")
     llenarSelect(document.getElementById("prevIsapre"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")
 
     // Institución del APV: las AFP con su código Previred de 3 dígitos, u otra institución con su código.
@@ -175,13 +175,14 @@ async function cargarSituaciones() {
     document.getElementById("situaciones").innerHTML = situaciones.length === 0
         ? `<p class="texto-suave">Sin registros: se considera no pensionado y cotizando en la AFP (a los 65 años o más el sistema lo trata como pensionado por vejez).</p>`
         : `<table>
-            <thead><tr><th>Desde</th><th>Pensionado</th><th>Cotiza AFP</th><th>Tipo de pensión</th><th></th></tr></thead>
+            <thead><tr><th>Desde</th><th>Pensionado</th><th>Cotiza AFP</th><th>Tipo de pensión</th><th>Técnico extranjero</th><th></th></tr></thead>
             <tbody>${situaciones.map((s) => `
                 <tr>
                     <td>${escaparHtml(String(s.desde).slice(0, 7))}</td>
                     <td>${s.pensionado ? "Sí" : "No"}</td>
                     <td>${s.cotiza_afp ? "Sí" : "No"}</td>
                     <td>${escaparHtml(TIPOS_PENSION[s.tipo_pension] ?? "—")}</td>
+                    <td>${s.tecnico_extranjero ? "Sí (Ley 18.156)" : "No"}</td>
                     <td><button type="button" class="chico secundario" data-eliminar="${s.id}">Eliminar</button></td>
                 </tr>`).join("")}
             </tbody>
@@ -197,20 +198,40 @@ document.getElementById("sitPensionado").addEventListener("change", function () 
     }
 })
 
+// Técnico extranjero (Ley 18.156): no pensionado y sin cotizar en la AFP.
+function ajustarTecnico() {
+    const tecnico = document.getElementById("sitTecnico").checked
+    document.getElementById("notaTecnico").hidden = !tecnico
+    for (const id of ["sitPensionado", "sitCotiza"]) {
+        document.getElementById(id).disabled = tecnico
+    }
+    if (tecnico) {
+        document.getElementById("sitPensionado").value = "false"
+        document.getElementById("sitCotiza").value = "false"
+        document.getElementById("sitTipo").value = ""
+        document.getElementById("sitTipo").disabled = true
+    }
+}
+
+document.getElementById("sitTecnico").addEventListener("change", ajustarTecnico)
+
 document.getElementById("formSituacion").addEventListener("submit", async function (evento) {
     evento.preventDefault()
     limpiarMensajes()
-    const pensionado = valor("sitPensionado") === "true"
+    const tecnico = document.getElementById("sitTecnico").checked
+    const pensionado = !tecnico && valor("sitPensionado") === "true"
 
     const creada = await crearRegistro(`/api/personas/${personaId}/situaciones-previsionales`, {
         desde: valor("sitDesde"),
         pensionado,
-        cotiza_afp: valor("sitCotiza") === "true",
-        tipo_pension: pensionado ? valor("sitTipo") : null
+        cotiza_afp: !tecnico && valor("sitCotiza") === "true",
+        tipo_pension: pensionado ? valor("sitTipo") : null,
+        tecnico_extranjero: tecnico
     }, "Situación previsional registrada.")
 
     if (creada) {
         this.reset()
+        ajustarTecnico()
         document.getElementById("sitTipo").disabled = true
         cargarSituaciones()
     }
