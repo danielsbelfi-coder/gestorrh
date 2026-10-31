@@ -128,6 +128,13 @@ function validarFila(fila, catalogos) {
         motivos.push("tipo_cuenta debe ser corriente, rut, ahorro o vista")
     }
 
+    // Banco por nombre o por código (catálogo de src/shared/bancos.js).
+    const { bancoDeTexto } = require("../shared/bancos.js")
+    const bancoCodigo = vacio("banco") ? null : bancoDeTexto(fila.banco)
+    if (!vacio("banco") && bancoCodigo === null) {
+        motivos.push("banco no reconocido: escriba el nombre (por ejemplo, BancoEstado, Santander) o su código de 3 dígitos")
+    }
+
     const crearPostulante = leerSiNo(fila.crear_postulante)
     let fechaIngreso = null
     if (crearPostulante === null) {
@@ -162,6 +169,7 @@ function validarFila(fila, catalogos) {
             isapre_id: isapreId,
             plan_isapre_uf: sistemaSalud === "Isapre" ? planUf : null,
             banco: opcional("banco"),
+            banco_codigo: bancoCodigo,
             tipo_cuenta: tipoCuenta ?? null,
             numero_cuenta: opcional("numero_cuenta")
         },

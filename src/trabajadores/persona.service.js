@@ -9,7 +9,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 
 
 
-const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco", "tipo_cuenta", "numero_cuenta", "plan_isapre_codigo", "afiliado_afc"]
+const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento", "sexo_genero", "direccion", "telefono", "email", "estado_civil", "banco_codigo", "forma_pago", "tipo_cuenta", "numero_cuenta", "plan_isapre_codigo", "afiliado_afc"]
 
 // La AFP y la salud se indican al crear la persona (quedan como su previsión «desde siempre»).
 // Después solo cambian con el historial de previsión (prevision_persona.service.js), que mantiene estos campos al día.
@@ -39,6 +39,7 @@ async function crearPersona(datos, empresasPermitidas, usuarioId) {
     if (!rutEsValido(rut, dv)) {
         throw new ValidationError("Rut inválido")
     }
+    validarDatosPago(datos)
 
     try {
         return await sequelize.transaction(async (transaction) => {
@@ -76,10 +77,25 @@ async function obtenerPersonaPorId(id, empresasPermitidas) {
     return persona
 }
 
+// Banco del catálogo y forma de pago válida (vacío = sin banco).
+function validarDatosPago(datos) {
+    const { BANCOS, FORMAS_PAGO } = require("../shared/bancos.js")
+    if (datos.banco_codigo === "") {
+        datos.banco_codigo = null
+    }
+    if (datos.banco_codigo !== undefined && datos.banco_codigo !== null && !BANCOS[datos.banco_codigo]) {
+        throw new ValidationError("El banco no está en la lista")
+    }
+    if (datos.forma_pago !== undefined && !FORMAS_PAGO.includes(datos.forma_pago)) {
+        throw new ValidationError("La forma de pago debe ser transferencia, cheque, efectivo o vale vista")
+    }
+}
+
 async function actualizarPersona(id, datos, empresasPermitidas, usuarioId) {
     const persona = await obtenerPersonaPorId(id, empresasPermitidas)
 
     await exigirRol(usuarioId, persona.empresa_id, PERMISOS.GESTIONAR_FICHAS)
+    validarDatosPago(datos)
 
     return await persona.update(datos, {
         fields: CAMPOS_EDITABLES

@@ -3,6 +3,10 @@ const { calcular, recalcular, eliminar, quitarTermino, obtener, emitir, pagar, d
 const router = express.Router()
 
 router.get("/", obtener)
+router.get("/nomina-bancaria", async (req, res) => {
+    const { nominaFiniquitos } = require("./nomina_bancaria.service.js")
+    res.status(200).json(await nominaFiniquitos(req.query ?? {}, req.empresasPermitidas, req.usuario.id))
+})
 router.post("/", calcular)
 router.post("/quitar-termino", quitarTermino)
 router.post("/:id/recalcular", recalcular)

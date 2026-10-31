@@ -437,6 +437,34 @@ function descargarCsv(nombreArchivo, columnas, registros) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+// Nómina bancaria: descarga el CSV (genérico, para cargar o adaptar en el banco) y muestra a quienes quedaron fuera.
+// datos = { filas, excluidas, total } del servidor.
+function descargarNomina(nombreArchivo, datos) {
+    if (datos.filas.length > 0) {
+        descargarCsv(nombreArchivo, [
+            ["RUT", (f) => f.rut],
+            ["Nombre", (f) => f.nombre],
+            ["Código banco", (f) => f.banco_codigo],
+            ["Banco", (f) => f.banco],
+            ["Tipo de cuenta", (f) => f.tipo_cuenta],
+            ["Número de cuenta", (f) => f.numero_cuenta],
+            ["Monto", (f) => f.monto],
+            ["Correo", (f) => f.email],
+            ["Glosa", (f) => f.glosa]
+        ], datos.filas)
+    }
+    const resumen = datos.filas.length > 0
+        ? `Nómina descargada: ${datos.filas.length} pago(s) por ${pesos(datos.total)}.`
+        : "No hay pagos por transferencia para incluir en la nómina."
+    if (datos.excluidas.length === 0) {
+        mensaje("info", resumen)
+        return
+    }
+    mensaje("info", resumen)
+    mensaje("error", `${datos.excluidas.length} quedaron fuera del archivo (págalos de otra forma o completa sus datos):`)
+    mostrarProblemasConNombre(datos.excluidas.map((e) => ({ nombre: `${e.nombre} (${e.rut}, ${pesos(e.monto)})`, motivos: [e.motivo] })))
+}
+
 function hoyIso() {
     const hoy = new Date()
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`

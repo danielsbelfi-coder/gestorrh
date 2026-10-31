@@ -54,9 +54,20 @@ const Persona = sequelize.define("Persona", {
         type: DataTypes.STRING,
         allowNull: true
     },
+    // Texto anterior al catálogo de bancos (se conserva; la ficha lo muestra si no se reconoció el banco).
     banco: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    // Código del banco (src/shared/bancos.js).
+    banco_codigo: {
+        type: DataTypes.STRING(3),
+        allowNull: true
+    },
+    forma_pago: {
+        type: DataTypes.ENUM("transferencia", "cheque", "efectivo", "vale_vista"),
+        allowNull: false,
+        defaultValue: "transferencia"
     },
     tipo_cuenta: {
         type: DataTypes.ENUM("cuenta corriente", "cuenta Rut", "cuenta de ahorro", "cuenta vista"),

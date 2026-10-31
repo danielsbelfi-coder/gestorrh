@@ -7,8 +7,8 @@ const TIPOS_PENSION = { vejez: "Vejez", invalidez_total: "Invalidez total", inva
 
 // Campos que el backend permite editar (CAMPOS_EDITABLES de persona.service.js).
 const CAMPOS_TEXTO = ["nombres", "apellido_paterno", "apellido_materno", "direccion", "telefono", "email", "estado_civil",
-    "banco", "numero_cuenta", "plan_isapre_codigo"]
-const CAMPOS_SELECCION = ["nacionalidad", "sexo_genero", "tipo_cuenta", "sistema_salud"]
+    "numero_cuenta", "plan_isapre_codigo"]
+const CAMPOS_SELECCION = ["nacionalidad", "sexo_genero", "tipo_cuenta", "sistema_salud", "banco_codigo", "forma_pago"]
 
 let persona = null
 let afpsApv = []
@@ -69,6 +69,10 @@ function llenarFormulario(p) {
     document.getElementById("isapre_id").value = p.isapre_id ?? ""
     document.getElementById("plan_isapre_uf").value = p.plan_isapre_uf ?? ""
     document.getElementById("afiliado_afc").value = String(p.afiliado_afc ?? true)
+    // Banco escrito como texto antes del catálogo que no se pudo reconocer: se muestra para elegirlo en la lista.
+    const anterior = document.getElementById("bancoAnterior")
+    anterior.hidden = !(p.banco && !p.banco_codigo)
+    anterior.textContent = anterior.hidden ? "" : `Antes decía «${p.banco}»: elige el banco en la lista.`
     mostrarCamposIsapre()
 }
 
@@ -80,11 +84,12 @@ function mostrarCamposIsapre() {
 document.getElementById("sistema_salud").addEventListener("change", mostrarCamposIsapre)
 
 async function cargarCatalogos() {
-    const listas = await cargarListas(["/api/afps", "/api/isapres"])
+    const listas = await cargarListas(["/api/afps", "/api/isapres", "/api/bancos"])
     if (!listas) {
         return
     }
-    const [afps, isapres] = listas
+    const [afps, isapres, bancos] = listas
+    llenarSelect(document.getElementById("banco_codigo"), bancos.map((b) => ({ id: b.codigo, texto: `${b.nombre} (${b.codigo})` })), "Sin banco")
     const activas = (lista) => lista.filter((x) => x.estado !== "inactivo").sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     llenarSelect(document.getElementById("afp_id"), activas(afps).map((a) => ({ id: a.id, texto: a.nombre })), "Sin AFP / no informada")
     llenarSelect(document.getElementById("isapre_id"), activas(isapres).map((i) => ({ id: i.id, texto: i.nombre })), "Elige la isapre")

@@ -46,6 +46,7 @@ function botones(fila) {
         // Mes del término cerrado: solo ver y descargar.
         if (f) {
             lista.push(`<button type="button" class="chico secundario" data-accion="pdf" data-trabajador="${id}">PDF</button>`)
+            lista.push(`<button type="button" class="chico secundario" data-accion="nomina" data-trabajador="${id}">Nómina</button>`)
         }
         if (f?.estado === "emitido") {
             lista.push(`<button type="button" class="chico" data-accion="pagar" data-trabajador="${id}">Marcar pagado</button>`)
@@ -69,6 +70,9 @@ function botones(fila) {
     }
     if (f) {
         lista.push(`<button type="button" class="chico secundario" data-accion="pdf" data-trabajador="${id}">PDF</button>`)
+    }
+    if (f && f.estado !== "calculado") {
+        lista.push(`<button type="button" class="chico secundario" data-accion="nomina" data-trabajador="${id}">Nómina</button>`)
     }
     if (f && f.estado !== "pagado") {
         lista.push(`<button type="button" class="chico secundario" data-accion="eliminar" data-trabajador="${id}">Eliminar</button>`)
@@ -314,6 +318,15 @@ document.getElementById("tablaFiniquitos").addEventListener("click", async funct
         return
     }
 
+    if (boton.dataset.accion === "nomina") {
+        const r = await llamarApi(`/api/finiquitos/nomina-bancaria?trabajador_id=${fila.trabajador.id}`)
+        if (r.status !== 200) {
+            mensaje("error", r.datos?.error ?? "No se pudo generar la nómina")
+            return
+        }
+        descargarNomina(`nomina-finiquito-${fila.persona?.rut ?? fila.trabajador.id}.csv`, r.datos)
+        return
+    }
     if (boton.dataset.accion === "recalcular") {
         const r = await llamarApi(`/api/finiquitos/${fila.finiquito.id}/recalcular`, { method: "POST" })
         if (r.status !== 200) {
@@ -401,5 +414,20 @@ function textoSaldoFiniquito(finiquito) {
     }
     return ` Se descontó el saldo de pago en exceso: ${pesos(saldo.descontado)}.` + (saldo.noRecuperado > 0 ? ` No alcanzó para ${pesos(saldo.noRecuperado)}: esa diferencia se gestiona fuera del sistema.` : "")
 }
+
+// Nómina masiva: finiquitos cerrados (o pagados) de los trabajadores que terminaron en el mes elegido.
+document.getElementById("formNominaFiniquitos").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const mes = document.getElementById("mesNomina").value
+    const r = await llamarApi(`/api/finiquitos/nomina-bancaria?empresa_id=${empresaActual()}&mes=${encodeURIComponent(mes)}`)
+    if (r.status !== 200) {
+        mensaje("error", r.datos?.error ?? "No se pudo generar la nómina")
+        return
+    }
+    descargarNomina(`nomina-finiquitos-${mes}.csv`, r.datos)
+})
+
+document.getElementById("mesNomina").value = hoyIso().slice(0, 7)
 
 document.addEventListener("empresa-lista", () => { limpiarMensajes(); cargarFiniquitos() })

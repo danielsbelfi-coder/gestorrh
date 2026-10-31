@@ -94,7 +94,15 @@
             <section class="tarjeta">
                 <h2>Datos para el pago</h2>
                 <div class="campos">
-                    <label>Banco<input type="text" id="banco"></label>
+                    <label>Forma de pago
+                        <select id="forma_pago">
+                            <option value="transferencia">Transferencia</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="vale_vista">Vale vista</option>
+                        </select>
+                    </label>
+                    <label>Banco<select id="banco_codigo"></select><small class="texto-suave" id="bancoAnterior" hidden></small></label>
                     <label>Tipo de cuenta
                         <select id="tipo_cuenta">
                             <option value="">Sin informar</option>

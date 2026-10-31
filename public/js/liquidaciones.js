@@ -386,6 +386,21 @@ async function descargarTodas(conAportes) {
 }
 
 document.getElementById("btnPdfTodas").addEventListener("click", () => descargarTodas(false))
+
+// Nómina bancaria del periodo: liquidaciones cerradas con líquido mayor que cero y datos de transferencia completos.
+document.getElementById("btnNomina").addEventListener("click", async function () {
+    limpiarMensajes()
+    const periodo = periodoElegido()
+    if (!periodo) {
+        return
+    }
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${periodo.id}/nomina-bancaria`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo generar la nómina")
+        return
+    }
+    descargarNomina(`nomina-remuneraciones-${periodo.anio}-${String(periodo.mes).padStart(2, "0")}.csv`, resultado.datos)
+})
 document.getElementById("btnPdfTodasAportes").addEventListener("click", () => descargarTodas(true))
 selectorPeriodo.addEventListener("change", () => { limpiarMensajes(); llenarTrabajadoresDelPeriodo(); cargarLiquidaciones() })
 

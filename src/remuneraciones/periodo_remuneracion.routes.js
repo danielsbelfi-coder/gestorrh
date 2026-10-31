@@ -15,5 +15,9 @@ router.use("/:periodoId/liquidaciones", liquidacionRoutes)
 router.get("/:id/previred", previred)
 router.get("/:id/lre", lre)
 router.get("/:id/parametros-faltantes", parametrosFaltantes)
+router.get("/:id/nomina-bancaria", async (req, res) => {
+    const { nominaLiquidaciones } = require("./nomina_bancaria.service.js")
+    res.status(200).json(await nominaLiquidaciones(req.params.id, req.empresasPermitidas, req.usuario.id))
+})
 
 module.exports = router

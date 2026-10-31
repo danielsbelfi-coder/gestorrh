@@ -84,6 +84,11 @@ app.use("/api/mutualidades", verificarSesion, mutualidadRoutes)
 app.use("/api/jornadas", verificarSesion, jornadaRoutes)
 app.use("/api/feriados", verificarSesion, feriadoRoutes)
 app.use("/api/pendientes", verificarSesion, pendienteRoutes)
+// Catálogo de bancos para la ficha de la persona y la nómina bancaria.
+app.get("/api/bancos", verificarSesion, (req, res) => {
+    const { BANCOS } = require("./shared/bancos.js")
+    res.status(200).json(Object.entries(BANCOS).map(([codigo, nombre]) => ({ codigo, nombre })))
+})
 
 app.use(express.static(path.join(__dirname, "../public")))
 app.use(manejarErrores)
