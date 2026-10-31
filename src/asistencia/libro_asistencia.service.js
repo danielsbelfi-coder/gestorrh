@@ -4,6 +4,7 @@ const { Feriado } = require("../calendario/feriado.model.js")
 const { feriadosAplicables } = require("../calendario/feriado_calculo.js")
 const { calcularLibro } = require("./libro_asistencia.js")
 const { NotFoundError, ValidationError } = require("../shared/errors.js")
+const { fechaTerminoVigente } = require("../contratos/contrato_original.js")
 
 function rangoDelMes(anio, mes) {
     const mm = String(mes).padStart(2, "0")
@@ -71,7 +72,7 @@ async function libroDelTrabajador(trabajador, anio, mes, transaction) {
         anio,
         mes,
         desde: contrato.fecha_inicio,
-        hasta: contrato.fecha_termino ?? trabajador.fecha_termino ?? null,
+        hasta: fechaTerminoVigente(contrato) ?? trabajador.fecha_termino ?? null,
         tramosJornada: tramos,
         feriados: feriadosAplicables(feriados.map((f) => f.toJSON()), contrato.comuna_prestacion ?? null),
         licencias: licencias.map((l) => l.toJSON()),

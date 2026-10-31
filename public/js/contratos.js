@@ -21,7 +21,7 @@ const tabla = crearTabla({
         { titulo: "Tipo", valor: (c) => TEXTOS.tipoContrato[c.tipo_contrato] ?? c.tipo_contrato },
         { titulo: "Cargo", valor: (c) => c.cargo ?? "" },
         { titulo: "Inicio", valor: (c) => c.fecha_inicio ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_inicio)) },
-        { titulo: "Término", valor: (c) => c.fecha_termino ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_termino)) },
+        { titulo: "Término", valor: (c) => (c.tipo_contrato === "indefinido" ? "" : c.fecha_termino ?? ""), html: (c) => escaparHtml(c.tipo_contrato === "indefinido" ? "" : fechaCorta(c.fecha_termino)) },
         { titulo: "Sueldo base", valor: (c) => Number(c.sueldo_base), html: (c) => escaparHtml(pesos(c.sueldo_base)), numero: true },
         { titulo: "Firma", valor: (c) => textoEstado("firma", c.estado_firma), html: (c) => insignia("firma", c.estado_firma) },
         { titulo: "Estado", valor: (c) => textoEstado("contrato", c.estado), html: (c) => insignia("contrato", c.estado) },

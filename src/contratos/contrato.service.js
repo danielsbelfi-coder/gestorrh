@@ -4,6 +4,7 @@ const {
 } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
 const { armarContrato } = require("./armar_contrato.js")
+const { contratoOriginal } = require("./contrato_original.js")
 const { situacionDelMes } = require("../remuneraciones/tipo_cotizante.js")
 const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.service.js")
 const { Op } = require("sequelize")
@@ -172,13 +173,19 @@ async function documentoContrato(id, empresasPermitidas) {
     const empresa = await Empresa.findByPk(contrato.Trabajador.empresa_id)
     const persona = contrato.Trabajador.Persona
     const situaciones = persona.SituacionesPrevisionales.map((s) => s.toJSON())
+    // El documento es el contrato tal como se firmó: los cambios posteriores constan en sus anexos.
+    const anexos = await ContratoAnexo.findAll({ where: { contrato_id: contrato.id } })
+    const original = contratoOriginal(contrato.toJSON(), anexos.map((a) => a.toJSON()))
+    const jornada = Number(original.jornada_id) === Number(contrato.jornada_id)
+        ? contrato.Jornada
+        : original.jornada_id ? await Jornada.findByPk(Number(original.jornada_id)) : null
 
     return armarContrato({
-        contrato: contrato.toJSON(),
+        contrato: original,
         persona: persona.toJSON(),
         empresa: empresa.toJSON(),
         cargo: contrato.Cargo?.nombre ?? "",
-        jornada: contrato.Jornada ? contrato.Jornada.toJSON() : null,
+        jornada: jornada ? jornada.toJSON() : null,
         trabajador: contrato.Trabajador,
         afp: persona.Afp,
         isapre: persona.Isapre,

@@ -48,7 +48,7 @@ function dibujarContrato(doc, d) {
 
     seccion(doc, "INDIVIDUALIZACIÓN DEL EMPLEADOR:", d.empleador)
     seccion(doc, "INDIVIDUALIZACIÓN DEL TRABAJADOR:", d.trabajador)
-    doc.font("Helvetica").fontSize(9).text("Entre las partes individualizadas se celebra el siguiente contrato de trabajo:", MARGEN, doc.y, { width: ANCHO })
+    doc.font("Helvetica").fontSize(9).text(d.introduccion ?? "Entre las partes individualizadas se celebra el siguiente contrato de trabajo:", MARGEN, doc.y, { width: ANCHO })
     doc.moveDown(0.8)
 
     for (const c of d.clausulas) {

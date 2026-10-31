@@ -94,8 +94,8 @@ async function dibujarContratos() {
         <article class="contrato">
             <header class="contrato-cabecera">
                 <div>
-                    <strong>Contrato #${c.id} · ${escaparHtml(TEXTOS.tipoContrato[c.tipo_contrato] ?? c.tipo_contrato)}</strong>
-                    <span class="texto-suave"> desde ${escaparHtml(fechaCorta(c.fecha_inicio))}${c.fecha_termino ? ` hasta ${escaparHtml(fechaCorta(c.fecha_termino))}` : ""}</span>
+                    <strong>Contrato #${c.id} · ${escaparHtml(TEXTOS.tipoContrato[conversionDe(anexos[i])?.valor_anterior ?? c.tipo_contrato] ?? c.tipo_contrato)}</strong>
+                    <span class="texto-suave"> desde ${escaparHtml(fechaCorta(c.fecha_inicio))}${c.fecha_termino && c.tipo_contrato !== "indefinido" ? ` hasta ${escaparHtml(fechaCorta(c.fecha_termino))}` : ""}${conversionDe(anexos[i]) ? ` · indefinido por anexo desde el ${escaparHtml(fechaCorta(conversionDe(anexos[i]).fecha_vigencia))}` : ""}</span>
                 </div>
                 <div class="contrato-estados">
                     ${insignia("contrato", c.estado)}
@@ -130,7 +130,7 @@ async function dibujarContratos() {
                             <td><strong>${escaparHtml(valorContrato(a.campo_modificado, a.valor_nuevo))}</strong></td>
                             <td>${escaparHtml(a.motivo ?? "")}</td>
                             <td>${insignia("firma", a.estado_firma)}</td>
-                            <td>${a.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-anexo="${a.id}" data-contrato="${c.id}">Firmar</button>` : ""}</td>
+                            <td>${a.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-anexo="${a.id}" data-contrato="${c.id}">Firmar</button> ` : ""}<button type="button" class="chico secundario" data-pdf-anexo="${a.id}" data-contrato="${c.id}">PDF</button></td>
                         </tr>`).join("")}
                     </tbody>
                 </table>`}
@@ -138,6 +138,11 @@ async function dibujarContratos() {
 }
 
 // ---------- Anexos ----------
+
+// Anexo firmado que pasó el contrato a indefinido (el contrato original sigue siendo plazo fijo u obra o faena).
+function conversionDe(anexosDelContrato) {
+    return anexosDelContrato.find((a) => a.campo_modificado === "tipo_contrato" && a.estado_firma === "firmado") ?? null
+}
 
 llenarSelect(document.getElementById("campoAnexo"),
     Object.entries(CAMPOS_ANEXO).map(([campo, def]) => ({ id: campo, texto: def.texto })))
@@ -225,6 +230,14 @@ document.getElementById("contratos").addEventListener("click", async function (e
         return
     }
     limpiarMensajes()
+
+    if (boton.dataset.pdfAnexo) {
+        const resultado = await descargarArchivo(`/api/contratos/${boton.dataset.contrato}/anexos/${boton.dataset.pdfAnexo}/documento`)
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo generar el anexo")
+        }
+        return
+    }
 
     if (boton.dataset.pdfContrato) {
         const resultado = await descargarArchivo(`/api/contratos/${boton.dataset.pdfContrato}/documento`)

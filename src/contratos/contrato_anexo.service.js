@@ -1,4 +1,6 @@
-const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada } = require("../shared/associations.js")
+const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo } = require("../shared/associations.js")
+const { armarAnexo } = require("./armar_anexo.js")
+const { contratoOriginal } = require("./contrato_original.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { sequelize } = require("../shared/database.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
@@ -151,13 +153,11 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
                 transaction: t
             }
         )
-        // Al pasar a indefinido, el contrato deja de tener fecha de término y causal de plazo fijo.
-        const conversion = anexo.campo_modificado === "tipo_contrato"
-            ? { fecha_termino: null, causal_plazo_fijo: null }
-            : {}
+        // El contrato firmado no se reescribe: queda el original (ver contrato_original.js) y su estado vigente
+        // se lleva en esta fila. Al pasar a indefinido, la fecha de término del plazo fijo deja de regir
+        // (fechaTerminoVigente), pero se conserva para el documento original.
         await contrato.update({
-            [anexo.campo_modificado]: anexo.valor_nuevo,
-            ...conversion
+            [anexo.campo_modificado]: anexo.valor_nuevo
         },
             {
                 transaction: t
@@ -173,6 +173,29 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
 
     })
     return anexo
+}
+
+// Documento del anexo (PDF): la modificación con la comparecencia de las partes; el contrato no se reescribe.
+async function documentoAnexo(contratoId, anexoId, empresasPermitidas) {
+    const anexo = await ContratoAnexo.findOne({ where: { id: anexoId, contrato_id: contratoId } })
+    const contrato = anexo && await ContratoTrabajo.findByPk(contratoId, { include: [Cargo, { model: Trabajador, include: [Persona] }] })
+    if (!contrato || !empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
+        throw new NotFoundError("Anexo no encontrado")
+    }
+    const empresa = await Empresa.findByPk(contrato.Trabajador.empresa_id)
+    const anexos = await ContratoAnexo.findAll({ where: { contrato_id: contrato.id } })
+    const original = contratoOriginal(contrato.toJSON(), anexos.map((a) => a.toJSON()))
+    const jornadaNueva = anexo.campo_modificado === "jornada_id" ? await Jornada.findByPk(Number(anexo.valor_nuevo)) : null
+
+    return armarAnexo({
+        anexo: anexo.toJSON(),
+        contrato: contrato.toJSON(),
+        tipoOriginal: original.tipo_contrato,
+        persona: contrato.Trabajador.Persona.toJSON(),
+        empresa: empresa.toJSON(),
+        cargo: contrato.Cargo?.nombre ?? "",
+        jornadaNueva: jornadaNueva ? jornadaNueva.toJSON() : null
+    })
 }
 
 async function listarAnexos(contratoId, empresasPermitidas) {
@@ -191,6 +214,7 @@ async function listarAnexos(contratoId, empresasPermitidas) {
 }
 
 module.exports = {
+    documentoAnexo,
     crearAnexo,
     firmarAnexo,
     listarAnexos
