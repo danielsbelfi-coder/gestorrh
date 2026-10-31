@@ -10,6 +10,7 @@ const PASOS_EMPRESA = [
     { tabla: "licencias_medicas", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "asistencia_correcciones", filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "asistencias", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
+    { tabla: "liquidaciones_eliminadas", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "liquidacion_lineas", filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "liquidaciones", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "contratos_anexo", filtro: `contrato_id IN (SELECT id FROM contratos_trabajo WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },

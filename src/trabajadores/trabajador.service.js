@@ -93,6 +93,9 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
     if (despues.fecha_ingreso !== antes.fecha_ingreso) {
         await exigirIngresoCorregible(trabajador)
     }
+    if (despues.fecha_termino !== null && despues.fecha_termino !== antes.fecha_termino) {
+        await exigirSinLiquidacionesDespuesDe(trabajador, despues.fecha_termino)
+    }
 
     const meses = mesesQueSuma(antes, despues)
 
@@ -115,6 +118,22 @@ async function exigirIngresoCorregible(trabajador) {
     })
     if (cerradas > 0) {
         throw new ConflictError("La fecha de ingreso no se puede cambiar: el trabajador tiene liquidaciones de meses cerrados")
+    }
+}
+
+// No se registra un término anterior a meses que ya tienen liquidación: hay que eliminarlas primero.
+async function exigirSinLiquidacionesDespuesDe(trabajador, fechaTermino) {
+    const { Liquidacion, PeriodoRemuneracion } = require("../shared/associations.js")
+    const anio = Number(fechaTermino.slice(0, 4))
+    const mes = Number(fechaTermino.slice(5, 7))
+    const posterior = await Liquidacion.findOne({
+        where: { trabajador_id: trabajador.id, vigente: true },
+        include: [{ model: PeriodoRemuneracion, required: true, where: { [Op.or]: [{ anio: { [Op.gt]: anio } }, { anio, mes: { [Op.gt]: mes } }] } }],
+        order: [[PeriodoRemuneracion, "anio", "ASC"], [PeriodoRemuneracion, "mes", "ASC"]]
+    })
+    if (posterior !== null) {
+        const p = posterior.PeriodoRemuneracion
+        throw new ConflictError(`El trabajador tiene una liquidación de ${String(p.mes).padStart(2, "0")}-${p.anio}, posterior a esa fecha de término: elimínela antes (Liquidaciones → Eliminar)`)
     }
 }
 

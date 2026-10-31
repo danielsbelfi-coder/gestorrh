@@ -89,6 +89,26 @@ function validarDatosFiniquito(datos, fechaTermino) {
     return descuentos.map((d) => ({ glosa: d.glosa.trim(), monto: d.monto, codigo_lre: d.codigo_lre }))
 }
 
+// Liquidaciones del trabajador en meses posteriores al término (por ejemplo, calculadas antes de registrar el término).
+// Mientras existan, el finiquito no se calcula ni se cierra: hay que eliminarlas primero.
+async function exigirSinLiquidacionesPosteriores(trabajador) {
+    const anio = Number(trabajador.fecha_termino.slice(0, 4))
+    const mes = Number(trabajador.fecha_termino.slice(5, 7))
+    const posterior = await Liquidacion.findOne({
+        where: { trabajador_id: trabajador.id, vigente: true },
+        include: [{
+            model: PeriodoRemuneracion,
+            required: true,
+            where: { empresa_id: trabajador.empresa_id, [Op.or]: [{ anio: { [Op.gt]: anio } }, { anio, mes: { [Op.gt]: mes } }] }
+        }],
+        order: [[PeriodoRemuneracion, "anio", "ASC"], [PeriodoRemuneracion, "mes", "ASC"]]
+    })
+    if (posterior !== null) {
+        const p = posterior.PeriodoRemuneracion
+        throw new ConflictError(`El trabajador tiene una liquidación de ${String(p.mes).padStart(2, "0")}-${p.anio}, posterior al término: elimínela antes de calcular o cerrar el finiquito (Liquidaciones → Eliminar)`)
+    }
+}
+
 async function exigirPeriodoAbierto(trabajador) {
     const anio = Number(trabajador.fecha_termino.slice(0, 4))
     const mes = Number(trabajador.fecha_termino.slice(5, 7))
@@ -115,6 +135,7 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     }
 
     const periodo = await exigirPeriodoAbierto(trabajador)
+    await exigirSinLiquidacionesPosteriores(trabajador)
 
     // El finiquito descuenta el saldo de pago en exceso que deja la liquidación del mes de término: debe existir.
     const liquidacionDelMes = await Liquidacion.findOne({ where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true } })
@@ -360,6 +381,7 @@ async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
     }
 
     const periodo = await exigirPeriodoAbierto(finiquito.Trabajador)
+    await exigirSinLiquidacionesPosteriores(finiquito.Trabajador)
 
     const liquidacion = await Liquidacion.findOne({
         where: { periodo_id: periodo.id, trabajador_id: finiquito.trabajador_id, vigente: true }

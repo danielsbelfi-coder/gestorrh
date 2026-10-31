@@ -5,7 +5,7 @@ const {
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
     ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional, PrevisionPersona, CargaFamiliar, TramoAsignacionPersona, AhorroVoluntario,
-    Finiquito, FiniquitoEliminado, Jornada, PeriodoReapertura, AccesoSoporte, RegistroSoporte
+    Finiquito, FiniquitoEliminado, LiquidacionEliminada, Jornada, PeriodoReapertura, AccesoSoporte, RegistroSoporte
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
 
@@ -35,6 +35,7 @@ const TABLAS = [
     { archivo: "liquidaciones.csv", modelo: Liquidacion, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "liquidacion_lineas.csv", modelo: LiquidacionLinea, filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { archivo: "finiquitos.csv", modelo: Finiquito, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
+    { archivo: "liquidaciones_eliminadas.csv", modelo: LiquidacionEliminada, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "finiquitos_eliminados.csv", modelo: FiniquitoEliminado, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "accesos_soporte.csv", modelo: AccesoSoporte, filtro: "empresa_id = :empresaId" },
     // Incluye los restablecimientos de contraseña o de acceso (van asociados a la cuenta, no a una empresa). Sin la IP del personal de soporte.

@@ -84,7 +84,13 @@ async function documentoPeriodo(req, res) {
     enviarPdf(res, `liquidaciones-${sufijoPeriodo(periodo)}.pdf`, documentos, req.query.con_aportes === "1")
 }
 
+async function eliminar(req, res) {
+    const { eliminarLiquidacion } = require("./liquidacion.service.js")
+    res.status(200).json(await eliminarLiquidacion(req.params.periodoId, req.params.id, req.body?.motivo, req.empresasPermitidas, req.usuario.id))
+}
+
 module.exports = {
+    eliminar,
     crear,
     listar,
     obtenerPorId,

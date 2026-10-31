@@ -33,6 +33,7 @@ const { CargaFamiliar, TramoAsignacionPersona } = require("../trabajadores/carga
 const { AhorroVoluntario } = require("../trabajadores/ahorro_voluntario.model.js")
 const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 const { FiniquitoEliminado } = require("../remuneraciones/finiquito_eliminado.model.js")
+const { LiquidacionEliminada } = require("../remuneraciones/liquidacion_eliminada.model.js")
 const { Jornada } = require("../contratos/jornada.model");
 const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
 const { AccesoSoporte } = require("../soporte/acceso_soporte.model.js");
@@ -394,6 +395,7 @@ module.exports = {
     AhorroVoluntario,
     Finiquito,
     FiniquitoEliminado,
+    LiquidacionEliminada,
     Jornada,
     ParametroHistorial
 }

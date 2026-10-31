@@ -76,7 +76,8 @@ const tabla = crearTabla({
                     ? `<button type="button" class="chico" data-accion="emitir" data-id="${l.id}">Cerrar liquidación</button>`
                     : `<button type="button" class="chico secundario" data-accion="recalcular" data-id="${l.id}">Recalcular</button>`}
                 <button type="button" class="chico secundario" data-accion="pdf" data-id="${l.id}">PDF</button>
-                <button type="button" class="chico secundario" data-accion="pdf-aportes" data-id="${l.id}">PDF con aportes</button>`
+                <button type="button" class="chico secundario" data-accion="pdf-aportes" data-id="${l.id}">PDF con aportes</button>
+                <button type="button" class="chico secundario" data-accion="eliminar" data-id="${l.id}">Eliminar</button>`
         }
     ],
     filtros: [{ titulo: "Estado", valor: (l) => l.estado, opciones: opcionesDe("liquidacion") }]
@@ -299,6 +300,26 @@ document.getElementById("tablaLiquidaciones").addEventListener("click", async fu
             return
         }
         mensaje("info", ["Nueva versión creada como borrador.", ...(resultado.datos.advertencias ?? [])].join(" "))
+    }
+
+    if (accion === "eliminar") {
+        const nombre = nombreDe(liquidacion.trabajador_id)
+        let motivo = ""
+        if (liquidacion.estado === "emitida") {
+            const respuesta = prompt(`La liquidación de ${nombre} está cerrada. Para eliminarla (con todas sus versiones), escribe el motivo; queda registrado:`)
+            if (respuesta === null) {
+                return
+            }
+            motivo = respuesta.trim()
+        } else if (!confirm(`¿Eliminar el borrador de la liquidación de ${nombre}? Queda registrado y se puede volver a calcular.`)) {
+            return
+        }
+        const resultado = await llamarApi(`${base}/eliminar`, { method: "POST", body: JSON.stringify({ motivo }) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo eliminar")
+            return
+        }
+        mensaje("info", `Liquidación de ${nombre} eliminada. Si el mes siguiente usaba su saldo de pago en exceso, aparecerá para recalcular.`)
     }
 
     cargarLiquidaciones()

@@ -2,7 +2,7 @@ const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo,
     Trabajador, TramoImpuesto, SituacionPrevisional,
     Persona, Afp, ConceptoRemuneracion,
     ResumenAsistencia, VariablePeriodo, LiquidacionLinea,
-    Empresa, LicenciaMedica, ContratoAnexo, Finiquito } = require("../shared/associations.js")
+    Empresa, LicenciaMedica, ContratoAnexo, Finiquito, LiquidacionEliminada } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
@@ -380,6 +380,12 @@ async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
 
     if (trabajador === null || trabajador.empresa_id !== periodo.empresa_id) {
         throw new NotFoundError("Trabajador no encontrado")
+    }
+
+    // Solo se liquida un mes en que la relación laboral existe (no antes del ingreso ni después del término).
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    if (trabajador.fecha_ingreso > ultimoDia || (trabajador.fecha_termino !== null && trabajador.fecha_termino < primerDia)) {
+        throw new ConflictError("El trabajador no tiene relación laboral en este periodo (ingresa después o terminó antes)")
     }
 
     return trabajador
@@ -867,6 +873,55 @@ async function emitirLiquidacionesPeriodo(periodo_id, empresasPermitidas, usuari
 }
 
 // Cada liquidación con el saldo que descuenta del mes anterior y si ese saldo quedó desactualizado.
+// Elimina la liquidación de un trabajador en un periodo abierto (todas sus versiones). La emitida pide motivo.
+// Toda eliminación queda en liquidaciones_eliminadas. Si el mes siguiente usaba su saldo de pago en exceso o era la
+// relación anterior del mes, esas liquidaciones quedan marcadas para recalcular (los avisos que ya existen).
+async function eliminarLiquidacion(periodo_id, liquidacion_id, motivo, empresasPermitidas, usuarioId) {
+    const periodo = await obtenerPeriodoPorId(periodo_id, empresasPermitidas)
+    await exigirRol(usuarioId, periodo.empresa_id, PERMISOS.CALCULAR_LIQUIDACION)
+
+    if (periodo.estado !== "abierto") {
+        throw new ConflictError("El periodo de remuneraciones se encuentra cerrado")
+    }
+    const liquidacion = await Liquidacion.findOne({ where: { id: liquidacion_id, periodo_id: periodo.id, vigente: true } })
+    if (liquidacion === null) {
+        throw new NotFoundError("Liquidación no encontrada")
+    }
+    const texto = typeof motivo === "string" ? motivo.trim() : ""
+    if (liquidacion.estado === "emitida" && texto === "") {
+        throw new ValidationError("Para eliminar una liquidación emitida debe indicar el motivo")
+    }
+    const finiquito = await Finiquito.findOne({ where: { trabajador_id: liquidacion.trabajador_id } })
+    const trabajador = await Trabajador.findByPk(liquidacion.trabajador_id)
+    const mes = `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}`
+    if (finiquito !== null && finiquito.estado !== "calculado" && trabajador.fecha_termino?.slice(0, 7) === mes) {
+        throw new ConflictError("El trabajador tiene su finiquito emitido en este mes: elimine primero el finiquito")
+    }
+
+    const versiones = await Liquidacion.findAll({
+        where: { periodo_id: periodo.id, trabajador_id: liquidacion.trabajador_id },
+        include: [LiquidacionLinea],
+        order: [["version", "DESC"]]
+    })
+
+    await sequelize.transaction(async (transaction) => {
+        await LiquidacionEliminada.create({
+            trabajador_id: liquidacion.trabajador_id,
+            periodo_id: periodo.id,
+            estado: liquidacion.estado,
+            datos: versiones.map((v) => v.toJSON()),
+            motivo: texto || null,
+            usuario_id: usuarioId
+        }, { transaction })
+        const ids = versiones.map((v) => v.id)
+        await LiquidacionLinea.destroy({ where: { liquidacion_id: ids }, transaction })
+        await Liquidacion.update({ reemplaza_a_id: null }, { where: { id: ids }, transaction })
+        await Liquidacion.destroy({ where: { id: ids }, transaction })
+    })
+
+    return { eliminada: true, versiones: versiones.length }
+}
+
 async function listarLiquidaciones(periodo_id, empresasPermitidas) {
     const liquidaciones = await Liquidacion.findAll({
         where: { periodo_id: periodo_id, vigente: true },
@@ -922,5 +977,6 @@ module.exports = {
     emitirLiquidacionesPeriodo,
     saldoDesactualizado,
     relacionDesactualizada,
+    eliminarLiquidacion,
     CODIGOS_PARAMETROS
 }
