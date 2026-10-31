@@ -17,6 +17,7 @@ const PASOS_EMPRESA = [
     { tabla: "periodo_reaperturas", filtro: "periodo_id IN (SELECT id FROM periodos_remuneracion WHERE empresa_id = :empresaId)" },
     { tabla: "periodos_remuneracion", filtro: "empresa_id = :empresaId" },
     { tabla: "finiquitos", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
+    { tabla: "finiquitos_eliminados", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "trabajadores", filtro: "empresa_id = :empresaId" },
     { tabla: "situaciones_previsionales", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
     { tabla: "previsiones_persona", filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },

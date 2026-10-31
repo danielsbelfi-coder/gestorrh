@@ -9,7 +9,8 @@ const TIPOS = {
     correccion: "Corrección de asistencia",
     variable: "Variable del mes",
     resumen: "Resumen de asistencia",
-    saldo: "Liquidación con saldo desactualizado"
+    saldo: "Liquidación con saldo desactualizado",
+    finiquito_saldo: "Finiquito con saldo desactualizado"
 }
 
 const TIPO_CONTRATO = { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
@@ -157,6 +158,19 @@ function deSaldo(liquidacion, saldo) {
     })
 }
 
+// Finiquito (calculado o emitido) que descontó un saldo de pago en exceso distinto del que hoy deja la liquidación del mes.
+function deFiniquitoSaldo(finiquito, saldo) {
+    const trabajador = finiquito.Trabajador
+    const pesos = (monto) => `$${Number(monto).toLocaleString("es-CL")}`
+    return base("finiquito_saldo", finiquito.id, trabajador, {
+        detalle: `Término ${fechaCorta(trabajador.fecha_termino)}: se calculó con un saldo de pago en exceso de ${pesos(saldo.guardado)} y la liquidación ahora deja ${pesos(saldo.actual)}`,
+        fecha: trabajador.fecha_termino,
+        enlace: enlace("finiquitos.html", { buscar: nombrePersona(trabajador.Persona), empresa: trabajador.empresa_id }),
+        accion: { texto: "Recalcular", metodo: "POST", ruta: `/api/finiquitos/${finiquito.id}/recalcular`, cuerpo: {} },
+        permiso: "GESTIONAR_FINIQUITOS"
+    })
+}
+
 // rolesPorEmpresa: { [empresa_id]: "ADMIN" | "JEFE_RRHH" | "RRHH" }. Sin rol en esa empresa (por ejemplo soporte), no actúa.
 // permisos: la matriz PERMISOS de src/shared/permisos.js (se recibe como parámetro para que esta función no toque la base).
 function puedeActuar(item, rolesPorEmpresa, permisos) {
@@ -169,4 +183,4 @@ function ordenar(items) {
     return [...items].sort((a, b) => String(a.fecha ?? "").localeCompare(String(b.fecha ?? "")) || a.clave.localeCompare(b.clave))
 }
 
-module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }
+module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deFiniquitoSaldo, puedeActuar, ordenar, nombrePersona, fechaCorta }

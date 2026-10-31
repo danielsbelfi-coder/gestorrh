@@ -83,3 +83,13 @@ test("deSaldo: borrador se vuelve a calcular; emitida se recalcula con motivo fi
     assert.equal(emitida.accion.ruta, "/api/periodos-remuneracion/12/liquidaciones/50/recalcular")
     assert.equal(emitida.accion.cuerpo.motivo, armarP.MOTIVO_SALDO)
 })
+
+test("deFiniquitoSaldo: recalcula el finiquito con los datos guardados", () => {
+    const armarP = require("../src/pendientes/armar_pendientes.js")
+    const trabajador = { id: 7, empresa_id: 3, fecha_termino: "2026-11-30", Persona: { nombres: "Ana", apellido_paterno: "Soto" }, Empresa: { razon_social: "Emp" } }
+    const item = armarP.deFiniquitoSaldo({ id: 9, Trabajador: trabajador }, { guardado: 50000, actual: 0 })
+    assert.equal(item.tipo, "finiquito_saldo")
+    assert.equal(item.permiso, "GESTIONAR_FINIQUITOS")
+    assert.deepEqual(item.accion, { texto: "Recalcular", metodo: "POST", ruta: "/api/finiquitos/9/recalcular", cuerpo: {} })
+    assert.match(item.detalle, /30-11-2026.*\$50\.000.*\$0/)
+})

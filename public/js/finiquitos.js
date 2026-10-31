@@ -23,7 +23,12 @@ const tabla = crearTabla({
             titulo: "Causal", valor: (f) => CAUSALES[f.trabajador.causal_termino] ?? "",
             html: (f) => `<span title="${escaparHtml(CAUSALES[f.trabajador.causal_termino] ?? "")}">${escaparHtml((CAUSALES[f.trabajador.causal_termino] ?? "Sin causal").split(":")[0])}</span>`
         },
-        { titulo: "Finiquito", valor: (f) => textoEstado("finiquito", f.estado), html: (f) => insignia("finiquito", f.estado) },
+        {
+            titulo: "Finiquito", valor: (f) => textoEstado("finiquito", f.estado),
+            html: (f) => insignia("finiquito", f.estado) + (f.finiquito?.saldo_desactualizado
+                ? ` <span class="insignia peligro" title="La liquidación del mes ahora deja un saldo de pago en exceso de ${escaparHtml(pesos(f.finiquito.saldo_liquidacion))}">Recalcular: cambió el saldo de la liquidación</span>`
+                : "")
+        },
         { titulo: "Total a pagar", valor: (f) => f.finiquito ? Number(f.finiquito.total_a_pagar) : 0, html: (f) => f.finiquito ? `<strong>${escaparHtml(pesos(f.finiquito.total_a_pagar))}</strong>` : "", numero: true },
         { titulo: "", orden: false, valor: () => "", html: botones }
     ],
@@ -37,8 +42,14 @@ function botones(fila) {
     if (f) {
         lista.push(`<button type="button" class="chico secundario" data-accion="detalle" data-trabajador="${id}">Detalle</button>`)
     }
-    if (!f || f.estado !== "pagado") {
-        lista.push(`<button type="button" class="chico secundario" data-accion="calcular" data-trabajador="${id}">${f ? "Recalcular" : "Calcular"}</button>`)
+    if (!f) {
+        lista.push(`<button type="button" class="chico secundario" data-accion="calcular" data-trabajador="${id}">Calcular</button>`)
+        lista.push(`<button type="button" class="chico secundario" data-accion="quitar-termino" data-trabajador="${id}">Quitar término</button>`)
+    }
+    if (f && f.estado !== "pagado") {
+        // Recalcular usa los datos guardados; «Editar datos» abre el formulario para cambiarlos.
+        lista.push(`<button type="button" class="chico ${f.saldo_desactualizado ? "" : "secundario"}" data-accion="recalcular" data-trabajador="${id}">Recalcular</button>`)
+        lista.push(`<button type="button" class="chico secundario" data-accion="calcular" data-trabajador="${id}">Editar datos</button>`)
     }
     if (f?.estado === "calculado") {
         lista.push(`<button type="button" class="chico" data-accion="emitir" data-trabajador="${id}">Cerrar finiquito</button>`)
@@ -48,6 +59,9 @@ function botones(fila) {
     }
     if (f) {
         lista.push(`<button type="button" class="chico secundario" data-accion="pdf" data-trabajador="${id}">PDF</button>`)
+    }
+    if (f && f.estado !== "pagado") {
+        lista.push(`<button type="button" class="chico secundario" data-accion="eliminar" data-trabajador="${id}">Eliminar</button>`)
     }
     return lista.join(" ")
 }
@@ -80,10 +94,7 @@ async function cargarFiniquitos() {
 
     llenarBuscador(document.getElementById("trabajadorTermino"), trabajadores
         .filter((t) => t.estado !== "postulante" && !t.fecha_termino)
-        .map((t) => {
-            const persona = personaPorId.get(t.persona_id)
-            return { id: t.id, texto: `${persona ? textoPersona(persona) : "Trabajador " + t.id} · #${t.id}` }
-        }))
+        .map((t) => ({ id: t.id, texto: textoTrabajador(t, personaPorId.get(t.persona_id)) })))
 }
 
 // ---------- Registrar término ----------
@@ -197,11 +208,7 @@ document.getElementById("formCalculo").addEventListener("submit", async function
         return
     }
 
-    const saldo = resultado.datos.detalle_calculo?.saldoPagoExceso
-    const textoSaldo = saldo?.descontado > 0
-        ? ` Se descontó el saldo de pago en exceso: ${pesos(saldo.descontado)}.` + (saldo.noRecuperado > 0 ? ` No alcanzó para ${pesos(saldo.noRecuperado)}: esa diferencia se gestiona fuera del sistema.` : "")
-        : ""
-    mensaje("info", `Finiquito calculado: ${pesos(resultado.datos.total_a_pagar)}.${textoSaldo} Revísalo y ciérralo cuando la liquidación del mes esté cerrada.`)
+    mensaje("info", `Finiquito calculado: ${pesos(resultado.datos.total_a_pagar)}.${textoSaldoFiniquito(resultado.datos)} Revísalo y ciérralo cuando la liquidación del mes esté cerrada.`)
     await cargarFiniquitos()
     const fila = filas.find((f) => f.trabajador.id === resultado.datos.trabajador_id)
     if (fila) {
@@ -294,6 +301,34 @@ document.getElementById("tablaFiniquitos").addEventListener("click", async funct
         return
     }
 
+    if (boton.dataset.accion === "recalcular") {
+        const r = await llamarApi(`/api/finiquitos/${fila.finiquito.id}/recalcular`, { method: "POST" })
+        if (r.status !== 200) {
+            mensaje("error", r.datos?.error ?? "No se pudo recalcular el finiquito")
+            return
+        }
+        await cargarFiniquitos()
+        mensaje("info", `Finiquito de ${nombre} recalculado: ${pesos(r.datos.total_a_pagar)}.${textoSaldoFiniquito(r.datos)}${fila.finiquito.estado === "emitido" ? " Quedó otra vez por cerrar." : ""}`)
+        return
+    }
+    if (boton.dataset.accion === "eliminar") {
+        await eliminarFiniquito(fila, nombre)
+        return
+    }
+    if (boton.dataset.accion === "quitar-termino") {
+        if (!confirm(`¿Quitar el término de ${nombre}? Se borran la fecha y la causal de término y el trabajador vuelve a quedar activo.`)) {
+            return
+        }
+        const r = await llamarApi("/api/finiquitos/quitar-termino", { method: "POST", body: JSON.stringify({ trabajador_id: fila.trabajador.id }) })
+        if (r.status !== 200) {
+            mensaje("error", r.datos?.error ?? "No se pudo quitar el término")
+            return
+        }
+        await cargarFiniquitos()
+        mensaje("info", ["Término quitado.", ...(r.datos.advertencias ?? [])].join(" "))
+        return
+    }
+
     let resultado
     if (boton.dataset.accion === "emitir") {
         if (!confirm(`¿Cerrar el finiquito de ${nombre}? Mientras no esté pagado y el periodo siga abierto, se puede recalcular.`)) {
@@ -316,5 +351,42 @@ document.getElementById("tablaFiniquitos").addEventListener("click", async funct
     mensaje("info", boton.dataset.accion === "emitir" ? "Finiquito cerrado." : "Finiquito marcado como pagado.")
     cargarFiniquitos()
 })
+
+// Elimina el finiquito (no pagado, con el mes del término abierto). El emitido pide motivo. Ofrece quitar también el término.
+async function eliminarFiniquito(fila, nombre) {
+    const emitido = fila.finiquito.estado === "emitido"
+    let motivo = ""
+    if (emitido) {
+        const respuesta = prompt(`El finiquito de ${nombre} está cerrado. Para eliminarlo, escribe el motivo (queda registrado):`)
+        if (respuesta === null) {
+            return
+        }
+        motivo = respuesta.trim()
+        if (motivo === "") {
+            mensaje("error", "Para eliminar un finiquito cerrado hay que indicar el motivo")
+            return
+        }
+    } else if (!confirm(`¿Eliminar el finiquito de ${nombre}? Queda registrado y se puede volver a calcular.`)) {
+        return
+    }
+    const quitarTermino = confirm(`¿Quitar también el término de ${nombre} (fecha y causal)?\n\nAceptar: el trabajador vuelve a quedar activo.\nCancelar: se mantiene el término y se puede calcular el finiquito de nuevo.`)
+
+    const r = await llamarApi(`/api/finiquitos/${fila.finiquito.id}/eliminar`, { method: "POST", body: JSON.stringify({ motivo, quitar_termino: quitarTermino }) })
+    if (r.status !== 200) {
+        mensaje("error", r.datos?.error ?? "No se pudo eliminar el finiquito")
+        return
+    }
+    await cargarFiniquitos()
+    mensaje("info", [r.datos.termino_quitado ? "Finiquito eliminado y término quitado." : "Finiquito eliminado.", ...(r.datos.advertencias ?? [])].join(" "))
+}
+
+// Texto del saldo de pago en exceso que descontó un finiquito.
+function textoSaldoFiniquito(finiquito) {
+    const saldo = finiquito.detalle_calculo?.saldoPagoExceso
+    if (!(saldo?.descontado > 0)) {
+        return ""
+    }
+    return ` Se descontó el saldo de pago en exceso: ${pesos(saldo.descontado)}.` + (saldo.noRecuperado > 0 ? ` No alcanzó para ${pesos(saldo.noRecuperado)}: esa diferencia se gestiona fuera del sistema.` : "")
+}
 
 document.addEventListener("empresa-lista", () => { limpiarMensajes(); cargarFiniquitos() })

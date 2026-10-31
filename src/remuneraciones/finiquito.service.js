@@ -1,7 +1,8 @@
 const { Finiquito, Trabajador, Persona, Liquidacion, LiquidacionLinea, ConceptoRemuneracion,
     PeriodoRemuneracion, ContratoTrabajo, ContratoAnexo,
-    Empresa, Cargo } = require("../shared/associations.js")
+    Empresa, Cargo, FiniquitoEliminado } = require("../shared/associations.js")
 const { Op } = require("sequelize")
+const { sequelize } = require("../shared/database.js")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
@@ -223,8 +224,130 @@ async function obtenerFiniquitoPermitido(where, empresasPermitidas) {
     return finiquito
 }
 
+// ¿El saldo de pago en exceso que descontó el finiquito sigue siendo el de la liquidación del mes de término?
+// Solo para finiquitos que todavía se pueden recalcular (calculado o emitido).
+async function estadoSaldoFiniquito(finiquito, trabajador) {
+    if (finiquito.estado === "pagado" || !trabajador.fecha_termino) {
+        return { desactualizado: false }
+    }
+    const anio = Number(trabajador.fecha_termino.slice(0, 4))
+    const mes = Number(trabajador.fecha_termino.slice(5, 7))
+    const periodo = await PeriodoRemuneracion.findOne({ where: { empresa_id: trabajador.empresa_id, anio, mes } })
+    const liquidacion = periodo === null ? null : await Liquidacion.findOne({ where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true } })
+    const guardado = Number(finiquito.detalle_calculo?.saldoPagoExceso?.saldo ?? 0)
+    const actual = liquidacion === null ? 0 : Number(liquidacion.saldo_pago_exceso)
+    return { desactualizado: guardado !== actual, guardado, actual, periodoAbierto: periodo?.estado === "abierto" }
+}
+
+// El finiquito con la marca de saldo desactualizado (para la lista de Finiquitos).
 async function obtenerFiniquito(trabajadorId, empresasPermitidas) {
-    return await obtenerFiniquitoPermitido({ trabajador_id: trabajadorId }, empresasPermitidas)
+    const finiquito = await obtenerFiniquitoPermitido({ trabajador_id: trabajadorId }, empresasPermitidas)
+    const saldo = await estadoSaldoFiniquito(finiquito, finiquito.Trabajador)
+    return { ...finiquito.toJSON(), saldo_desactualizado: saldo.desactualizado, saldo_liquidacion: saldo.actual ?? null }
+}
+
+// Datos del cálculo guardados en el finiquito, para recalcularlo sin volver a llenar el formulario.
+function datosGuardados(finiquito) {
+    return {
+        trabajador_id: finiquito.trabajador_id,
+        fecha_finiquito: finiquito.fecha_finiquito,
+        lugar: finiquito.lugar,
+        aviso_previo_dado: finiquito.aviso_previo_dado,
+        dias_tomados: Number(finiquito.dias_tomados),
+        dias_inhabiles: Number(finiquito.dias_inhabiles),
+        imputacion_afc: Number(finiquito.imputacion_afc),
+        descuentos: (finiquito.descuentos ?? []).filter((d) => !d.automatico)
+    }
+}
+
+async function recalcularFiniquito(id, empresasPermitidas, usuarioId) {
+    const finiquito = await obtenerFiniquitoPermitido({ id }, empresasPermitidas)
+    return await calcularFiniquito(datosGuardados(finiquito), empresasPermitidas, usuarioId)
+}
+
+// Periodo del mes de término: debe estar abierto para eliminar el finiquito o quitar el término.
+async function exigirPeriodoDelTerminoAbierto(trabajador) {
+    const anio = Number(trabajador.fecha_termino.slice(0, 4))
+    const mes = Number(trabajador.fecha_termino.slice(5, 7))
+    const periodo = await PeriodoRemuneracion.findOne({ where: { empresa_id: trabajador.empresa_id, anio, mes } })
+    if (periodo !== null && periodo.estado !== "abierto") {
+        throw new ConflictError(`El periodo ${String(mes).padStart(2, "0")}-${anio} del término está cerrado; si es necesario, el administrador puede reabrirlo`)
+    }
+    return periodo
+}
+
+// Quita la fecha y la causal de término (el trabajador vuelve a activo). Pasa por actualizarTrabajador para respetar
+// el límite de trabajadores del plan (sin término, el trabajador vuelve a contar en los meses siguientes).
+// Avisa si hay que recalcular la liquidación del mes.
+async function quitarTerminoDe(trabajador, periodo, empresasPermitidas, usuarioId) {
+    const { actualizarTrabajador } = require("../trabajadores/trabajador.service.js")
+    await actualizarTrabajador(trabajador.id, {
+        fecha_termino: null,
+        causal_termino: null,
+        estado: trabajador.estado === "desvinculado" ? "activo" : trabajador.estado
+    }, empresasPermitidas, usuarioId)
+    const liquidacion = periodo === null ? null : await Liquidacion.findOne({ where: { periodo_id: periodo.id, trabajador_id: trabajador.id, vigente: true } })
+    return liquidacion === null
+        ? []
+        : [`Recalcule la liquidación de ${String(periodo.mes).padStart(2, "0")}-${periodo.anio}: se calculó con la fecha de término que se quitó`]
+}
+
+// Elimina un finiquito calculado o emitido (nunca pagado) con el mes del término abierto. El emitido pide motivo.
+// Opcionalmente quita también el término del trabajador. Toda eliminación queda en finiquitos_eliminados.
+async function eliminarFiniquito(id, { motivo, quitar_termino: quitarTermino } = {}, empresasPermitidas, usuarioId) {
+    const finiquito = await obtenerFiniquitoPermitido({ id }, empresasPermitidas)
+    const trabajador = finiquito.Trabajador
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.GESTIONAR_FINIQUITOS)
+
+    if (finiquito.estado === "pagado") {
+        throw new ConflictError("El finiquito ya está pagado: no se elimina; las diferencias se tratan como refiniquito")
+    }
+    const textoMotivo = typeof motivo === "string" ? motivo.trim() : ""
+    if (finiquito.estado === "emitido" && textoMotivo === "") {
+        throw new ValidationError("Para eliminar un finiquito emitido debe indicar el motivo")
+    }
+    const periodo = await exigirPeriodoDelTerminoAbierto(trabajador)
+
+    await sequelize.transaction(async (transaction) => {
+        await FiniquitoEliminado.create({
+            trabajador_id: trabajador.id,
+            finiquito_id: finiquito.id,
+            estado: finiquito.estado,
+            datos: finiquito.toJSON(),
+            motivo: textoMotivo || null,
+            quito_termino: quitarTermino === true,
+            usuario_id: usuarioId
+        }, { transaction })
+        await finiquito.destroy({ transaction })
+    })
+
+    if (quitarTermino !== true) {
+        return { eliminado: true, termino_quitado: false, advertencias: [] }
+    }
+    try {
+        const advertencias = await quitarTerminoDe(trabajador, periodo, empresasPermitidas, usuarioId)
+        return { eliminado: true, termino_quitado: true, advertencias }
+    } catch (error) {
+        return { eliminado: true, termino_quitado: false, advertencias: [`Se eliminó el finiquito, pero no se pudo quitar el término: ${error.message}`] }
+    }
+}
+
+// Quita el término de un trabajador que no tiene finiquito (por ejemplo, registrado por error).
+async function quitarTermino(trabajadorId, empresasPermitidas, usuarioId) {
+    const trabajador = await Trabajador.findByPk(trabajadorId)
+    if (trabajador === null || !empresasPermitidas.includes(trabajador.empresa_id)) {
+        throw new NotFoundError("Trabajador no encontrado")
+    }
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.GESTIONAR_FINIQUITOS)
+    if (!trabajador.fecha_termino) {
+        throw new ConflictError("El trabajador no tiene término registrado")
+    }
+    if (await Finiquito.count({ where: { trabajador_id: trabajador.id } }) > 0) {
+        throw new ConflictError("El trabajador tiene finiquito: elimínelo y marque «quitar también el término»")
+    }
+    const periodo = await exigirPeriodoDelTerminoAbierto(trabajador)
+    const advertencias = await quitarTerminoDe(trabajador, periodo, empresasPermitidas, usuarioId)
+    return { termino_quitado: true, advertencias }
 }
 
 async function emitirFiniquito(id, empresasPermitidas, usuarioId) {
@@ -304,6 +427,10 @@ async function documentoFiniquito(id, empresasPermitidas) {
 
 module.exports = {
     calcularFiniquito,
+    recalcularFiniquito,
+    eliminarFiniquito,
+    quitarTermino,
+    estadoSaldoFiniquito,
     obtenerFiniquito,
     emitirFiniquito,
     pagarFiniquito,

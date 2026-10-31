@@ -2,7 +2,7 @@ const { Liquidacion, PeriodoRemuneracion, ContratoTrabajo,
     Trabajador, TramoImpuesto, SituacionPrevisional,
     Persona, Afp, ConceptoRemuneracion,
     ResumenAsistencia, VariablePeriodo, LiquidacionLinea,
-    Empresa, LicenciaMedica, ContratoAnexo } = require("../shared/associations.js")
+    Empresa, LicenciaMedica, ContratoAnexo, Finiquito } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerParametroVigente } = require("./parametro_legal.service.js")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
@@ -488,6 +488,16 @@ async function prepararCalculo(periodo, trabajador) {
     const avisos = resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : []
+
+    // Si el trabajador ya tiene finiquito (no pagado) y este cálculo cambia el saldo que el finiquito descontó, se avisa.
+    const finiquito = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
+    if (finiquito !== null && finiquito.estado !== "pagado" && trabajador.fecha_termino?.slice(0, 7) === primerDia.slice(0, 7)) {
+        const saldoFiniquito = Number(finiquito.detalle_calculo?.saldoPagoExceso?.saldo ?? 0)
+        if (saldoFiniquito !== resultado.nuevoSaldoPendiente) {
+            const pesos = (monto) => `$${monto.toLocaleString("es-CL")}`
+            avisos.push(`El finiquito se calculó con un saldo de pago en exceso de ${pesos(saldoFiniquito)} y ahora es ${pesos(resultado.nuevoSaldoPendiente)}: recalcule el finiquito (Finiquitos → Recalcular)`)
+        }
+    }
     const montoDe = (codigo) => resultado.lineas
         .filter((l) => l.concepto.codigo === codigo)
         .reduce((suma, l) => suma + l.monto, 0)

@@ -225,6 +225,11 @@ async function problemasDeCierre(periodo) {
             motivos.push("No tiene liquidación")
         } else if (liquidacion.estado !== "emitida") {
             motivos.push("La liquidación está en borrador (sin emitir)")
+        } else {
+            const { saldoDesactualizado } = require("./liquidacion.service.js")
+            if ((await saldoDesactualizado(liquidacion, periodo)).desactualizado) {
+                motivos.push("Cambió el saldo de pago en exceso del mes anterior: recalcule la liquidación")
+            }
         }
 
         const pendientes = await VariablePeriodo.count({ where: { ...filtro, estado: "pendiente" } })
@@ -236,6 +241,11 @@ async function problemasDeCierre(periodo) {
             const finiquito = await Finiquito.findOne({ where: { trabajador_id: trabajador.id } })
             if (finiquito === null || finiquito.estado === "calculado") {
                 motivos.push("Terminó en el mes y no tiene su finiquito emitido")
+            } else {
+                const { estadoSaldoFiniquito } = require("./finiquito.service.js")
+                if ((await estadoSaldoFiniquito(finiquito, trabajador)).desactualizado) {
+                    motivos.push("El finiquito se calculó con otro saldo de pago en exceso: recalcúlelo")
+                }
             }
         }
 
