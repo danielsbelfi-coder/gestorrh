@@ -84,6 +84,10 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         throw new ValidationError("La comuna de prestación no está en la tabla de la Dirección del Trabajo")
     }
 
+    if (datos.campo_modificado === "sistema_remuneracion" && datos.valor_nuevo === "hora") {
+        throw new ValidationError("El sistema de remuneración por hora corresponde a honorarios, que el sistema todavía no contempla")
+    }
+
     if (datos.campo_modificado === "jornada_id") {
         await validarJornadaDelAnexo(datos.valor_nuevo, contrato)
     }

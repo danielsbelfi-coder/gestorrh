@@ -226,7 +226,7 @@ function prepararCampoValor() {
             ? `<select id="valorAnexo" required>${opciones.map((j) => `<option value="${j.id}">${escaparHtml(`${j.nombre} · ${textoDistribucion(j.dias)}`)}</option>`).join("")}</select>`
             : `<select id="valorAnexo" required disabled><option value="">No hay otra jornada de ${Number(actual?.horas_semanales ?? 0)} h en ${actual?.dias_trabajados ?? "?"} días</option></select>`
     } else if (definicion.tipo === "lista") {
-        control = `<select id="valorAnexo" required>${Object.entries(definicion.opciones).map(([v, t]) => `<option value="${escaparHtml(v)}">${escaparHtml(t)}</option>`).join("")}</select>`
+        control = `<select id="valorAnexo" required>${Object.entries(definicion.opciones).filter(([v]) => !(document.getElementById("campoAnexo").value === "sistema_remuneracion" && v === "hora")).map(([v, t]) => `<option value="${escaparHtml(v)}">${escaparHtml(t)}</option>`).join("")}</select>`
     } else if (definicion.tipo === "numero") {
         control = `<input type="number" id="valorAnexo" min="0" step="any" required>`
     } else if (definicion.tipo === "fecha") {

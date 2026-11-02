@@ -14,6 +14,10 @@ const { COMUNAS } = require("../shared/comunas_lre.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { exigirSinCruce } = require("../trabajadores/relaciones.js")
 
+// Los contratos por hora son honorarios, que el sistema todavía no contempla: no se crean nuevos (los que existan se
+// siguen liquidando). Ver «Sistema por hora» en el SPEC.
+const MENSAJE_POR_HORA = "El sistema de remuneración por hora corresponde a honorarios, que el sistema todavía no contempla"
+
 
 async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null) {
     const cargo = await Cargo.findByPk(datos.cargo_id)
@@ -44,6 +48,9 @@ async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null) 
 }
 
 async function crearContrato(datos, empresasPermitidas, usuarioId) {
+    if (datos.sistema_remuneracion === "hora") {
+        throw new ValidationError(MENSAJE_POR_HORA)
+    }
     const trabajador = await Trabajador.findByPk(datos.trabajador_id)
 
     if (trabajador === null || !empresasPermitidas.includes(trabajador.empresa_id)) {
@@ -212,6 +219,9 @@ async function corregirContrato(id, datos, empresasPermitidas, usuarioId) {
 
     await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
     await exigirContratoSinFirmar(contrato)
+    if (datos.sistema_remuneracion === "hora" && contrato.sistema_remuneracion !== "hora") {
+        throw new ValidationError(MENSAJE_POR_HORA)
+    }
 
     // Se valida con los datos finales: lo que llega encima de lo que ya tenía el contrato.
     const finales = { ...contrato.toJSON(), ...datos }
