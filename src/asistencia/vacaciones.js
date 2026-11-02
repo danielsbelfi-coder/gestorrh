@@ -140,4 +140,41 @@ function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial 
     }
 }
 
-module.exports = { DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }
+// Feriado a pagar en el finiquito: pendientes de los períodos + proporcional (0 con art. 44) en días hábiles, más los
+// inhábiles (sábados, domingos y feriados) que caen al recorrer esos días desde el siguiente al término.
+// saldo: resultado de saldoVacaciones a la fecha del término. feriados: fechas "AAAA-MM-DD".
+function feriadoFiniquito({ saldo, fechaTermino, feriados = [], art44 = false }) {
+    const pendientes = saldo.disponible
+    const proporcional = art44 ? 0 : (saldo.enCurso?.proporcional ?? 0)
+    const neto = Math.round((pendientes + proporcional) * 100) / 100
+    const habiles = Math.max(0, neto)
+    const anticipados = neto < 0 ? -neto : 0
+
+    const festivos = new Set(feriados.map((f) => String(f).slice(0, 10)))
+    let inhabiles = 0
+    let contados = 0
+    let pendientesInhabiles = 0
+    const objetivo = Math.ceil(habiles)
+    for (let fecha = sumarDias(fechaTermino, 1); contados < objetivo; fecha = sumarDias(fecha, 1)) {
+        const dia = diaSemana(fecha)
+        if (dia === 0 || dia === 6 || festivos.has(fecha)) {
+            pendientesInhabiles++
+        } else {
+            contados++
+            inhabiles += pendientesInhabiles
+            pendientesInhabiles = 0
+        }
+    }
+
+    return {
+        pendientes: Math.max(0, pendientes),
+        proporcional,
+        habiles,
+        inhabiles,
+        diasPorPagar: Math.round((habiles + inhabiles) * 100) / 100,
+        anticipados,
+        art44
+    }
+}
+
+module.exports = { feriadoFiniquito, DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }

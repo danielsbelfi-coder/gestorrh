@@ -8,7 +8,7 @@ const { sequelize } = require("../shared/database.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { esFechaValida, fechaChilena } = require("../shared/fechas.js")
-const { fechasHabiles, saldoVacaciones } = require("./vacaciones.js")
+const { fechasHabiles, saldoVacaciones, feriadoFiniquito } = require("./vacaciones.js")
 const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 
 const hoyChile = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date())
@@ -69,7 +69,8 @@ async function feriadosEntre(desde, hasta, comuna) {
     return feriadosAplicables(feriados.map((f) => f.toJSON()), comuna).map((f) => String(f.fecha).slice(0, 10))
 }
 
-async function saldoDe(trabajador, { excluir = null, agregar = null } = {}) {
+// aFecha: fecha a la que se calcula (el finiquito usa la del término aunque sea futura); por defecto, hoy.
+async function saldoDe(trabajador, { excluir = null, agregar = null, aFecha = null } = {}) {
     const aprobadas = await Vacacion.findAll({ where: { trabajador_id: trabajador.id, estado: "aprobada" } })
     const inicial = await VacacionSaldoInicial.findOne({ where: { trabajador_id: trabajador.id } })
     const tomadas = aprobadas
@@ -83,7 +84,7 @@ async function saldoDe(trabajador, { excluir = null, agregar = null } = {}) {
         aniosPrevios: persona?.anios_previos_progresivo ?? 0,
         fechaIngreso: trabajador.fecha_ingreso,
         fechaTermino: trabajador.fecha_termino,
-        hoy: hoyChile(),
+        hoy: aFecha ?? hoyChile(),
         saldoInicial: inicial ? { fecha_corte: inicial.fecha_corte, dias: Number(inicial.dias) } : null,
         tomadas
     })
@@ -324,7 +325,45 @@ async function guardarProgresivo(personaId, datos, empresasPermitidas, usuarioId
     return await persona.update({ anios_previos_progresivo: anios, respaldo_progresivo: respaldo.slice(0, 200) || null })
 }
 
+// Art. 44: relación de hasta 30 días, o hasta 60 si su primer contrato era a plazo fijo pactado por hasta 30 días.
+async function aplicaArt44(trabajador) {
+    const { ContratoAnexo } = require("../shared/associations.js")
+    const { contratoOriginal } = require("../contratos/contrato_original.js")
+    const duracion = (desde, hasta) => Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000) + 1
+    const total = duracion(trabajador.fecha_ingreso, trabajador.fecha_termino)
+    if (total <= 30) {
+        return true
+    }
+    if (total > 60) {
+        return false
+    }
+    const primero = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajador.id, estado: { [Op.ne]: "anulado" } }, order: [["fecha_inicio", "ASC"]] })
+    if (!primero) {
+        return false
+    }
+    const anexos = await ContratoAnexo.findAll({ where: { contrato_id: primero.id } })
+    const original = contratoOriginal(primero.toJSON(), anexos.map((a) => a.toJSON()))
+    return original.tipo_contrato === "plazo_fijo" && Boolean(original.fecha_termino) && duracion(original.fecha_inicio, original.fecha_termino) <= 30
+}
+
+// Feriado a pagar en el finiquito (días del módulo de vacaciones a la fecha del término).
+async function feriadoParaFiniquito(trabajador) {
+    const saldo = await saldoDe(trabajador, { aFecha: trabajador.fecha_termino })
+    const comuna = await comunaDelContrato(trabajador.id, trabajador.fecha_termino)
+    const hasta = new Date(Date.parse(`${trabajador.fecha_termino}T00:00:00Z`) + 400 * 86400000).toISOString().slice(0, 10)
+    const feriados = await feriadosEntre(trabajador.fecha_termino, hasta, comuna)
+    const art44 = await aplicaArt44(trabajador)
+    return {
+        ...feriadoFiniquito({ saldo, fechaTermino: trabajador.fecha_termino, feriados, art44 }),
+        ganados: saldo.ganados,
+        tomados: saldo.tomados,
+        periodos: saldo.periodos.filter((p) => p.cumplido).map(({ tipo, numero, desde, hasta: fin, ganados, tomados, pendientes }) => ({ tipo, numero, desde, hasta: fin, ganados, tomados, pendientes }))
+    }
+}
+
 module.exports = {
+    feriadoParaFiniquito,
+    aplicaArt44,
     guardarProgresivo,
     crearVacacion, aprobarVacacion, rechazarVacacion, anularVacacion, eliminarVacacion,
     listarVacaciones, saldoTrabajador, guardarSaldoInicial, mesesEntre

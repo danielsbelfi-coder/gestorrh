@@ -80,3 +80,21 @@ test("saldoVacaciones con progresivo: el período que cumple los 3 años suma el
     assert.equal(s.enCurso.proporcional, 8)
     assert.equal(s.aniosPrevios, 10)
 })
+
+test("feriadoFiniquito: pendientes + proporcional e inhábiles desde el día siguiente al término", () => {
+    // Término el viernes 6-11-2026: 3 hábiles → lunes 9, martes 10 y miércoles 11; inhábiles: sábado 7 y domingo 8.
+    const r = v.feriadoFiniquito({ saldo: { disponible: 1, enCurso: { proporcional: 2 } }, fechaTermino: "2026-11-06" })
+    assert.deepEqual([r.habiles, r.inhabiles, r.diasPorPagar], [3, 2, 5])
+    // Con fracción (2,5): se recorre hasta el tercer hábil; un feriado en el camino se suma.
+    const f = v.feriadoFiniquito({ saldo: { disponible: 0, enCurso: { proporcional: 2.5 } }, fechaTermino: "2026-11-06", feriados: ["2026-11-10"] })
+    assert.deepEqual([f.habiles, f.inhabiles, f.diasPorPagar], [2.5, 3, 5.5])
+    // Los inhábiles después del último hábil no se suman (término el miércoles, 2 hábiles: jueves y viernes).
+    assert.equal(v.feriadoFiniquito({ saldo: { disponible: 2, enCurso: null }, fechaTermino: "2026-11-04" }).inhabiles, 0)
+})
+
+test("feriadoFiniquito: art. 44 sin proporcional y anticipadas como exceso", () => {
+    const a = v.feriadoFiniquito({ saldo: { disponible: 0, enCurso: { proporcional: 1.25 } }, fechaTermino: "2026-11-06", art44: true })
+    assert.deepEqual([a.proporcional, a.diasPorPagar, a.art44], [0, 0, true])
+    const n = v.feriadoFiniquito({ saldo: { disponible: -5, enCurso: { proporcional: 2 } }, fechaTermino: "2026-11-06" })
+    assert.deepEqual([n.habiles, n.diasPorPagar, n.anticipados, n.pendientes], [0, 0, 3, 0])
+})

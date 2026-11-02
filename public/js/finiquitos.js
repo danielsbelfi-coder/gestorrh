@@ -179,8 +179,6 @@ function abrirCalculo(fila) {
     document.getElementById("fechaFiniquito").value = f?.fecha_finiquito ?? fila.trabajador.fecha_termino
     document.getElementById("lugar").value = f?.lugar ?? ""
     document.getElementById("avisoPrevio").value = String(f?.aviso_previo_dado ?? false)
-    document.getElementById("diasTomados").value = f ? Number(f.dias_tomados) : 0
-    document.getElementById("diasInhabiles").value = f?.dias_inhabiles ?? 0
     document.getElementById("imputacionAfc").value = f?.imputacion_afc ?? 0
     document.getElementById("listaDescuentos").innerHTML = ""
     // El saldo de pago en exceso lo agrega el servidor al calcular: no se edita a mano.
@@ -213,8 +211,6 @@ document.getElementById("formCalculo").addEventListener("submit", async function
             fecha_finiquito: document.getElementById("fechaFiniquito").value,
             lugar: document.getElementById("lugar").value.trim(),
             aviso_previo_dado: document.getElementById("avisoPrevio").value === "true",
-            dias_tomados: Number(document.getElementById("diasTomados").value),
-            dias_inhabiles: Number(document.getElementById("diasInhabiles").value),
             imputacion_afc: Number(document.getElementById("imputacionAfc").value || 0),
             descuentos
         })
@@ -257,7 +253,7 @@ function mostrarDetalle(fila) {
             <table>
                 <thead><tr><th>Haberes</th><th class="numero">Monto</th></tr></thead>
                 <tbody>
-                    ${filaMonto(`Feriado proporcional (${feriado.diasPorPagar ?? "—"} días)`, f.monto_feriado)}
+                    ${filaMonto(`Feriado legal y proporcional (${feriado.diasPorPagar === undefined ? "—" : dias(feriado.diasPorPagar)} días)`, f.monto_feriado)}
                     ${filaMonto("Indemnización sustitutiva del aviso previo", f.monto_aviso_previo)}
                     ${filaMonto(`Indemnización por años de servicio (${d.anios ?? 0} años)`, f.monto_anios_servicio)}
                 </tbody>
@@ -282,7 +278,12 @@ function mostrarDetalle(fila) {
                     <tr><td>Base indemnizaciones</td><td class="numero">${escaparHtml(pesos(d.bases?.baseIndemnizacion))}</td></tr>
                     <tr><td>Base feriado</td><td class="numero">${escaparHtml(pesos(d.bases?.baseFeriado))}</td></tr>
                     <tr><td>Base con tope de ${escaparHtml(d.topeUF ?? 90)} UF (UF ${escaparHtml(pesos(d.valorUF))})</td><td class="numero">${escaparHtml(pesos(d.baseTopada))}</td></tr>
-                    <tr><td>Feriado: ganados − tomados + inhábiles</td><td>${escaparHtml(`${feriado.diasGanados ?? "—"} − ${feriado.diasTomados ?? "—"} + ${feriado.diasInhabiles ?? "—"} = ${feriado.diasPorPagar ?? "—"} días`)}</td></tr>
+                    ${feriado.proporcional === undefined
+                        ? `<tr><td>Feriado: ganados − tomados + inhábiles</td><td>${escaparHtml(`${feriado.diasGanados ?? "—"} − ${feriado.diasTomados ?? "—"} + ${feriado.diasInhabiles ?? "—"} = ${feriado.diasPorPagar ?? "—"} días`)}</td></tr>`
+                        : `<tr><td>Feriado: días hábiles (pendientes de los períodos + proporcional) + inhábiles desde el día siguiente al término</td><td>${escaparHtml(`${dias(feriado.diasPendientes)} (${dias(feriado.pendientes)} + ${dias(feriado.proporcional)}) + ${feriado.diasInhabiles} = ${dias(feriado.diasPorPagar)} días`)}</td></tr>
+                           <tr><td>Días ganados y tomados (módulo de vacaciones)</td><td>${escaparHtml(`${dias(feriado.diasGanados)} ganados · ${dias(feriado.diasTomados)} tomados`)}</td></tr>
+                           ${feriado.art44 ? `<tr><td colspan="2">Relación de hasta 30 días (o hasta 60 con prórroga): el feriado proporcional se entiende incluido en la remuneración (art. 44 del Código del Trabajo).</td></tr>` : ""}
+                           ${feriado.anticipados ? `<tr><td colspan="2">Vacaciones anticipadas no devengadas: ${escaparHtml(dias(feriado.anticipados))} días${feriado.anticipadasNoRecuperadas ? `; no alcanzaron a descontarse ${escaparHtml(pesos(feriado.anticipadasNoRecuperadas))}` : ""}.</td></tr>` : ""}`}
                 </tbody>
             </table>
         </details>`

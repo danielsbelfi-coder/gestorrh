@@ -8,7 +8,7 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { camposMontosLre } = require("./archivo_lre.js")
-const { tiempoServido, diasFeriadoGanados, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
+const { tiempoServido, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { armarFiniquito } = require("./armar_finiquito.js")
 
@@ -17,6 +17,16 @@ const TOPE_UF_INDEMNIZACION = 90
 const CODIGOS_DESCUENTO_FINIQUITO = [3171, 3183, 3185, 3186, 3188]
 const GLOSA_SALDO_PAGO_EXCESO = "Saldo de pago en exceso"
 const CODIGO_LRE_PAGO_EXCESO = 3188
+// Vacaciones anticipadas no devengadas que se descuentan al término (LRE: otros descuentos).
+const CODIGO_LRE_ANTICIPADAS = 3185
+
+function calcularMontosSeguro(calcular, descuentos) {
+    try {
+        return calcular(descuentos)
+    } catch (error) {
+        throw new ConflictError(error.message)
+    }
+}
 
 async function montosMesesAnteriores(trabajador, anio, mes) {
     const liquidaciones = await Liquidacion.findAll({
@@ -68,9 +78,6 @@ function validarDatosFiniquito(datos, fechaTermino) {
     }
     if (typeof datos.aviso_previo_dado !== "boolean") {
         throw new ValidationError("Debe indicar si se dio aviso previo (true o false)")
-    }
-    if (!(Number(datos.dias_tomados) >= 0) || !Number.isInteger(Number(datos.dias_inhabiles)) || Number(datos.dias_inhabiles) < 0) {
-        throw new ValidationError("Los días tomados deben ser 0 o más, y los días inhábiles, un entero de 0 o más")
     }
     if (!Number.isInteger(Number(datos.imputacion_afc ?? 0)) || Number(datos.imputacion_afc ?? 0) < 0) {
         throw new ValidationError("La imputación del seguro de cesantía debe ser un monto entero de 0 o más")
@@ -163,12 +170,12 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     }
 
     const tiempo = tiempoServido(trabajador.fecha_ingreso, trabajador.fecha_termino)
-    const diasGanados = diasFeriadoGanados(tiempo)
-    const diasPendientes = Math.round((diasGanados - Number(datos.dias_tomados)) * 100) / 100
-
-    if (diasPendientes < 0) {
-        throw new ValidationError(`Los días tomados (${datos.dias_tomados}) superan los días ganados (${diasGanados})`)
-    }
+    // Feriado: días del módulo de vacaciones a la fecha del término (períodos pendientes + proporcional, art. 44)
+    // e inhábiles calculados desde el día siguiente al término. Ver «Módulo de vacaciones, parte 3» en el SPEC.
+    const { feriadoParaFiniquito } = require("../asistencia/vacacion.service.js")
+    const feriado = await feriadoParaFiniquito(trabajador)
+    const diasPendientes = feriado.habiles
+    const diasInhabiles = feriado.inhabiles
 
     const calcularMontos = (lista) => montosFiniquito({
         causal: trabajador.causal_termino,
@@ -179,10 +186,22 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
         topeUF: TOPE_UF_INDEMNIZACION,
         valorUF: Number(uf.valor),
         diasPendientes,
-        diasInhabiles: Number(datos.dias_inhabiles),
+        diasInhabiles,
         imputacionAfc: Number(datos.imputacion_afc ?? 0),
         descuentos: lista
     })
+
+    // Vacaciones anticipadas no devengadas: se descuentan en dinero al valor diario del feriado (base / 30).
+    let anticipadasNoRecuperadas = 0
+    if (feriado.anticipados > 0) {
+        const montoAnticipadas = Math.round(bases.baseFeriado / 30 * feriado.anticipados)
+        const disponible = calcularMontosSeguro(calcularMontos, descuentos).totalAPagar
+        const descontado = Math.min(montoAnticipadas, Math.max(0, disponible))
+        anticipadasNoRecuperadas = montoAnticipadas - descontado
+        if (descontado > 0) {
+            descuentos.push({ glosa: `Vacaciones anticipadas no devengadas (${String(feriado.anticipados).replace(".", ",")} días)`, monto: descontado, codigo_lre: CODIGO_LRE_ANTICIPADAS, automatico: true })
+        }
+    }
 
     let montos
     try {
@@ -202,8 +221,8 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
         fecha_finiquito: datos.fecha_finiquito,
         lugar: datos.lugar.trim(),
         aviso_previo_dado: datos.aviso_previo_dado,
-        dias_tomados: Number(datos.dias_tomados),
-        dias_inhabiles: Number(datos.dias_inhabiles),
+        dias_tomados: feriado.tomados,
+        dias_inhabiles: feriado.inhabiles,
         imputacion_afc: montos.imputacion,
         descuentos,
         monto_feriado: montos.montoFeriado,
@@ -223,7 +242,11 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
             valorUF: Number(uf.valor),
             topeUF: TOPE_UF_INDEMNIZACION,
             baseTopada: montos.baseTopada,
-            feriado: { diasGanados, diasTomados: Number(datos.dias_tomados), diasPendientes, diasInhabiles: Number(datos.dias_inhabiles), diasPorPagar: montos.diasFeriado },
+            feriado: {
+                diasGanados: feriado.ganados, diasTomados: feriado.tomados, pendientes: feriado.pendientes, proporcional: feriado.proporcional,
+                art44: feriado.art44, diasPendientes, diasInhabiles, diasPorPagar: montos.diasFeriado,
+                anticipados: feriado.anticipados, anticipadasNoRecuperadas, periodos: feriado.periodos
+            },
             saldoPagoExceso: { saldo: saldoPendiente, descontado: saldoDescontado, noRecuperado: saldoPendiente - saldoDescontado }
         }
     }
@@ -274,8 +297,6 @@ function datosGuardados(finiquito) {
         fecha_finiquito: finiquito.fecha_finiquito,
         lugar: finiquito.lugar,
         aviso_previo_dado: finiquito.aviso_previo_dado,
-        dias_tomados: Number(finiquito.dias_tomados),
-        dias_inhabiles: Number(finiquito.dias_inhabiles),
         imputacion_afc: Number(finiquito.imputacion_afc),
         descuentos: (finiquito.descuentos ?? []).filter((d) => !d.automatico)
     }
