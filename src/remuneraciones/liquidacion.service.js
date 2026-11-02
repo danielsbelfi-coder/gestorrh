@@ -191,6 +191,20 @@ async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueld
     }
 }
 
+// Huella de las marcas del libro de asistencia del mes. El sueldo diario y la semana corrida se calculan con esas marcas
+// (no solo con el resumen): si cambian después del cálculo, la liquidación hay que recalcularla antes de emitirla.
+async function huellaAsistencia(trabajadorId, periodo) {
+    const { Asistencia } = require("../shared/associations.js")
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    const marcas = await Asistencia.findAll({
+        where: { trabajador_id: trabajadorId, fecha: { [Op.between]: [primerDia, ultimoDia] } },
+        attributes: ["fecha", "tipo", "estado_aprobacion", "hora_entrada", "hora_salida"],
+        order: [["fecha", "ASC"], ["id", "ASC"]]
+    })
+    const texto = marcas.map((m) => [m.fecha, m.tipo, m.estado_aprobacion, m.hora_entrada ?? "", m.hora_salida ?? ""].join("|")).join(";")
+    return require("crypto").createHash("sha256").update(texto).digest("hex")
+}
+
 async function obtenerSaldoAnterior(periodo, trabajadorId) {
     const liquidacionAnterior = await Liquidacion.findOne({
         where: { trabajador_id: trabajadorId, vigente: true },
@@ -756,6 +770,7 @@ async function prepararCalculo(periodo, trabajador) {
         vacacionesArt71: remuneracionVacaciones,
         sueldoPorDias: porDias.sueldoPorDias,
         semanaCorrida: porDias.semanaCorrida,
+        huellaAsistencia: porDias.sueldoPorDias || porDias.semanaCorrida ? await huellaAsistencia(trabajador.id, periodo) : null,
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
@@ -919,6 +934,10 @@ async function validarEmision(periodo, liquidacion) {
 
     if (cambiosVariables + cambiosResumen > 0) {
         throw new ConflictError("Hubo cambios en las variables o en la asistencia después del cálculo; recalcule antes de emitir")
+    }
+    const huella = liquidacion.detalle_calculo?.huellaAsistencia
+    if (huella && huella !== await huellaAsistencia(liquidacion.trabajador_id, periodo)) {
+        throw new ConflictError("Cambiaron las marcas del libro de asistencia del mes después del cálculo (el sueldo diario o la semana corrida dependen de ellas); recalcule antes de emitir")
     }
 
     const saldo = await saldoDesactualizado(liquidacion, periodo)

@@ -75,3 +75,10 @@ test("tope de 90 UF, aviso dado y menos de un año: sin años de servicio ni avi
 test("descuentos mayores que los haberes: error", () => {
     assert.throws(() => montosFiniquito({ ...despido, causal: 4, descuentos: [{ glosa: "Préstamo", monto: 9000000 }] }), /superan los haberes/)
 })
+test("bases: la semana corrida (2104) entra al promedio de variables (art. 71 inc. 5° y art. 172)", () => {
+    const bases = basesFiniquito({
+        sueldoMensual: 600000,
+        meses: [{ 2103: 300000, 2104: 75000 }, { 2103: 210000, 2104: 50000 }, { 2103: 90000, 2104: 25000 }]
+    })
+    assert.deepStrictEqual([bases.variables, bases.baseFeriado], [250000, 850000])
+})

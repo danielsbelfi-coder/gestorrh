@@ -178,7 +178,8 @@ function feriadoFiniquito({ saldo, fechaTermino, feriados = [], art44 = false })
 }
 
 // Art. 71: quien gana variables recibe en vacaciones el promedio de lo variable de los últimos 3 meses liquidados.
-const CODIGOS_VARIABLES_ART71 = [2103, 2112, 2113]
+// Incluye la semana corrida (2104): art. 71 inciso 5° (Ley 20.613) y Dictamen DT 3740/035 de 2012.
+const CODIGOS_VARIABLES_ART71 = [2103, 2104, 2112, 2113]
 const DIAS_MES = 30
 
 // Días corridos de vacaciones aprobadas que caen en el mes (tope 30, mes comercial). vacaciones: [{ desde, hasta }].

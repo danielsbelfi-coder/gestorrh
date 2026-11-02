@@ -35,7 +35,9 @@ function diasFeriadoGanados(tiempo) {
 }
 
 const CODIGOS_FIJOS = [2111]
-const CODIGOS_VARIABLES = [2103, 2112, 2113]
+// Variables promediadas (comisiones, semana corrida, tratos, bonos variables). La semana corrida entra al feriado por el
+// art. 71 inciso 5° y a la última remuneración mensual del art. 172 (toda cantidad percibida por los servicios).
+const CODIGOS_VARIABLES = [2103, 2104, 2112, 2113]
 const CODIGO_GRATIFICACION = 2106
 const CAUSALES_ART_161 = [18, 19]
 

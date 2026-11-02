@@ -16,8 +16,15 @@ const USUARIOS = [
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Usuarios con contraseña conocida: jamás en la nube.
+    // Se salta sin error para no cortar `db:seed:all` (los seeders siguientes cargan datos comunes).
     if (process.env.NODE_ENV === "production") {
-      throw new Error("Este seeder crea usuarios de prueba con contraseña conocida y no se ejecuta con NODE_ENV=production")
+      console.warn("Seeder de usuarios de prueba omitido: no se ejecuta con NODE_ENV=production")
+      return
+    }
+    const [empresas] = await queryInterface.sequelize.query("SELECT id FROM empresas WHERE id = :id", { replacements: { id: EMPRESA_ID } })
+    if (empresas.length === 0) {
+      console.warn(`Seeder de usuarios de prueba omitido: no existe la empresa ${EMPRESA_ID}`)
+      return
     }
 
     const passwordHash = await bcrypt.hash(PASSWORD_PRUEBA, 10)

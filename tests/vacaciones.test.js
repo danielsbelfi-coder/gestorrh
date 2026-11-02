@@ -111,3 +111,8 @@ test("art. 71: promedio de comisiones, tratos y bonos variables de los últimos 
     assert.deepEqual(v.remuneracionVariableVacaciones(meses, 12), { promedio: 200000, dias: 12, monto: 80000, meses: 3 })
     assert.deepEqual(v.remuneracionVariableVacaciones([], 10), { promedio: 0, dias: 10, monto: 0, meses: 0 })
 })
+
+test("art. 71: la semana corrida (2104) entra al promedio (art. 71 inciso 5°)", () => {
+    const meses = [{ 2103: 300000, 2104: 60000 }, { 2103: 240000, 2104: 48000 }, { 2103: 0 }]
+    assert.deepEqual(v.remuneracionVariableVacaciones(meses, 15), { promedio: 216000, dias: 15, monto: 108000, meses: 3 })
+})
