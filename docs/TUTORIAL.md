@@ -62,7 +62,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 ## 6. Cada mes
 
 ### Acceso de soporte (administradores de la cuenta)
-Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **una empresa a la vez** (la que elige en su barra superior). Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas) también los intentos de entrar a una empresa que no autorizaste, y cualquier restablecimiento de acceso del administrador principal; se guarda 2 años.
+Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **una empresa a la vez** (la que elige en su barra superior). Si necesitas ayuda: menú **Empresa → Acceso de soporte**, elige la empresa, la duración (1, 4, 8 o 24 horas) y escribe el motivo. Soporte solo puede mirar (no edita nada) y no ve el número de cuenta bancaria completo. Puedes **Revocar** el acceso antes de que venza. Abajo, en **Lo que consultó soporte**, ves cada consulta (también las bloqueadas), los intentos de entrar a una empresa que no autorizaste y cualquier restablecimiento de acceso del administrador principal; se guarda 2 años.
 
 ### Historial de previsión (ficha de la persona)
 La AFP, el sistema de salud y el plan de isapre se registran **por mes** en la ficha de la persona, sección **Historial de previsión**: «Registrar cambio» indicando desde qué mes rige. Cada liquidación se calcula con la previsión que regía en su mes, y el PDF, el LRE y Previred de meses anteriores siguen mostrando la de ese mes aunque la persona cambie después. Arriba, en «Previsión y salud», se ve la vigente hoy. No se aceptan cambios que alcancen meses ya cerrados: en ese caso se reabre el periodo o se regulariza en Previred o con la isapre.
@@ -146,7 +146,7 @@ En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abri
 **Recontratar**: la nueva relación (Trabajadores → nuevo postulante) debe empezar después del término de la anterior; el sistema no acepta relaciones que se crucen. Al crear el primer contrato del postulante, su fecha de ingreso pasa a ser el inicio del contrato. Si la ficha de un trabajador avisa que la fecha de ingreso no coincide con el inicio de su primer contrato, el botón **Usar … como ingreso** la corrige (solo si no tiene liquidaciones de meses cerrados); después hay que volver a generar el resumen de asistencia y recalcular la liquidación.
 
 ### 6.7 Archivos legales
-**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Importante: todavía no informan los pensionados afiliados a una caja (1 %) ni controlan el tope anual del depósito convenido.
+**Previred y LRE**: **Descargar archivo Previred** (105 campos, separados por punto y coma) y **Descargar archivo LRE** (Libro de Remuneraciones Electrónico). Previred informa la caja de compensación (también para pensionados, con el 1 %), y la liquidación controla el tope anual de 900 UF del depósito convenido.
 
 **DJ 1887 y certificados de sueldos** (en la misma pantalla, una vez al año): elige el **año comercial** y presiona **Ver resumen**. Muestra los totales que se escriben en el formulario del SII (Sección C actualizada y el cuadro de montos sin actualizar, con leyes sociales y remuneraciones imponibles) y la lista de trabajadores con el código de cada mes (C/P, o A/B si la empresa es agrícola; F en el mes del término). **Descargar archivo para el SII** genera el CSV para el Importador de Datos (una fila por trabajador, sumando todas sus relaciones del año) y **Certificados (PDF)** el Certificado N° 6 de todos; cada fila del resumen tiene su certificado individual. Requisitos: todos los periodos del año **cerrados** y los **12 factores de actualización** del año cargados (los ingresa soporte en Parámetros legales cuando el SII los publica, en diciembre). Si la empresa empezó a usar GestorRH a mitad de año, el resumen avisa qué meses no están en el sistema: esos se completan en el formulario del SII. Mayor retención (art. 88), renta exenta y zonas extremas van en 0. «Empresa agrícola» se marca en la ficha de la empresa.
 
@@ -186,8 +186,10 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 5. Como RRHH intentar firmar un contrato (debe rechazarse) y como JEFE_RRHH firmarlo. Probar Corregir y Anular. Revisar **Pendientes** con ambos usuarios: el número del menú, los filtros y aprobar varios a la vez.
 6. Registrar marcas de asistencia con atrasos, horas extra, un día libre y un feriado; revisar el libro.
 7. Generar resumen, cargar variables, aprobar, calcular y cerrar liquidaciones; bajar los PDF.
-8. Descargar los archivos de Previred y LRE.
-9. Registrar el término de un trabajador y calcular su finiquito.
+8. Registrar vacaciones (solicitud, aprobación y anulación); revisar el saldo en la ficha del trabajador y su efecto en el libro y en la liquidación.
+9. Probar la semana corrida: un trabajador con sueldo mensual y comisiones, y uno con contrato diario a plazo fijo (ambos con jornada); revisar el detalle de la liquidación.
+10. Descargar los archivos de Previred y LRE.
+11. Registrar el término de un trabajador y calcular su finiquito (con vacaciones pendientes y, si quieres, con vacaciones anticipadas).
 
 ## Intenta romperlo
 - Entrar con la contraseña mal 6 veces: debe bloquearte unos minutos. Lo mismo con 5 códigos de verificación incorrectos.
@@ -204,4 +206,4 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 Para cada observación anota: pantalla, qué hiciste, qué esperabas y qué pasó (con captura si puedes). Envíalo por el canal acordado con el responsable. Los problemas de seguridad, solo por mensaje directo.
 
 ## Lo que todavía no existe
-Carga masiva de marcas, informes y estadísticas, carga automática de UF y UTM, pensiones alimenticias y re-finiquito. No los reportes como errores.
+Carga masiva de marcas, informes y estadísticas, carga automática de UF y UTM, pensiones alimenticias, re-finiquito, honorarios (contratos por hora) y los roles SUPERVISOR y LECTURA. No los reportes como errores.
