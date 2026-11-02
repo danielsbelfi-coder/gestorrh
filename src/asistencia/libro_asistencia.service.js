@@ -12,14 +12,15 @@ function rangoDelMes(anio, mes) {
     return { primerDia: `${anio}-${mm}-01`, ultimoDia: `${anio}-${mm}-${String(ultimo).padStart(2, "0")}` }
 }
 
-// El contrato que rige el mes: el más reciente (no anulado) que se cruza con el mes.
+// El contrato que rige el mes: el más reciente (no anulado) que se cruza con el mes. Un plazo fijo que pasó a
+// indefinido por anexo conserva su fecha de término original, pero ya no rige (fechaTerminoVigente).
 async function contratoDelMes(trabajadorId, primerDia, ultimoDia, transaction) {
     return await ContratoTrabajo.findOne({
         where: {
             trabajador_id: trabajadorId,
             estado: { [Op.ne]: "anulado" },
             fecha_inicio: { [Op.lte]: ultimoDia },
-            [Op.or]: [{ fecha_termino: null }, { fecha_termino: { [Op.gte]: primerDia } }]
+            [Op.or]: [{ fecha_termino: null }, { fecha_termino: { [Op.gte]: primerDia } }, { tipo_contrato: "indefinido" }]
         },
         order: [["fecha_inicio", "DESC"]],
         transaction
@@ -105,4 +106,6 @@ async function obtenerLibro({ trabajador_id, anio, mes }, empresasPermitidas) {
     return { trabajador_id: trabajador.id, anio: año, mes: numeroMes, ...await libroDelTrabajador(trabajador, año, numeroMes) }
 }
 
-module.exports = { obtenerLibro, libroDelTrabajador }
+module.exports = {
+    rangoDelMes,
+    contratoDelMes, obtenerLibro, libroDelTrabajador }

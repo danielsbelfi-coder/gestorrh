@@ -46,6 +46,7 @@ async function cargarFicha() {
         <a class="boton secundario chico" href="persona.html?id=${persona.id}">Datos personales y previsión</a>
         <a class="boton secundario chico" href="libro.html?trabajador=${trabajador.id}">Libro de asistencia</a>
         <a class="boton secundario chico" href="liquidaciones.html?buscar=${rut}">Liquidaciones</a>
+        <a class="boton secundario chico" href="vacaciones.html?buscar=${encodeURIComponent(nombreCompleto(persona))}">Vacaciones</a>
         ${trabajador.fecha_termino ? `<a class="boton secundario chico" href="finiquitos.html?buscar=${rut}">Finiquito</a>` : ""}`
 
     const vigente = contratos.find((c) => c.estado === "vigente")
@@ -75,8 +76,71 @@ async function cargarFicha() {
     botonNuevo.href = `contratos.html?trabajador=${trabajador.id}`
 
     await dibujarContratos()
+    await dibujarVacaciones()
     return true
 }
+
+// ---------- Vacaciones ----------
+
+async function dibujarVacaciones() {
+    const seccion = document.getElementById("vacaciones")
+    if (!trabajador.fecha_ingreso || trabajador.estado === "postulante") {
+        seccion.hidden = true
+        return
+    }
+    const resultado = await llamarApi(`/api/vacaciones/saldo/${trabajador.id}`)
+    if (resultado.status !== 200) {
+        seccion.hidden = true
+        return
+    }
+    const s = resultado.datos
+    seccion.hidden = false
+    const filas = s.periodos.filter((p) => p.cumplido).map((p) => `
+        <tr>
+            <td>${p.tipo === "inicial" ? `Saldo inicial al ${escaparHtml(fechaCorta(p.hasta))}` : `Período ${p.numero}: ${escaparHtml(fechaCorta(p.desde))} al ${escaparHtml(fechaCorta(p.hasta))}`}</td>
+            <td class="numero">${dias(p.ganados)}</td><td class="numero">${dias(p.tomados)}</td><td class="numero"><strong>${dias(p.pendientes)}</strong></td>
+        </tr>`).join("")
+    document.getElementById("saldoVacaciones").innerHTML = `
+        <p class="saldo-vacaciones">Disponible: <strong>${dias(s.disponible)}</strong> día(s) hábil(es)
+            ${s.enCurso ? `<span class="texto-suave"> · período ${s.enCurso.numero} en curso (${escaparHtml(fechaCorta(s.enCurso.desde))} al ${escaparHtml(fechaCorta(s.enCurso.hasta))}): ${dias(s.enCurso.proporcional)} proporcional al ${escaparHtml(fechaCorta(s.referencia))}</span>` : ""}</p>
+        ${s.avisos.map((a) => `<p class="alerta advertencia">${escaparHtml(a)}</p>`).join("")}
+        ${filas ? `<table><thead><tr><th>Período</th><th class="numero">Ganados</th><th class="numero">Tomados</th><th class="numero">Pendientes</th></tr></thead><tbody>${filas}</tbody></table>`
+            : `<p class="texto-suave">Todavía no cumple su primer año: los 15 días se ganan el ${escaparHtml(fechaCorta(s.enCurso?.hasta ? s.enCurso.hasta : ""))} (al terminar el período).</p>`}`
+    if (s.saldoInicial) {
+        document.getElementById("corteSaldo").value = s.saldoInicial.fecha_corte
+        document.getElementById("diasSaldo").value = String(Number(s.saldoInicial.dias)).replace(".", ",")
+        document.getElementById("documentoSaldo").value = s.saldoInicial.documento ?? ""
+    }
+    document.getElementById("borrarSaldo").hidden = !s.saldoInicial
+}
+
+document.getElementById("formSaldoInicial").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/vacaciones/saldo-inicial/${trabajador.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ fecha_corte: document.getElementById("corteSaldo").value, dias: document.getElementById("diasSaldo").value, documento: document.getElementById("documentoSaldo").value })
+    })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo guardar el saldo inicial")
+        return
+    }
+    await dibujarVacaciones()
+    mensaje("info", "Saldo inicial guardado.")
+})
+
+document.getElementById("borrarSaldo").addEventListener("click", async () => {
+    if (!confirm("¿Quitar el saldo inicial de vacaciones?")) return
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/vacaciones/saldo-inicial/${trabajador.id}`, { method: "PUT", body: JSON.stringify({ dias: null }) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo quitar el saldo inicial")
+        return
+    }
+    document.getElementById("formSaldoInicial").reset()
+    await dibujarVacaciones()
+    mensaje("info", "Saldo inicial quitado.")
+})
 
 async function dibujarContratos() {
     const contenedor = document.getElementById("contratos")

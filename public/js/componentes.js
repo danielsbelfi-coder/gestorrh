@@ -22,6 +22,11 @@ function fechaCorta(texto) {
     return texto ? formatearFecha(String(texto).slice(0, 10)) : ""
 }
 
+// Días con decimales en formato chileno (12,42).
+function dias(valor) {
+    return Number(valor).toLocaleString("es-CL", { maximumFractionDigits: 2 })
+}
+
 function pesos(valor) {
     if (valor === null || valor === undefined || valor === "") {
         return ""
@@ -37,6 +42,12 @@ function normalizar(texto) {
 // ---------- Estados ----------
 
 const ESTADOS = {
+    vacacion: {
+        pendiente: ["Pendiente", "advertencia"],
+        aprobada: ["Aprobada", "exito"],
+        rechazada: ["Rechazada", "peligro"],
+        anulada: ["Anulada", ""]
+    },
     trabajador: {
         postulante: ["Postulante", "info"],
         activo: ["Activo", "exito"],

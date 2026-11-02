@@ -40,6 +40,11 @@ const Asistencia = sequelize.define("Asistencia", {
         defaultValue: "manual",
         allowNull: false
     },
+    // Marca generada por unas vacaciones aprobadas (se anula desde Vacaciones, no desde Asistencia).
+    vacacion_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     observaciones: {
         type: DataTypes.TEXT,
         allowNull: true

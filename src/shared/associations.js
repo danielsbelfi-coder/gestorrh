@@ -35,6 +35,7 @@ const { Finiquito } = require("../remuneraciones/finiquito.model.js");
 const { FiniquitoEliminado } = require("../remuneraciones/finiquito_eliminado.model.js")
 const { LiquidacionEliminada } = require("../remuneraciones/liquidacion_eliminada.model.js")
 const { FactorActualizacion } = require("../remuneraciones/factor_actualizacion.model.js")
+const { Vacacion, VacacionSaldoInicial } = require("../asistencia/vacacion.model.js")
 const { Jornada } = require("../contratos/jornada.model");
 const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
 const { AccesoSoporte } = require("../soporte/acceso_soporte.model.js");
@@ -357,6 +358,10 @@ Usuario.hasMany(Sesion, { foreignKey: "usuario_id" })
 CodigoRecuperacion.belongsTo(Usuario, { foreignKey: "usuario_id", onDelete: "CASCADE" })
 Usuario.hasMany(CodigoRecuperacion, { foreignKey: "usuario_id" })
 
+Vacacion.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
+Trabajador.hasMany(Vacacion, { foreignKey: "trabajador_id" })
+VacacionSaldoInicial.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
+
 module.exports = {
     Sesion,
     CodigoRecuperacion,
@@ -398,6 +403,8 @@ module.exports = {
     FiniquitoEliminado,
     LiquidacionEliminada,
     FactorActualizacion,
+    Vacacion,
+    VacacionSaldoInicial,
     Jornada,
     ParametroHistorial
 }

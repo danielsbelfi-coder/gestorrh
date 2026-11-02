@@ -10,6 +10,7 @@ const ICONOS = {
     periodos: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     asistencias: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     licencias: '<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z"/><path d="M12 10v4M10 12h4"/>',
+    vacaciones: '<path d="M12 3a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7Z"/><path d="M12 10v11M8 21h8"/>',
     resumenes: '<path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><path d="M8 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2M9 13l2 2 4-4"/>',
     variables: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
     conceptos: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.5"/><circle cx="16" cy="12" r="1.5"/><circle cx="10" cy="18" r="1.5"/>',
@@ -87,6 +88,7 @@ function gruposDeEmpresa(usuario, conInicio, empresa = [["empresas.html", "Empre
                 ["libro.html", "Libro de asistencia", "libro"],
                 ["asistencias.html", "Marcas de asistencia", "asistencias"],
                 ["licencias.html", "Licencias médicas", "licencias"],
+                ["vacaciones.html", "Vacaciones", "vacaciones"],
                 ["resumenes.html", "Resumen de asistencia", "resumenes"]
             ]
         },

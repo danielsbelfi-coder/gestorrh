@@ -2,7 +2,7 @@
 const { Op } = require("sequelize")
 const {
     ContratoTrabajo, ContratoAnexo, Asistencia, AsistenciaCorreccion, VariablePeriodo, ResumenAsistencia, Liquidacion, Finiquito,
-    PeriodoRemuneracion, Trabajador, Persona, Empresa, ConceptoRemuneracion, UsuarioEmpresaRol, Rol
+    PeriodoRemuneracion, Trabajador, Persona, Empresa, ConceptoRemuneracion, UsuarioEmpresaRol, Rol, Vacacion
 } = require("../shared/associations.js")
 const { PERMISOS, ROLES_ASIGNABLES } = require("../shared/permisos.js")
 const armar = require("./armar_pendientes.js")
@@ -95,7 +95,7 @@ async function listarPendientes(usuario, empresasPermitidas) {
         return { items: [], total: 0, accionables: 0 }
     }
 
-    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles, saldos, finiquitos, vencidos] = await Promise.all([
+    const [contratos, anexos, marcas, correcciones, variables, resumenes, cerrados, roles, saldos, finiquitos, vencidos, vacaciones] = await Promise.all([
         ContratoTrabajo.findAll({ where: { estado_firma: "pendiente", estado: "vigente" }, include: [trabajadorDe(empresas)] }),
         ContratoAnexo.findAll({
             where: { estado_firma: "pendiente" },
@@ -115,7 +115,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         rolesPorEmpresa(usuario.id),
         saldosDesactualizados(empresas),
         finiquitosDesactualizados(empresas),
-        plazosVencidos(empresas)
+        plazosVencidos(empresas),
+        Vacacion.findAll({ where: { estado: "pendiente" }, include: [trabajadorDe(empresas)] })
     ])
 
     const marcasAbiertas = marcas.filter((marca) => !cerrados.has(`${marca.Trabajador.empresa_id}-${String(marca.fecha).slice(0, 7)}`))
@@ -129,7 +130,8 @@ async function listarPendientes(usuario, empresasPermitidas) {
         ...resumenes.map(armar.deResumen),
         ...saldos.map(({ liquidacion, saldo, relacion }) => relacion ? armar.deRelacion(liquidacion) : armar.deSaldo(liquidacion, saldo)),
         ...finiquitos.map(({ finiquito, saldo }) => armar.deFiniquitoSaldo(finiquito, saldo)),
-        ...vencidos.map(armar.dePlazoVencido)
+        ...vencidos.map(armar.dePlazoVencido),
+        ...vacaciones.map(armar.deVacacion)
     ]).map((item) => ({ ...item, puede_actuar: armar.puedeActuar(item, roles, PERMISOS) }))
 
     return { items, total: items.length, accionables: items.filter((item) => item.puede_actuar).length }

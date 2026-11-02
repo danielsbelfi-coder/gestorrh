@@ -38,6 +38,25 @@
             <div id="contratos"></div>
         </section>
 
+        <section class="tarjeta" id="vacaciones" hidden>
+            <div class="encabezado-seccion">
+                <h2>Vacaciones</h2>
+                <a class="boton chico secundario" href="vacaciones.html">Solicitudes</a>
+            </div>
+            <div id="saldoVacaciones"></div>
+            <details class="plegable-simple">
+                <summary>Saldo inicial (vacaciones pendientes antes de usar GestorRH)</summary>
+                <form id="formSaldoInicial">
+                    <label>Fecha de corte<input type="date" id="corteSaldo" required></label>
+                    <label>Días pendientes<input type="text" id="diasSaldo" inputmode="decimal" placeholder="15,5" required></label>
+                    <label class="campo-ancho">Respaldo (opcional)<input type="text" id="documentoSaldo" maxlength="200" placeholder="Comprobante firmado, planilla anterior…"></label>
+                    <button type="submit">Guardar saldo inicial</button>
+                    <button type="button" class="secundario" id="borrarSaldo">Quitar</button>
+                </form>
+                <p class="texto-suave">Días hábiles pendientes de los períodos ya cumplidos a la fecha de corte. Desde ahí, cada aniversario suma 15 días y lo aprobado en Vacaciones se descuenta.</p>
+            </details>
+        </section>
+
         <section class="tarjeta" id="panelAnexo" hidden>
             <div class="encabezado-seccion">
                 <h2 id="tituloAnexo">Nuevo anexo</h2>

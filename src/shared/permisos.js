@@ -26,7 +26,9 @@ const PERMISOS = {
     GENERAR_LRE: ["ADMIN", "JEFE_RRHH"],
     GENERAR_DJ: ["ADMIN", "JEFE_RRHH"],
     GESTIONAR_FINIQUITOS: ["ADMIN", "JEFE_RRHH"],
-    APROBAR_ASISTENCIA: ["ADMIN", "JEFE_RRHH"]
+    APROBAR_ASISTENCIA: ["ADMIN", "JEFE_RRHH"],
+    SOLICITAR_VACACIONES: ["ADMIN", "JEFE_RRHH", "RRHH"],
+    APROBAR_VACACIONES: ["ADMIN", "JEFE_RRHH"]
 }
 
 async function exigirRol(usuarioId, empresaId, rolesPermitidos) {

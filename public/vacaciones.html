@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Vacaciones</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Vacaciones">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Vacaciones</h1>
+                <p>Solicitudes de feriado anual. Al aprobarlas se marcan solas en el libro de asistencia y se descuentan del saldo del trabajador (días hábiles: lunes a viernes sin feriados).</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelCrear">
+            <summary>＋ Registrar solicitud</summary>
+            <form id="formVacacion">
+                <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Desde<input type="date" id="desde" required></label>
+                <label>Hasta<input type="date" id="hasta" required></label>
+                <label class="campo-ancho">Observaciones (opcional)<input type="text" id="observaciones" maxlength="300"></label>
+                <button type="submit">Registrar</button>
+            </form>
+            <p class="texto-suave" id="vistaPrevia"></p>
+        </details>
+
+        <div id="tablaVacaciones"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/vacaciones.js"></script>
+</body>
+
+</html>

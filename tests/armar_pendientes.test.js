@@ -110,3 +110,11 @@ test("plazo fijo vencido: acción que crea el anexo de conversión desde el día
     const a = p.deAnexo({ id: 4, contrato_id: 9, campo_modificado: "tipo_contrato", valor_anterior: "obra_faena", valor_nuevo: "indefinido", fecha_vigencia: "2027-08-01", ContratoTrabajo: { Trabajador: trabajador } })
     assert.equal(a.detalle, "Pasa de obra o faena a indefinido desde el 01-08-2027 (código 8 en Previred)")
 })
+
+test("vacaciones por aprobar: detalle con días hábiles y ruta de aprobación", () => {
+    const v = p.deVacacion({ id: 7, desde: "2027-02-01", hasta: "2027-02-12", dias_habiles: 10, anticipadas: true, Trabajador: trabajador })
+    assert.equal(v.tipo_texto, "Vacaciones por aprobar")
+    assert.equal(v.detalle, "Del 01-02-2027 al 12-02-2027: 10 día(s) hábil(es) (anticipadas)")
+    assert.deepEqual(v.accion, { texto: "Aprobar", metodo: "PATCH", ruta: "/api/vacaciones/7/aprobar", cuerpo: {} })
+    assert.equal(v.permiso, "APROBAR_VACACIONES")
+})

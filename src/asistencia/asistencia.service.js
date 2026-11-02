@@ -153,6 +153,9 @@ async function cambiarAprobacionAsistencia(id, estado, empresasPermitidas, usuar
     const asistencia = await obtenerAsistenciaPorId(id, empresasPermitidas)
 
     await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.APROBAR_ASISTENCIA)
+    if (asistencia.vacacion_id !== null && asistencia.vacacion_id !== undefined) {
+        throw new ConflictError("La marca viene de unas vacaciones aprobadas: para cambiarla, anule las vacaciones en Vacaciones")
+    }
 
     if (!ESTADOS_APROBACION.includes(estado)) {
         throw new ValidationError("El estado debe ser pendiente, aprobada o rechazada")
@@ -184,6 +187,9 @@ async function marcaEditable(id, empresasPermitidas, usuarioId) {
     const asistencia = await obtenerAsistenciaPorId(id, empresasPermitidas)
 
     await exigirRol(usuarioId, asistencia.Trabajador.empresa_id, PERMISOS.REGISTRAR_ASISTENCIA)
+    if (asistencia.vacacion_id !== null && asistencia.vacacion_id !== undefined) {
+        throw new ConflictError("La marca viene de unas vacaciones aprobadas: para cambiarla, anule las vacaciones en Vacaciones")
+    }
 
     if (asistencia.estado_aprobacion === "aprobada") {
         throw new ConflictError("La marca está aprobada: la jefatura debe devolverla a pendiente para modificarla")

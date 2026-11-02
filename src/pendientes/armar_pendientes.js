@@ -12,7 +12,8 @@ const TIPOS = {
     saldo: "Liquidación con saldo desactualizado",
     finiquito_saldo: "Finiquito con saldo desactualizado",
     relacion: "Liquidación con otra relación del mes cambiada",
-    plazo_vencido: "Plazo fijo vencido"
+    plazo_vencido: "Plazo fijo vencido",
+    vacacion: "Vacaciones por aprobar"
 }
 
 const TIPO_CONTRATO = { indefinido: "Indefinido", plazo_fijo: "Plazo fijo", obra_faena: "Obra o faena" }
@@ -214,6 +215,18 @@ function dePlazoVencido(contrato) {
     })
 }
 
+// Solicitud de vacaciones pendiente de aprobación (al aprobar se generan las marcas del libro).
+function deVacacion(vacacion) {
+    const trabajador = vacacion.Trabajador
+    return base("vacacion", vacacion.id, trabajador, {
+        detalle: `Del ${fechaCorta(vacacion.desde)} al ${fechaCorta(vacacion.hasta)}: ${vacacion.dias_habiles} día(s) hábil(es)${vacacion.anticipadas ? " (anticipadas)" : ""}`,
+        fecha: vacacion.desde,
+        enlace: enlace("vacaciones.html", { buscar: nombrePersona(trabajador.Persona), empresa: trabajador.empresa_id }),
+        accion: { texto: "Aprobar", metodo: "PATCH", ruta: `/api/vacaciones/${vacacion.id}/aprobar`, cuerpo: {} },
+        permiso: "APROBAR_VACACIONES"
+    })
+}
+
 // rolesPorEmpresa: { [empresa_id]: "ADMIN" | "JEFE_RRHH" | "RRHH" }. Sin rol en esa empresa (por ejemplo soporte), no actúa.
 // permisos: la matriz PERMISOS de src/shared/permisos.js (se recibe como parámetro para que esta función no toque la base).
 function puedeActuar(item, rolesPorEmpresa, permisos) {
@@ -226,4 +239,4 @@ function ordenar(items) {
     return [...items].sort((a, b) => String(a.fecha ?? "").localeCompare(String(b.fecha ?? "")) || a.clave.localeCompare(b.clave))
 }
 
-module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deRelacion, deFiniquitoSaldo, dePlazoVencido, puedeActuar, ordenar, nombrePersona, fechaCorta }
+module.exports = { TIPOS, MOTIVO_SALDO, deContrato, deAnexo, deMarca, deCorreccion, deVariable, deResumen, deSaldo, deRelacion, deFiniquitoSaldo, dePlazoVencido, deVacacion, puedeActuar, ordenar, nombrePersona, fechaCorta }

@@ -1723,3 +1723,32 @@ button.chico.peligro:hover { background: var(--peligro); color: #fff; border-col
 .archivo-legal .acciones-grupo button {
     margin-top: 0;
 }
+
+/* Vacaciones en la ficha del trabajador */
+.alerta.advertencia {
+    background: var(--advertencia-suave, #fef3c7);
+    color: var(--advertencia, #92400e);
+    border-color: #fde68a;
+}
+
+.saldo-vacaciones {
+    font-size: 1rem;
+    margin: 0 0 12px;
+}
+
+.plegable-simple {
+    margin-top: 14px;
+}
+
+.plegable-simple > summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.plegable-simple > form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
