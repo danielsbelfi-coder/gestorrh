@@ -16,6 +16,7 @@ const tabla = crearTabla({
         { titulo: "Imponible", valor: (c) => siNo(c.imponible) },
         { titulo: "Tributable", valor: (c) => siNo(c.tributable) },
         { titulo: "Base grat.", valor: (c) => siNo(c.base_gratificacion) },
+        { titulo: "Semana corrida", valor: (c) => (c.tipo === "haber" ? siNo(c.devengo_diario) : "—") },
         { titulo: "15 % art. 58", valor: (c) => (c.tipo === "descuento" ? siNo(c.limite_art58) : "—") },
         {
             titulo: "Código LRE", valor: (c) => c.codigo_lre ?? "",
@@ -36,6 +37,7 @@ function botones(c) {
         return ""
     }
     return `<button type="button" class="chico secundario" data-accion="lre" data-id="${c.id}">Código LRE</button>
+        ${c.tipo === "haber" ? `<button type="button" class="chico secundario" data-accion="devengo" data-id="${c.id}">${c.devengo_diario ? "Quitar de semana corrida" : "Contar en semana corrida"}</button>` : ""}
         ${c.tipo === "descuento" ? `<button type="button" class="chico secundario" data-accion="art58" data-id="${c.id}">${c.limite_art58 ? "Quitar del 15 %" : "Contar en el 15 %"}</button>` : ""}
         ${c.activo === false
             ? `<button type="button" class="chico" data-accion="reactivar" data-id="${c.id}">Reactivar</button>`
@@ -75,7 +77,8 @@ document.getElementById("formConcepto").addEventListener("submit", async functio
         imponible: document.getElementById("imponible").checked,
         tributable: document.getElementById("tributable").checked,
         base_gratificacion: document.getElementById("baseGratificacion").checked,
-        limite_art58: document.getElementById("limiteArt58").checked
+        limite_art58: document.getElementById("limiteArt58").checked,
+        devengo_diario: document.getElementById("devengoDiario").checked
     }, "Concepto creado.")
     if (creado) {
         cerrarPanelCrear(this)
@@ -102,6 +105,8 @@ document.getElementById("tablaConceptos").addEventListener("click", async functi
             method: "PATCH",
             body: JSON.stringify({ codigo_lre: valor.trim() === "" ? null : Number(valor) })
         })
+    } else if (boton.dataset.accion === "devengo") {
+        resultado = await llamarApi(`/api/conceptos/${concepto.id}/devengo-diario`, { method: "PATCH", body: JSON.stringify({ devengo_diario: !concepto.devengo_diario }) })
     } else if (boton.dataset.accion === "art58") {
         resultado = await llamarApi(`/api/conceptos/${concepto.id}/art58`, { method: "PATCH", body: JSON.stringify({ limite_art58: !concepto.limite_art58 }) })
     } else {

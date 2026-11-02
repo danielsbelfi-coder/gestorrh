@@ -155,6 +155,20 @@ function filaDetalle(texto, valor, clase = "") {
     return `<tr class="${clase}"><td>${escaparHtml(texto)}</td><td class="numero">${escaparHtml(pesos(valor))}</td></tr>`
 }
 
+// Cómo se calculó el sueldo por día u hora y la semana corrida (art. 45).
+function textoSemanaCorrida(detalle) {
+    const partes = []
+    const porDias = detalle?.sueldoPorDias
+    if (porDias) {
+        partes.push(`Sueldo ${porDias.sistema === "hora" ? `por hora: ${porDias.cantidad} horas` : `diario: ${porDias.cantidad} días`} pagados según la jornada y la asistencia.`)
+    }
+    const sc = detalle?.semanaCorrida
+    if (sc && sc.base > 0) {
+        partes.push(`Semana corrida (art. 45): ${pesos(sc.base)} devengados por día${sc.sueldo > 0 && sc.variables > 0 ? ` (sueldo ${pesos(sc.sueldo)} + variables ${pesos(sc.variables)})` : ""} / ${sc.divisor} días que debió trabajar × ${sc.dias} domingos y festivos = ${pesos(sc.monto)}.`)
+    }
+    return partes.length > 0 ? `<p class="texto-suave">${escaparHtml(partes.join(" "))}</p>` : ""
+}
+
 function mostrarDetalle(liquidacion) {
     const panel = document.getElementById("detalle")
     panel.innerHTML = `
@@ -171,6 +185,7 @@ function mostrarDetalle(liquidacion) {
                 <tbody>
                     ${filaDetalle("Sueldo proporcional", liquidacion.sueldo_base_proporcional)}
                     ${filaDetalle("Horas extra", liquidacion.monto_horas_extra)}
+                    ${liquidacion.detalle_calculo?.semanaCorrida?.monto > 0 ? filaDetalle("Semana corrida", liquidacion.detalle_calculo.semanaCorrida.monto) : ""}
                     ${filaDetalle("Gratificación", liquidacion.monto_gratificacion)}
                     ${filaDetalle("Total haberes", liquidacion.total_haberes, "total")}
                 </tbody>
@@ -188,6 +203,7 @@ function mostrarDetalle(liquidacion) {
         </div>
         <p class="liquido">Líquido a pagar: <strong>${escaparHtml(pesos(liquidacion.liquido_a_pagar))}</strong></p>
         ${liquidacion.detalle_calculo?.art58?.exceso > 0 ? `<p class="aviso-art58"><span class="insignia advertencia">Art. 58</span> Los descuentos voluntarios (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.voluntarios))}) superan el 15 % de la remuneración imponible (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.tope))}) por ${escaparHtml(pesos(liquidacion.detalle_calculo.art58.exceso))}.</p>` : ""}
+        ${textoSemanaCorrida(liquidacion.detalle_calculo)}
         <p class="texto-suave">El detalle completo, con todos los conceptos, está en el PDF.</p>`
     panel.hidden = false
     panel.querySelector("#cerrarDetalle").addEventListener("click", () => { panel.hidden = true })

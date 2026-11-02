@@ -10,7 +10,7 @@ const { NotFoundError, ConflictError, ValidationError } = require("../shared/err
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { sequelize } = require("../shared/database.js")
 const { calcularDiasPago, DIAS_MES_COMERCIAL, rimaDelMes, diasPorTramo } = require("./dias_pago.js")
-const { calcularLiquidacionPorLineas } = require("./calculo_lineas.js")
+const { calcularLiquidacionPorLineas, valorHoraOrdinaria } = require("./calculo_lineas.js")
 const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
@@ -58,7 +58,7 @@ const CODIGOS_SISTEMA = [
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
     "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA",
     "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC",
-    "REMUNERACION_VARIABLE_VACACIONES"
+    "REMUNERACION_VARIABLE_VACACIONES", "SEMANA_CORRIDA"
 ]
 
 async function obtenerConceptosSistema() {
@@ -145,6 +145,50 @@ async function remuneracionVariableDelMes(periodo, trabajador) {
     const { montosMesesAnteriores } = require("./finiquito.service.js")
     const meses = await montosMesesAnteriores(trabajador, periodo.anio, periodo.mes)
     return { ...remuneracionVariableVacaciones(meses.map((m) => m.montos), dias), periodos: meses.map((m) => m.periodo) }
+}
+
+// Contrato diario o por hora: sueldo de los días u horas del libro de asistencia. Semana corrida (art. 45) del sueldo
+// diario o por hora y de los haberes variables de devengo diario. Ver «Semana corrida (art. 45)» en el SPEC.
+async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueldo, resumen, variables, ingresoMinimoMensual }) {
+    const sistema = contrato.sistema_remuneracion
+    const porDias = sistema === "diario" || sistema === "hora"
+    const variablesDiarias = variables
+        .filter((v) => v.concepto.tipo === "haber" && v.concepto.devengo_diario === true)
+        .reduce((suma, v) => suma + Number(v.monto ?? 0), 0)
+    if (!porDias && variablesDiarias === 0) {
+        return { sueldoPorDias: null, semanaCorrida: null, valorHoraContrato: undefined, avisos: [] }
+    }
+
+    const { libroDelTrabajador } = require("../asistencia/libro_asistencia.service.js")
+    const sc = require("./semana_corrida.js")
+    const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
+    const laborales = libro.dias.filter((f) => f.esperado.tipo === "laboral")
+    if (libro.dias.some((f) => f.esperado.tipo === "sin_horario")) {
+        if (porDias) {
+            throw new ConflictError(`El contrato es ${sistema === "hora" ? "por hora" : "por día"} y no tiene plantilla de jornada: asígnele una (Jornadas y anexo de contrato) para calcular los días trabajados y la semana corrida`)
+        }
+        return { sueldoPorDias: null, semanaCorrida: null, valorHoraContrato: undefined, avisos: ["Tiene haberes variables de devengo diario, pero el contrato no tiene plantilla de jornada: no se calculó la semana corrida (art. 45). Asígnele una jornada y vuelva a calcular"] }
+    }
+
+    const trabajaDomingo = laborales.some((f) => f.diaSemana === 7)
+    const semanaCorrida = sc.calcularSemanaCorrida({ sistema, dias: libro.dias, tramos: tramosSueldo, resumen, variablesDiarias, trabajaDomingo })
+    if (!porDias) {
+        return { sueldoPorDias: null, semanaCorrida, valorHoraContrato: undefined, avisos: [] }
+    }
+    const diasSemana = new Set(laborales.map((f) => f.diaSemana)).size
+    const horasSemanales = Number(contrato.horas_semanales)
+    return {
+        sueldoPorDias: sc.sueldoPorDias({ sistema, dias: libro.dias, tramos: tramosSueldo, resumen }),
+        semanaCorrida,
+        valorHoraContrato: sc.valorHoraPorDias({
+            sistema,
+            sueldo: tramosSueldo[tramosSueldo.length - 1].sueldo,
+            diasSemana,
+            horasSemanales,
+            minimoPorHora: valorHoraOrdinaria(ingresoMinimoMensual, horasSemanales)
+        }),
+        avisos: []
+    }
 }
 
 async function obtenerSaldoAnterior(periodo, trabajadorId) {
@@ -565,6 +609,7 @@ async function prepararCalculo(periodo, trabajador) {
         mutual: parametros.mutualBasica + Number(empresa.tasa_adicional_mutual),
         sanna: parametros.sanna
     }
+    const porDias = await sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueldo, resumen, variables: aprobadas, ingresoMinimoMensual: parametros.ingresoMinimoMensual })
     const datos = {
         sueldoBase: Number(contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
@@ -591,6 +636,9 @@ async function prepararCalculo(periodo, trabajador) {
         ahorros: ahorrosDelMes,
         depositoConvenidoAcumulado,
         remuneracionVacaciones,
+        sueldoPorDias: porDias.sueldoPorDias,
+        semanaCorrida: porDias.semanaCorrida,
+        valorHoraContrato: porDias.valorHoraContrato,
         conceptos
     }
 
@@ -632,9 +680,9 @@ async function prepararCalculo(periodo, trabajador) {
             tasa: Number(tasaCcaf.valor)
         })
     }
-    const avisos = resultado.nuevoSaldoPendiente > 0
+    const avisos = [...porDias.avisos, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
-        : []
+        : [])]
     // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
     const art58 = revisarArt58(resultado.lineas, resultado.rentaImponible)
     if (art58.exceso > 0) {
@@ -699,6 +747,8 @@ async function prepararCalculo(periodo, trabajador) {
         ccaf: { caja: empresa.ccaf ?? null, saludCcaf, tasa: tasaSaludCcaf },
         art58,
         vacacionesArt71: remuneracionVacaciones,
+        sueldoPorDias: porDias.sueldoPorDias,
+        semanaCorrida: porDias.semanaCorrida,
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).

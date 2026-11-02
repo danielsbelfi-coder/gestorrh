@@ -52,6 +52,12 @@ const ConceptoRemuneracion = sequelize.define("ConceptoRemuneracion", {
         allowNull: false,
         defaultValue: false
     },
+    // Haber variable de devengo diario (comisiones, tratos): entra a la base de la semana corrida (art. 45).
+    devengo_diario: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

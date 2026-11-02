@@ -1,4 +1,4 @@
-const { listarConceptos, crearConcepto, desactivarConcepto, reactivarConcepto, asignarCodigoLre, marcarArt58 } = require("./concepto_remuneracion.service.js")
+const { listarConceptos, crearConcepto, desactivarConcepto, reactivarConcepto, asignarCodigoLre, marcarArt58, marcarDevengoDiario } = require("./concepto_remuneracion.service.js")
 
 async function listar(req, res) {
     const conceptos = await listarConceptos(Number(req.query.empresa_id), req.empresasPermitidas)
@@ -29,8 +29,13 @@ async function art58(req, res) {
     res.status(200).json(await marcarArt58(req.params.id, req.body?.limite_art58, req.empresasPermitidas, req.usuario.id))
 }
 
+async function devengoDiario(req, res) {
+    res.status(200).json(await marcarDevengoDiario(req.params.id, req.body?.devengo_diario, req.empresasPermitidas, req.usuario.id))
+}
+
 module.exports = {
     art58,
+    devengoDiario,
     listar,
     crear,
     desactivar,

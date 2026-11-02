@@ -33,17 +33,21 @@ function sumarSegun(lineas, marca) {
     }, 0)
 }
 
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, remuneracionVacaciones, conceptos }) {
-    const valorHora = valorHoraOrdinaria(sueldoBase, horasSemanales)
+// sueldoPorDias: contrato diario o por hora ({ cantidad, monto } de los días u horas del mes); si no, el sueldo es mensual.
+// semanaCorrida: { monto, dias } (art. 45). valorHoraContrato: valor de la hora ordinaria si no es el del sueldo mensual.
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, remuneracionVacaciones, sueldoPorDias, semanaCorrida, valorHoraContrato, conceptos }) {
+    const valorHora = valorHoraContrato ?? valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
 
     const tramos = tramosSueldo ?? [{ sueldo: sueldoBase, dias: diasPagados }]
 
-    lineas.push({
-        concepto: conceptos.SUELDO_BASE,
-        cantidad: diasPagados,
-        monto: Math.round(tramos.reduce((suma, tramo) => suma + tramo.sueldo * tramo.dias, 0) / DIAS_MES_COMERCIAL)
-    })
+    lineas.push(sueldoPorDias
+        ? { concepto: conceptos.SUELDO_BASE, cantidad: sueldoPorDias.cantidad, monto: sueldoPorDias.monto }
+        : {
+            concepto: conceptos.SUELDO_BASE,
+            cantidad: diasPagados,
+            monto: Math.round(tramos.reduce((suma, tramo) => suma + tramo.sueldo * tramo.dias, 0) / DIAS_MES_COMERCIAL)
+        })
 
     for (const grupo of agruparVariables(variables)) {
         if (grupo.concepto.recargo_hora_extra !== null) {
@@ -57,6 +61,11 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
         } else {
             lineas.push({ concepto: grupo.concepto, cantidad: null, monto: grupo.monto })
         }
+    }
+
+    // Art. 45: domingos y festivos (semana corrida) del sueldo diario o por hora y de los variables de devengo diario.
+    if (semanaCorrida && semanaCorrida.monto > 0) {
+        lineas.push({ concepto: conceptos.SEMANA_CORRIDA, cantidad: semanaCorrida.dias, monto: semanaCorrida.monto })
     }
 
     // Art. 71: en vacaciones, promedio de lo variable de los últimos 3 meses (imponible, tributable y base de gratificación).

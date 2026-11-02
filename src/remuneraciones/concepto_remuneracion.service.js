@@ -81,6 +81,7 @@ async function crearConcepto(datos, empresasPermitidas, usuarioId) {
             calculado_por_sistema: false,
             codigo_lre: codigoLre,
             limite_art58: datos.tipo === "descuento" && datos.limite_art58 === true,
+            devengo_diario: esHaber && datos.devengo_diario === true,
             activo: true
         })
     } catch (error) {
@@ -157,8 +158,25 @@ async function marcarArt58(id, valor, empresasPermitidas, usuarioId) {
     return await concepto.update({ limite_art58: valor })
 }
 
+// Marca o desmarca un haber propio como variable de devengo diario (base de la semana corrida, art. 45).
+async function marcarDevengoDiario(id, valor, empresasPermitidas, usuarioId) {
+    const concepto = await obtenerConceptoPropio(id, empresasPermitidas)
+
+    await exigirRol(usuarioId, concepto.empresa_id, PERMISOS.CONFIGURAR_CONCEPTOS)
+
+    if (concepto.tipo !== "haber") {
+        throw new ValidationError("Solo los haberes entran a la semana corrida")
+    }
+    if (typeof valor !== "boolean") {
+        throw new ValidationError("devengo_diario debe ser true o false")
+    }
+
+    return await concepto.update({ devengo_diario: valor })
+}
+
 module.exports = {
     marcarArt58,
+    marcarDevengoDiario,
     listarConceptos,
     crearConcepto,
     desactivarConcepto,
