@@ -250,6 +250,17 @@
             <div id="saldosRelaciones"></div>
         </section>
 
+        <section class="tarjeta" id="seccionProgresivo" hidden>
+            <h2>Feriado progresivo</h2>
+            <p class="texto-suave">Años trabajados con empleadores anteriores, según el certificado de cotizaciones de la AFP que presenta el trabajador (el documento queda en su carpeta). Con 10 años trabajados se suma 1 día de vacaciones por cada 3 años nuevos con esta empresa; de empleadores anteriores se reconocen hasta 10 años (art. 68). Las relaciones anteriores con esta misma empresa también se ingresan aquí.</p>
+            <form id="formProgresivo">
+                <label>Años con empleadores anteriores<input type="number" id="aniosProgresivo" min="0" max="60" step="1" required></label>
+                <label class="campo-ancho">Respaldo<input type="text" id="respaldoProgresivo" maxlength="200" placeholder="Certificado AFP Capital del 15-10-2026"></label>
+                <button type="submit">Guardar</button>
+                <button type="button" class="secundario" id="borrarProgresivo">Quitar</button>
+            </form>
+        </section>
+
         <section class="tarjeta" id="seccionSituacion" hidden>
             <h2>Situación previsional</h2>
             <p class="texto-suave">Historial por mes: pensionado, si sigue cotizando en la AFP y tipo de pensión, o técnico extranjero. Cada registro rige desde su mes hasta el siguiente registro.</p>

@@ -60,3 +60,23 @@ test("saldoVacaciones: con término, se calcula a la fecha del término", () => 
     assert.equal(s.ganados, 15)
     assert.equal(s.enCurso.proporcional, 7.5)
 })
+
+test("diasProgresivos (art. 68): 10 años trabajados y 1 día por cada 3 nuevos; anteriores hasta 10", () => {
+    assert.equal(v.diasProgresivos(10, 2), 0)
+    assert.equal(v.diasProgresivos(10, 3), 1)
+    assert.equal(v.diasProgresivos(10, 6), 2)
+    assert.equal(v.diasProgresivos(15, 3), 1)
+    assert.equal(v.diasProgresivos(5, 7), 0)
+    assert.equal(v.diasProgresivos(5, 8), 1)
+    assert.equal(v.diasProgresivos(0, 13), 1)
+    assert.equal(v.diasProgresivos(null, 12), 0)
+})
+
+test("saldoVacaciones con progresivo: el período que cumple los 3 años suma el día y el proporcional lo incluye", () => {
+    const s = v.saldoVacaciones({ fechaIngreso: "2020-01-01", hoy: "2023-06-30", aniosPrevios: 10, tomadas: [] })
+    assert.deepEqual(s.periodos.filter((p) => p.cumplido).map((p) => [p.numero, p.progresivos, p.ganados]), [[1, 0, 15], [2, 0, 15], [3, 1, 16]])
+    assert.equal(s.ganados, 46)
+    assert.equal(s.enCurso.progresivos, 1)
+    assert.equal(s.enCurso.proporcional, 8)
+    assert.equal(s.aniosPrevios, 10)
+})

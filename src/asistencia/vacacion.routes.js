@@ -15,6 +15,9 @@ router.get("/saldo/:trabajadorId", async (req, res) => {
 router.put("/saldo-inicial/:trabajadorId", async (req, res) => {
     res.status(200).json(await s.guardarSaldoInicial(req.params.trabajadorId, req.body ?? {}, req.empresasPermitidas, req.usuario.id))
 })
+router.put("/progresivo/:personaId", async (req, res) => {
+    res.status(200).json(await s.guardarProgresivo(req.params.personaId, req.body ?? {}, req.empresasPermitidas, req.usuario.id))
+})
 router.patch("/:id/aprobar", async (req, res) => {
     res.status(200).json(await s.aprobarVacacion(req.params.id, req.empresasPermitidas, req.usuario.id))
 })

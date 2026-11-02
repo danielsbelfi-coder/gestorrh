@@ -136,10 +136,42 @@ async function cargarPersona() {
     document.getElementById("seccionPrevision").hidden = false
     document.getElementById("seccionCargas").hidden = false
     document.getElementById("seccionAhorro").hidden = false
+    document.getElementById("seccionProgresivo").hidden = false
+    mostrarProgresivo()
     mostrarCamposAhorro()
     await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros(), cargarSaldos()])
     avisoSinTramo()
 }
+
+// ---------- Feriado progresivo ----------
+
+function mostrarProgresivo() {
+    document.getElementById("aniosProgresivo").value = persona.anios_previos_progresivo ?? ""
+    document.getElementById("respaldoProgresivo").value = persona.respaldo_progresivo ?? ""
+    document.getElementById("borrarProgresivo").hidden = persona.anios_previos_progresivo === null || persona.anios_previos_progresivo === undefined
+}
+
+async function guardarProgresivo(cuerpo, texto) {
+    limpiarMensajes()
+    const resultado = await llamarApi(`/api/vacaciones/progresivo/${personaId}`, { method: "PUT", body: JSON.stringify(cuerpo) })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo guardar")
+        return
+    }
+    persona = { ...persona, anios_previos_progresivo: resultado.datos.anios_previos_progresivo, respaldo_progresivo: resultado.datos.respaldo_progresivo }
+    mostrarProgresivo()
+    mensaje("info", texto)
+}
+
+document.getElementById("formProgresivo").addEventListener("submit", (evento) => {
+    evento.preventDefault()
+    guardarProgresivo({ anios: Number(document.getElementById("aniosProgresivo").value), respaldo: document.getElementById("respaldoProgresivo").value }, "Años para el feriado progresivo guardados.")
+})
+document.getElementById("borrarProgresivo").addEventListener("click", () => {
+    if (confirm("¿Quitar los años con empleadores anteriores?")) {
+        guardarProgresivo({ anios: null }, "Años para el feriado progresivo quitados.")
+    }
+})
 
 async function cargarRelaciones() {
     const listas = await cargarListas(["/api/trabajadores"])

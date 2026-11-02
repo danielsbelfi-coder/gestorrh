@@ -78,7 +78,9 @@ async function saldoDe(trabajador, { excluir = null, agregar = null } = {}) {
     if (agregar) {
         tomadas.push(agregar)
     }
+    const persona = await Persona.findByPk(trabajador.persona_id, { attributes: ["anios_previos_progresivo"] })
     return saldoVacaciones({
+        aniosPrevios: persona?.anios_previos_progresivo ?? 0,
         fechaIngreso: trabajador.fecha_ingreso,
         fechaTermino: trabajador.fecha_termino,
         hoy: hoyChile(),
@@ -302,7 +304,28 @@ async function guardarSaldoInicial(trabajadorId, datos, empresasPermitidas, usua
     return existente ? await existente.update(valores) : await VacacionSaldoInicial.create(valores)
 }
 
+// Feriado progresivo (art. 68): años con empleadores anteriores de la persona, con el respaldo obligatorio
+// (certificado de cotizaciones de la AFP). anios = null lo borra. Se reconocen hasta 10 al calcular.
+async function guardarProgresivo(personaId, datos, empresasPermitidas, usuarioId) {
+    const { obtenerPersonaPorId } = require("../trabajadores/persona.service.js")
+    const persona = await obtenerPersonaPorId(personaId, empresasPermitidas)
+    await exigirRol(usuarioId, persona.empresa_id, PERMISOS.APROBAR_VACACIONES)
+    if (datos?.anios === null) {
+        return await persona.update({ anios_previos_progresivo: null, respaldo_progresivo: null })
+    }
+    const anios = Number(datos?.anios)
+    if (!Number.isInteger(anios) || anios < 0 || anios > 60) {
+        throw new ValidationError("Los años con empleadores anteriores deben ser un número entero entre 0 y 60")
+    }
+    const respaldo = typeof datos.respaldo === "string" ? datos.respaldo.trim() : ""
+    if (anios > 0 && respaldo.length < 3) {
+        throw new ValidationError("Indica el respaldo: certificado de cotizaciones de la AFP (número, fecha o descripción)")
+    }
+    return await persona.update({ anios_previos_progresivo: anios, respaldo_progresivo: respaldo.slice(0, 200) || null })
+}
+
 module.exports = {
+    guardarProgresivo,
     crearVacacion, aprobarVacacion, rechazarVacacion, anularVacacion, eliminarVacacion,
     listarVacaciones, saldoTrabajador, guardarSaldoInicial, mesesEntre
 }

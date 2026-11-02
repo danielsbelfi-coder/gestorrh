@@ -6,6 +6,17 @@ const { tiempoServido, diasFeriadoGanados } = require("../remuneraciones/calculo
 const DIAS_POR_PERIODO = 15
 const BLOQUE_MINIMO = 10
 const PERIODOS_ACUMULABLES = 2
+// Art. 68: con 10 años trabajados, 1 día más por cada 3 años nuevos con el empleador actual; de empleadores
+// anteriores se reconocen hasta 10 años.
+const ANIOS_BASE_PROGRESIVO = 10
+const ANIOS_POR_DIA_PROGRESIVO = 3
+const TOPE_ANIOS_PREVIOS = 10
+
+// Días progresivos de un período que se cumple con "aniosActuales" años con el empleador actual.
+function diasProgresivos(aniosPrevios, aniosActuales) {
+    const total = Math.min(Math.max(0, Number(aniosPrevios) || 0), TOPE_ANIOS_PREVIOS) + aniosActuales
+    return total > ANIOS_BASE_PROGRESIVO ? Math.floor((total - ANIOS_BASE_PROGRESIVO) / ANIOS_POR_DIA_PROGRESIVO) : 0
+}
 
 const diaSemana = (fecha) => new Date(`${fecha}T00:00:00Z`).getUTCDay()
 
@@ -50,7 +61,8 @@ function periodosAnuales(fechaIngreso, hasta) {
 
 // fechaIngreso, fechaTermino (o null), hoy: "AAAA-MM-DD". saldoInicial: { fecha_corte, dias } o null.
 // tomadas: vacaciones aprobadas [{ id, desde, dias }].
-function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial = null, tomadas = [] }) {
+// aniosPrevios: años con empleadores anteriores (feriado progresivo; se reconocen hasta 10).
+function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial = null, tomadas = [], aniosPrevios = 0 }) {
     const referencia = fechaTermino && fechaTermino < hoy ? fechaTermino : hoy
     const anuales = periodosAnuales(fechaIngreso, referencia)
     const corte = saldoInicial?.fecha_corte ?? null
@@ -65,7 +77,8 @@ function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial 
             continue
         }
         const cumplido = p.hasta < referencia
-        periodos.push({ tipo: "anual", ...p, ganados: cumplido ? DIAS_POR_PERIODO : 0, cumplido })
+        const progresivos = diasProgresivos(aniosPrevios, p.numero)
+        periodos.push({ tipo: "anual", ...p, progresivos, ganados: cumplido ? DIAS_POR_PERIODO + progresivos : 0, cumplido })
     }
     for (const p of periodos) {
         Object.assign(p, { tomados: 0, imputaciones: [] })
@@ -93,7 +106,10 @@ function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial 
     }
 
     const enCurso = periodos.find((p) => p.tipo === "anual" && !p.cumplido) ?? null
-    const proporcional = enCurso ? diasFeriadoGanados(tiempoServido(enCurso.desde, referencia)) : 0
+    // El proporcional del período en curso incluye sus días progresivos en la misma proporción.
+    const proporcional = enCurso
+        ? Math.round(diasFeriadoGanados(tiempoServido(enCurso.desde, referencia)) * (DIAS_POR_PERIODO + enCurso.progresivos) / DIAS_POR_PERIODO * 100) / 100
+        : 0
     const ganados = cumplidos.reduce((suma, p) => suma + p.ganados, 0)
     const tomados = tomadas.reduce((suma, v) => suma + Number(v.dias), 0)
 
@@ -114,7 +130,8 @@ function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial 
     return {
         referencia,
         periodos,
-        enCurso: enCurso ? { numero: enCurso.numero, desde: enCurso.desde, hasta: enCurso.hasta, proporcional } : null,
+        enCurso: enCurso ? { numero: enCurso.numero, desde: enCurso.desde, hasta: enCurso.hasta, progresivos: enCurso.progresivos, proporcional } : null,
+        aniosPrevios: Math.min(Math.max(0, Number(aniosPrevios) || 0), TOPE_ANIOS_PREVIOS),
         ganados,
         tomados,
         disponible: Math.round((ganados - tomados) * 100) / 100,
@@ -123,4 +140,4 @@ function saldoVacaciones({ fechaIngreso, fechaTermino = null, hoy, saldoInicial 
     }
 }
 
-module.exports = { DIAS_POR_PERIODO, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }
+module.exports = { DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }

@@ -77,6 +77,15 @@ const Persona = sequelize.define("Persona", {
         type: DataTypes.STRING,
         allowNull: true
     },
+    // Feriado progresivo (art. 68): años con empleadores anteriores según el certificado de la AFP (se reconocen hasta 10).
+    anios_previos_progresivo: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    respaldo_progresivo: {
+        type: DataTypes.STRING(200),
+        allowNull: true
+    },
     afp_id: {
         type: DataTypes.INTEGER,
         allowNull: true

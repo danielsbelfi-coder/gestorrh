@@ -98,11 +98,12 @@ async function dibujarVacaciones() {
     const filas = s.periodos.filter((p) => p.cumplido).map((p) => `
         <tr>
             <td>${p.tipo === "inicial" ? `Saldo inicial al ${escaparHtml(fechaCorta(p.hasta))}` : `Período ${p.numero}: ${escaparHtml(fechaCorta(p.desde))} al ${escaparHtml(fechaCorta(p.hasta))}`}</td>
-            <td class="numero">${dias(p.ganados)}</td><td class="numero">${dias(p.tomados)}</td><td class="numero"><strong>${dias(p.pendientes)}</strong></td>
+            <td class="numero">${dias(p.ganados)}${p.progresivos ? ` <span class="texto-suave">(${p.progresivos} prog.)</span>` : ""}</td><td class="numero">${dias(p.tomados)}</td><td class="numero"><strong>${dias(p.pendientes)}</strong></td>
         </tr>`).join("")
     document.getElementById("saldoVacaciones").innerHTML = `
         <p class="saldo-vacaciones">Disponible: <strong>${dias(s.disponible)}</strong> día(s) hábil(es)
             ${s.enCurso ? `<span class="texto-suave"> · período ${s.enCurso.numero} en curso (${escaparHtml(fechaCorta(s.enCurso.desde))} al ${escaparHtml(fechaCorta(s.enCurso.hasta))}): ${dias(s.enCurso.proporcional)} proporcional al ${escaparHtml(fechaCorta(s.referencia))}</span>` : ""}</p>
+        <p class="texto-suave">Feriado progresivo: ${s.aniosPrevios > 0 ? `${s.aniosPrevios} año(s) con empleadores anteriores reconocidos` : "sin años con empleadores anteriores registrados"}${s.enCurso?.progresivos ? `; el período en curso tiene ${s.enCurso.progresivos} día(s) progresivo(s)` : ""} (se registran en <a href="persona.html?id=${persona.id}">la ficha de la persona</a>).</p>
         ${s.avisos.map((a) => `<p class="alerta advertencia">${escaparHtml(a)}</p>`).join("")}
         ${filas ? `<table><thead><tr><th>Período</th><th class="numero">Ganados</th><th class="numero">Tomados</th><th class="numero">Pendientes</th></tr></thead><tbody>${filas}</tbody></table>`
             : `<p class="texto-suave">Todavía no cumple su primer año: los 15 días se ganan el ${escaparHtml(fechaCorta(s.enCurso?.hasta ? s.enCurso.hasta : ""))} (al terminar el período).</p>`}`
