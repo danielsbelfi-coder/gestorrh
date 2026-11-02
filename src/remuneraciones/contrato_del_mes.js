@@ -37,6 +37,14 @@ function contratoDelMes({ contrato, anexos, anio, mes }) {
     return { contrato: delMes, tramosSueldo }
 }
 
+// Sueldo mensual del contrato: el sistema semanal se mensualiza (sueldo semanal × 30 / 7); el descanso ya va pagado en
+// el sueldo fijo. Los demás sistemas quedan igual (el diario y por hora se pagan por días u horas en la liquidación).
+const DIAS_SEMANA = 7
+function sueldoMensualDe(sistema, sueldo) {
+    return sistema === "semanal" ? Math.round(Number(sueldo) * 30 / DIAS_SEMANA) : Number(sueldo)
+}
+
 module.exports = {
-    contratoDelMes
+    contratoDelMes,
+    sueldoMensualDe
 }

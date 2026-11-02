@@ -497,6 +497,13 @@ async function prepararCalculo(periodo, trabajador) {
     if (contrato === null) {
         throw new ConflictError("No existe un contrato vigente para este trabajador")
     }
+    // Sistema semanal: el sueldo se mensualiza (× 30 / 7) y se liquida como un mensual.
+    const { sueldoMensualDe } = require("./contrato_del_mes.js")
+    if (contrato.sistema_remuneracion === "semanal") {
+        for (const tramo of tramosSueldo) {
+            tramo.sueldo = sueldoMensualDe("semanal", tramo.sueldo)
+        }
+    }
 
     const persona = trabajador.Persona
 
@@ -611,7 +618,7 @@ async function prepararCalculo(periodo, trabajador) {
     }
     const porDias = await sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueldo, resumen, variables: aprobadas, ingresoMinimoMensual: parametros.ingresoMinimoMensual })
     const datos = {
-        sueldoBase: Number(contrato.sueldo_base),
+        sueldoBase: sueldoMensualDe(contrato.sistema_remuneracion, contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
         diasPagados,
         tramosSueldo: tramosConDias,

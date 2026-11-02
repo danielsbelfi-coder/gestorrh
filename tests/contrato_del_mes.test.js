@@ -48,3 +48,10 @@ test("otros campos: las horas quedan como al final del mes", () => {
     assert.strictEqual(contratoDelMes({ contrato, anexos, anio: 2027, mes: 3 }).contrato.horas_semanales, "42")
     assert.strictEqual(contratoDelMes({ contrato, anexos, anio: 2027, mes: 3 }).contrato.tipo_jornada, "completa")
 })
+test("sueldoMensualDe: el sueldo semanal se mensualiza (× 30 / 7); los demás sistemas no cambian", () => {
+    const { sueldoMensualDe } = require("../src/remuneraciones/contrato_del_mes.js")
+    assert.strictEqual(sueldoMensualDe("semanal", 140000), 600000)
+    assert.strictEqual(sueldoMensualDe("semanal", "100000"), 428571)
+    assert.strictEqual(sueldoMensualDe("mensual", "600000"), 600000)
+    assert.strictEqual(sueldoMensualDe("diario", 30000), 30000)
+})

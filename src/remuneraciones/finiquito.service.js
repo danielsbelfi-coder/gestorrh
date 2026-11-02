@@ -66,7 +66,8 @@ async function sueldoDelMesDeTermino(trabajador, anio, mes) {
     const anexos = await ContratoAnexo.findAll({ where: { contrato_id: vigente.id } })
     const { contrato } = contratoDelMes({ contrato: vigente.toJSON(), anexos: anexos.map((a) => a.toJSON()), anio, mes })
 
-    return Number(contrato.sueldo_base)
+    const { sueldoMensualDe } = require("./contrato_del_mes.js")
+    return sueldoMensualDe(contrato.sistema_remuneracion, contrato.sueldo_base)
 }
 
 function validarDatosFiniquito(datos, fechaTermino) {
