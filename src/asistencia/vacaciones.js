@@ -177,4 +177,32 @@ function feriadoFiniquito({ saldo, fechaTermino, feriados = [], art44 = false })
     }
 }
 
-module.exports = { feriadoFiniquito, DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }
+// Art. 71: quien gana variables recibe en vacaciones el promedio de lo variable de los últimos 3 meses liquidados.
+const CODIGOS_VARIABLES_ART71 = [2103, 2112, 2113]
+const DIAS_MES = 30
+
+// Días corridos de vacaciones aprobadas que caen en el mes (tope 30, mes comercial). vacaciones: [{ desde, hasta }].
+function diasCorridosEnMes(vacaciones, anio, mes) {
+    const mm = String(mes).padStart(2, "0")
+    const primerDia = `${anio}-${mm}-01`
+    const ultimoDia = `${anio}-${mm}-${String(new Date(Date.UTC(anio, mes, 0)).getUTCDate()).padStart(2, "0")}`
+    let dias = 0
+    for (const v of vacaciones) {
+        const desde = v.desde > primerDia ? v.desde : primerDia
+        const hasta = v.hasta < ultimoDia ? v.hasta : ultimoDia
+        if (desde <= hasta) {
+            dias += Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000) + 1
+        }
+    }
+    return Math.min(dias, DIAS_MES)
+}
+
+// meses: montos por código LRE de las liquidaciones anteriores (máximo 3). → { promedio, dias, monto, meses }.
+function remuneracionVariableVacaciones(meses, diasCorridos) {
+    const usados = meses.slice(0, 3)
+    const suma = (montos) => CODIGOS_VARIABLES_ART71.reduce((total, codigo) => total + Number(montos[codigo] ?? 0), 0)
+    const promedio = usados.length === 0 ? 0 : Math.round(usados.reduce((total, montos) => total + suma(montos), 0) / usados.length)
+    return { promedio, dias: diasCorridos, monto: Math.round(promedio / DIAS_MES * diasCorridos), meses: usados.length }
+}
+
+module.exports = { CODIGOS_VARIABLES_ART71, diasCorridosEnMes, remuneracionVariableVacaciones, feriadoFiniquito, DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }

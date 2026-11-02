@@ -469,6 +469,7 @@ async function documentoFiniquito(id, empresasPermitidas) {
 }
 
 module.exports = {
+    montosMesesAnteriores,
     calcularFiniquito,
     recalcularFiniquito,
     eliminarFiniquito,

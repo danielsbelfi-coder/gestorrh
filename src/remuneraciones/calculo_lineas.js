@@ -33,7 +33,7 @@ function sumarSegun(lineas, marca) {
     }, 0)
 }
 
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, conceptos }) {
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, remuneracionVacaciones, conceptos }) {
     const valorHora = valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
 
@@ -57,6 +57,11 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
         } else {
             lineas.push({ concepto: grupo.concepto, cantidad: null, monto: grupo.monto })
         }
+    }
+
+    // Art. 71: en vacaciones, promedio de lo variable de los últimos 3 meses (imponible, tributable y base de gratificación).
+    if (remuneracionVacaciones && remuneracionVacaciones.monto > 0) {
+        lineas.push({ concepto: conceptos.REMUNERACION_VARIABLE_VACACIONES, cantidad: remuneracionVacaciones.dias, monto: remuneracionVacaciones.monto })
     }
 
     // Asignación familiar del mes (no imponible ni tributable): cantidad = número de cargas.

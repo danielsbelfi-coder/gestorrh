@@ -98,3 +98,16 @@ test("feriadoFiniquito: art. 44 sin proporcional y anticipadas como exceso", () 
     const n = v.feriadoFiniquito({ saldo: { disponible: -5, enCurso: { proporcional: 2 } }, fechaTermino: "2026-11-06" })
     assert.deepEqual([n.habiles, n.diasPorPagar, n.anticipados, n.pendientes], [0, 0, 3, 0])
 })
+
+test("art. 71: días corridos de vacaciones en el mes (tope 30)", () => {
+    assert.equal(v.diasCorridosEnMes([{ desde: "2026-11-23", hasta: "2026-12-04" }], 2026, 11), 8)
+    assert.equal(v.diasCorridosEnMes([{ desde: "2026-11-23", hasta: "2026-12-04" }], 2026, 12), 4)
+    assert.equal(v.diasCorridosEnMes([{ desde: "2026-12-01", hasta: "2026-12-31" }], 2026, 12), 30)
+    assert.equal(v.diasCorridosEnMes([{ desde: "2026-10-01", hasta: "2026-10-05" }], 2026, 11), 0)
+})
+
+test("art. 71: promedio de comisiones, tratos y bonos variables de los últimos 3 meses / 30 × días", () => {
+    const meses = [{ 2103: 300000, 2102: 99999 }, { 2112: 150000, 2113: 60000 }, { 2103: 90000 }, { 2103: 1000000 }]
+    assert.deepEqual(v.remuneracionVariableVacaciones(meses, 12), { promedio: 200000, dias: 12, monto: 80000, meses: 3 })
+    assert.deepEqual(v.remuneracionVariableVacaciones([], 10), { promedio: 0, dias: 10, monto: 0, meses: 0 })
+})

@@ -57,7 +57,8 @@ const CODIGOS_SISTEMA = [
     "DESCUENTO_PAGO_EXCESO", "AJUSTE_PAGO_EXCESO",
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
     "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA",
-    "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC"
+    "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC",
+    "REMUNERACION_VARIABLE_VACACIONES"
 ]
 
 async function obtenerConceptosSistema() {
@@ -128,6 +129,22 @@ async function depositoConvenidoDelAnio(periodo, trabajador) {
         attributes: ["monto"]
     })
     return lineas.reduce((suma, linea) => suma + Number(linea.monto), 0)
+}
+
+// Art. 71: días corridos de vacaciones aprobadas en el mes y promedio de comisiones, tratos y bonos variables de las
+// tres liquidaciones anteriores de la relación. null si no tuvo vacaciones en el mes.
+async function remuneracionVariableDelMes(periodo, trabajador) {
+    const { Vacacion } = require("../shared/associations.js")
+    const { diasCorridosEnMes, remuneracionVariableVacaciones } = require("../asistencia/vacaciones.js")
+    const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
+    const vacaciones = await Vacacion.findAll({ where: { trabajador_id: trabajador.id, estado: "aprobada", desde: { [Op.lte]: ultimoDia }, hasta: { [Op.gte]: primerDia } } })
+    const dias = diasCorridosEnMes(vacaciones.map((v) => ({ desde: v.desde, hasta: v.hasta })), periodo.anio, periodo.mes)
+    if (dias === 0) {
+        return null
+    }
+    const { montosMesesAnteriores } = require("./finiquito.service.js")
+    const meses = await montosMesesAnteriores(trabajador, periodo.anio, periodo.mes)
+    return { ...remuneracionVariableVacaciones(meses.map((m) => m.montos), dias), periodos: meses.map((m) => m.periodo) }
 }
 
 async function obtenerSaldoAnterior(periodo, trabajadorId) {
@@ -495,6 +512,8 @@ async function prepararCalculo(periodo, trabajador) {
     const { ahorrosEnMes } = require("../trabajadores/ahorro_voluntario.service.js")
     // Con dos relaciones en el mes, el APV y el depósito convenido se descuentan una sola vez, en la última relación.
     const ahorrosDelMes = hayPosterior ? [] : await ahorrosEnMes(persona.id, periodo.anio, periodo.mes)
+    // Art. 71: vacaciones aprobadas en el mes → promedio de lo variable de los últimos 3 meses liquidados.
+    const remuneracionVacaciones = await remuneracionVariableDelMes(periodo, trabajador)
     const depositoConvenidoAcumulado = ahorrosDelMes.some((a) => a.tipo === "deposito_convenido")
         ? await depositoConvenidoDelAnio(periodo, trabajador)
         : 0
@@ -571,6 +590,7 @@ async function prepararCalculo(periodo, trabajador) {
         relacionAnterior,
         ahorros: ahorrosDelMes,
         depositoConvenidoAcumulado,
+        remuneracionVacaciones,
         conceptos
     }
 
@@ -678,6 +698,7 @@ async function prepararCalculo(periodo, trabajador) {
         apv: resultado.ahorros,
         ccaf: { caja: empresa.ccaf ?? null, saludCcaf, tasa: tasaSaludCcaf },
         art58,
+        vacacionesArt71: remuneracionVacaciones,
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
