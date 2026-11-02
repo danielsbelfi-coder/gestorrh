@@ -122,8 +122,6 @@ document.getElementById("tablaVacaciones").addEventListener("click", async funct
 document.addEventListener("empresa-lista", async function () {
     limpiarMensajes()
     datosTrabajadores = (await trabajadoresDeLaEmpresa()) ?? datosTrabajadores
-    llenarBuscador(document.getElementById("trabajador"), datosTrabajadores.trabajadores
-        .filter((t) => t.estado !== "postulante")
-        .map((t) => ({ id: t.id, texto: t.textoBuscador })))
+    buscadorVigenteEnFecha(document.getElementById("trabajador"), document.getElementById("desde"), datosTrabajadores.trabajadores, (t) => t.textoBuscador)
     cargarVacaciones()
 })

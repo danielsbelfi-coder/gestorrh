@@ -47,12 +47,8 @@ async function cargarAsistencias() {
         .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
     tabla.mostrar(asistencias)
 
-    llenarBuscador(document.getElementById("trabajador"), deEmpresaActual(trabajadores)
-        .filter((t) => t.estado !== "postulante")
-        .map((trabajador) => {
-            const persona = personaPorId.get(trabajador.persona_id)
-            return { id: trabajador.id, texto: textoTrabajador(trabajador, persona) }
-        }))
+    buscadorVigenteEnFecha(document.getElementById("trabajador"), document.getElementById("fecha"), deEmpresaActual(trabajadores),
+        (trabajador) => textoTrabajador(trabajador, personaPorId.get(trabajador.persona_id)))
 }
 
 const formulario = document.getElementById("formCrearAsistencias")

@@ -360,6 +360,27 @@ function vigenteEnPeriodo(trabajador, periodo) {
         && (!trabajador.fecha_termino || trabajador.fecha_termino >= primerDia)
 }
 
+// Relación laboral vigente en una fecha "AAAA-MM-DD" (ingresó y no había terminado). Sirve para que los buscadores
+// de los formularios no ofrezcan relaciones ya terminadas (por ejemplo, la anterior de una persona recontratada).
+function vigenteEnFecha(trabajador, fecha) {
+    return trabajador.estado !== "postulante"
+        && Boolean(trabajador.fecha_ingreso) && trabajador.fecha_ingreso <= fecha
+        && (!trabajador.fecha_termino || trabajador.fecha_termino >= fecha)
+}
+
+// Llena el buscador con las relaciones vigentes en la fecha del campo (o hoy, si está vacío) y lo rehace al cambiarla.
+function buscadorVigenteEnFecha(input, campoFecha, trabajadores, textoDe) {
+    const llenar = () => llenarBuscador(input, trabajadores
+        .filter((t) => vigenteEnFecha(t, campoFecha.value || hoyIso()))
+        .map((t) => ({ id: t.id, texto: textoDe(t) })))
+    llenar()
+    if (!campoFecha.dataset.buscadorVigente) {
+        campoFecha.dataset.buscadorVigente = "si"
+        campoFecha.addEventListener("change", () => campoFecha._llenarVigentes?.())
+    }
+    campoFecha._llenarVigentes = llenar
+}
+
 // Lista de problemas con nombre del trabajador: [{ nombre, motivos }]
 function mostrarProblemasConNombre(problemas) {
     document.getElementById("listaProblemas").innerHTML = problemas.map((problema) =>

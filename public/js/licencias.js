@@ -95,8 +95,6 @@ document.getElementById("tablaLicencias").addEventListener("click", async functi
 document.addEventListener("empresa-lista", async function () {
     limpiarMensajes()
     datosTrabajadores = (await trabajadoresDeLaEmpresa()) ?? datosTrabajadores
-    llenarBuscador(document.getElementById("trabajador"), datosTrabajadores.trabajadores
-        .filter((t) => t.estado !== "postulante")
-        .map((t) => ({ id: t.id, texto: t.textoBuscador })))
+    buscadorVigenteEnFecha(document.getElementById("trabajador"), document.getElementById("fechaInicio"), datosTrabajadores.trabajadores, (t) => t.textoBuscador)
     cargarLicencias()
 })
