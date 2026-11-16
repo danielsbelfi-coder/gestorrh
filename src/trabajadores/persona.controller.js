@@ -1,4 +1,4 @@
-const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona, importarPersonas } = require("./persona.service");
+const { crearPersona, listarPersonas, obtenerPersonaPorId, actualizarPersona, importarPersonas, guiaDeImportacion, plantillaDeImportacion } = require("./persona.service");
 
 async function crear(req, res) {
     const nuevaPersona = await crearPersona(req.body, req.empresasPermitidas, req.usuario.id);
@@ -25,7 +25,20 @@ async function importar(req, res) {
     res.status(200).json(resultado)
 }
 
+async function guiaImportacion(req, res) {
+    res.status(200).json(await guiaDeImportacion())
+}
+
+async function plantillaImportacion(req, res) {
+    const archivo = await plantillaDeImportacion()
+    res.attachment("plantilla-personas.xlsx")
+    res.type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    res.status(200).send(archivo)
+}
+
 module.exports = {
+    guiaImportacion,
+    plantillaImportacion,
     crear,
     listar,
     obtenerPorId,

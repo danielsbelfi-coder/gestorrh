@@ -12,9 +12,30 @@ const COLUMNAS_OPCIONALES = ["forma_pago"]
 
 let filas = []
 
-document.getElementById("btnPlantilla").addEventListener("click", function () {
+document.getElementById("btnPlantilla").addEventListener("click", async function () {
+    limpiarMensajes()
+    const resultado = await descargarArchivo("/api/personas/importar/plantilla.xlsx")
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo descargar la plantilla")
+    }
+})
+
+document.getElementById("btnPlantillaCsv").addEventListener("click", function () {
     descargarCsv("plantilla-personas.csv", COLUMNAS.map((columna) => [columna, () => ""]), [])
 })
+
+// Guía de valores válidos (AFP, isapres, bancos, tipos de cuenta, formas de pago…), tal como está en la base.
+async function cargarGuia() {
+    const resultado = await llamarApi("/api/personas/importar/guia")
+    if (resultado.status !== 200) {
+        return
+    }
+    document.getElementById("tablaValores").innerHTML = `<table class="tabla-ayuda"><tbody>${resultado.datos.valores.map((g) => `
+        <tr><td><strong>${escaparHtml(g.columna)}</strong></td><td>${g.valores.map((v) => escaparHtml(v)).join(" · ")}</td></tr>`).join("")}
+    </tbody></table>`
+}
+
+cargarGuia()
 
 // Lee un CSV con separador ; o , y comillas. Devuelve una matriz de textos.
 function leerCsv(contenido) {

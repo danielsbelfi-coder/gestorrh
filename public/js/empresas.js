@@ -2,6 +2,7 @@ requiereLogin()
 
 let esAdminCuenta = false
 let cuentaCancelada = false
+let usuarioActualId = null
 
 ESTADOS.empresa = { activa: ["Activa", "exito"], inactiva: ["Inactiva", "advertencia"] }
 
@@ -49,6 +50,42 @@ async function cargarEmpresas() {
         (a.estado === "inactiva") - (b.estado === "inactiva") || a.razon_social.localeCompare(b.razon_social, "es")))
 }
 
+// Usuarios activos de la cuenta (menos quien crea la empresa, que queda como ADMIN) para darles acceso a la empresa nueva.
+async function cargarAccesoUsuarios() {
+    const lista = document.getElementById("listaAccesoUsuarios")
+    const resultado = await llamarApi("/api/cuenta/usuarios")
+    if (resultado.status !== 200) {
+        lista.innerHTML = `<p class="texto-suave">No se pudo cargar la lista de usuarios.</p>`
+        return
+    }
+
+    const otros = resultado.datos
+        .filter((u) => u.estado === "activo" && u.id !== usuarioActualId)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+
+    if (otros.length === 0) {
+        lista.innerHTML = `<p class="texto-suave">La cuenta no tiene otros usuarios activos.</p>`
+        return
+    }
+
+    lista.innerHTML = otros.map((u) => `
+        <label class="fila-acceso">
+            <span>${escaparHtml(u.nombre)} <span class="texto-suave">(${escaparHtml(u.email)})</span></span>
+            <select data-usuario="${u.id}" aria-label="Rol de ${escaparHtml(u.nombre)} en la empresa nueva">
+                <option value="">Sin acceso</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="JEFE_RRHH">JEFE_RRHH</option>
+                <option value="RRHH">RRHH</option>
+            </select>
+        </label>`).join("")
+}
+
+function rolesElegidos() {
+    return [...document.querySelectorAll("#listaAccesoUsuarios select")]
+        .filter((select) => select.value !== "")
+        .map((select) => ({ usuario_id: Number(select.dataset.usuario), rol: select.value }))
+}
+
 document.getElementById("formCrearEmpresa").addEventListener("submit", async function (evento) {
     evento.preventDefault()
 
@@ -58,7 +95,8 @@ document.getElementById("formCrearEmpresa").addEventListener("submit", async fun
         razon_social: document.getElementById("razonSocial").value.trim(),
         representante_legal_nombre: document.getElementById("representanteLegalNombre").value.trim(),
         representante_legal_rut: document.getElementById("representanteLegalRut").value.trim(),
-        direccion: document.getElementById("direccion").value.trim()
+        direccion: document.getElementById("direccion").value.trim(),
+        roles_usuarios: rolesElegidos()
     }, "Empresa creada.")
 
     if (creada) {
@@ -103,11 +141,15 @@ document.getElementById("tablaEmpresas").addEventListener("click", async functio
     }
     mensaje("info", accion === "desactivar" ? "Empresa desactivada." : "Empresa reactivada.")
     cargarEmpresas()
+    if (esAdminCuenta && !cuentaCancelada) {
+        cargarAccesoUsuarios()
+    }
 })
 
 document.addEventListener("usuario-listo", function (evento) {
     const usuario = evento.detail
     esAdminCuenta = usuario.es_admin_cuenta === true
+    usuarioActualId = usuario.id
     cuentaCancelada = usuario.cuenta_estado === "cancelada"
 
     document.getElementById("panelCrear").hidden = !esAdminCuenta || cuentaCancelada
@@ -115,4 +157,7 @@ document.addEventListener("usuario-listo", function (evento) {
         mensaje("error", `La cuenta está cancelada. Sus datos se eliminarán el ${fechaCorta(usuario.cuenta_fecha_eliminacion)}. Hasta esa fecha puedes descargarlos con "Exportar datos".`)
     }
     cargarEmpresas()
+    if (esAdminCuenta && !cuentaCancelada) {
+        cargarAccesoUsuarios()
+    }
 })

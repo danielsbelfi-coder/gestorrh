@@ -34,9 +34,10 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    // Opcional: si está vacío, el contrato indica solo el cargo.
     funciones: {
         type: DataTypes.TEXT,
-        allowNull: false
+        allowNull: true
     },
     lugar_prestacion_servicios: {
         type: DataTypes.STRING,

@@ -4,6 +4,8 @@
 
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
 const { esFechaValida } = require("../shared/fechas.js")
+const { buscarEnCatalogo, nombresDelCatalogo } = require("../shared/nombres_catalogo.js")
+const { BANCOS, TIPOS_CUENTA: TIPOS_CUENTA_VALIDOS, bancoDeTexto } = require("../shared/bancos.js")
 
 const MAXIMO_FILAS = 500
 
@@ -16,28 +18,37 @@ const COLUMNAS = [
 // Columnas que una planilla antigua puede no traer (la pantalla y la validación las dejan vacías).
 const COLUMNAS_OPCIONALES = ["forma_pago"]
 
+// Las opciones se comparan sin mayúsculas, tildes ni puntuación («Cta. Cte.» = «cta cte»).
 const TIPOS_CUENTA = {
-    corriente: "cuenta corriente", "cuenta corriente": "cuenta corriente",
-    rut: "cuenta Rut", "cuenta rut": "cuenta Rut",
-    ahorro: "cuenta de ahorro", "cuenta de ahorro": "cuenta de ahorro",
-    vista: "cuenta vista", "cuenta vista": "cuenta vista"
+    corriente: "cuenta corriente", "cuenta corriente": "cuenta corriente", "cta corriente": "cuenta corriente", "cta cte": "cuenta corriente", cc: "cuenta corriente",
+    rut: "cuenta Rut", "cuenta rut": "cuenta Rut", cuentarut: "cuenta Rut", "cta rut": "cuenta Rut",
+    ahorro: "cuenta de ahorro", ahorros: "cuenta de ahorro", "cuenta de ahorro": "cuenta de ahorro", "cuenta ahorro": "cuenta de ahorro", "cta ahorro": "cuenta de ahorro",
+    vista: "cuenta vista", "cuenta vista": "cuenta vista", "cta vista": "cuenta vista"
 }
 
 // Forma de pago de la remuneración. Vacía = transferencia (lo que ya se hacía antes de existir la columna).
 const FORMAS_PAGO = {
-    transferencia: "transferencia",
+    transferencia: "transferencia", "transferencia bancaria": "transferencia", "transferencia electronica": "transferencia", deposito: "transferencia",
     cheque: "cheque",
     efectivo: "efectivo",
-    "vale vista": "vale_vista", "vale_vista": "vale_vista", valevista: "vale_vista"
+    "vale vista": "vale_vista", vale_vista: "vale_vista", valevista: "vale_vista"
 }
+
+const SEXOS = { "": null, m: "masculino", masculino: "masculino", hombre: "masculino", f: "femenino", femenino: "femenino", mujer: "femenino" }
+const NACIONALIDADES = { chilena: "chilena", chileno: "chilena", extranjera: "extranjera", extranjero: "extranjera" }
 
 function texto(valor) {
     return String(valor ?? "").trim()
 }
 
-// Minúsculas y sin tildes, para comparar nombres de AFP, isapres y opciones.
+// Minúsculas y sin tildes, para comparar opciones.
 function normalizar(valor) {
     return texto(valor).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+// Para las opciones con sinónimos: además, sin puntos ni guiones y con los espacios simples («Cta. Cte.» → «cta cte»).
+function normalizarOpcion(valor) {
+    return normalizar(valor).replace(/[^a-z0-9_ ]+/g, " ").replace(/\s+/g, " ").trim()
 }
 
 // Acepta dd-mm-aaaa, dd/mm/aaaa o aaaa-mm-dd. Devuelve aaaa-mm-dd o null.
@@ -60,9 +71,17 @@ function leerSiNo(valor) {
     return null
 }
 
-function buscarPorNombre(lista, valor) {
-    const buscado = normalizar(valor)
-    return lista.find((item) => item.estado !== "inactivo" && normalizar(item.nombre) === buscado) ?? null
+// Resultado de buscar un nombre del catálogo: { id } o { motivo } con los valores válidos para corregir.
+function resolverCatalogo(lista, valor, etiqueta) {
+    const encontrado = buscarEnCatalogo(lista, valor)
+
+    if (encontrado?.item) {
+        return { id: encontrado.item.id }
+    }
+    if (encontrado?.ambiguos) {
+        return { motivo: `${etiqueta} "${texto(valor)}" es ambigua (${encontrado.ambiguos.map((i) => i.nombre).join(", ")}): escribe el nombre completo` }
+    }
+    return { motivo: `${etiqueta} "${texto(valor)}" no existe (valores válidos: ${nombresDelCatalogo(lista).join(", ")})` }
 }
 
 function validarFila(fila, catalogos) {
@@ -81,8 +100,8 @@ function validarFila(fila, catalogos) {
         motivos.push("RUT inválido")
     }
 
-    const nacionalidad = normalizar(fila.nacionalidad)
-    if (!vacio("nacionalidad") && !["chilena", "extranjera"].includes(nacionalidad)) {
+    const nacionalidad = NACIONALIDADES[normalizarOpcion(fila.nacionalidad)]
+    if (!vacio("nacionalidad") && nacionalidad === undefined) {
         motivos.push("nacionalidad debe ser chilena o extranjera")
     }
 
@@ -91,7 +110,7 @@ function validarFila(fila, catalogos) {
         motivos.push("fecha_nacimiento inválida (usa dd-mm-aaaa)")
     }
 
-    const sexo = { "": null, m: "masculino", masculino: "masculino", f: "femenino", femenino: "femenino" }[normalizar(fila.sexo)]
+    const sexo = SEXOS[normalizarOpcion(fila.sexo)]
     if (sexo === undefined) {
         motivos.push("sexo debe ser masculino o femenino")
     }
@@ -103,9 +122,9 @@ function validarFila(fila, catalogos) {
 
     let afpId = null
     if (!vacio("afp")) {
-        const afp = buscarPorNombre(catalogos.afps, fila.afp)
-        if (afp === null) {
-            motivos.push(`la AFP "${texto(fila.afp)}" no existe`)
+        const afp = resolverCatalogo(catalogos.afps, fila.afp, "la AFP")
+        if (afp.motivo) {
+            motivos.push(afp.motivo)
         } else {
             afpId = afp.id
         }
@@ -122,9 +141,9 @@ function validarFila(fila, catalogos) {
     if (sistemaSalud === undefined) {
         motivos.push("sistema_salud debe ser Fonasa o Isapre")
     } else if (sistemaSalud === "Isapre") {
-        const isapre = buscarPorNombre(catalogos.isapres, fila.isapre)
-        if (isapre === null) {
-            motivos.push(vacio("isapre") ? "falta la isapre" : `la isapre "${texto(fila.isapre)}" no existe`)
+        const isapre = vacio("isapre") ? { motivo: "falta la isapre" } : resolverCatalogo(catalogos.isapres, fila.isapre, "la isapre")
+        if (isapre.motivo) {
+            motivos.push(isapre.motivo)
         } else {
             isapreId = isapre.id
         }
@@ -134,21 +153,20 @@ function validarFila(fila, catalogos) {
         }
     }
 
-    const formaPago = vacio("forma_pago") ? "transferencia" : FORMAS_PAGO[normalizar(fila.forma_pago).replace(/\s+/g, " ")]
+    const formaPago = vacio("forma_pago") ? "transferencia" : FORMAS_PAGO[normalizarOpcion(fila.forma_pago)]
     if (formaPago === undefined) {
         motivos.push("forma_pago debe ser transferencia, cheque, efectivo o vale vista")
     }
 
-    const tipoCuenta = vacio("tipo_cuenta") ? null : TIPOS_CUENTA[normalizar(fila.tipo_cuenta)]
+    const tipoCuenta = vacio("tipo_cuenta") ? null : TIPOS_CUENTA[normalizarOpcion(fila.tipo_cuenta)]
     if (tipoCuenta === undefined) {
         // «Cheque», «efectivo» o «vale vista» en esta columna es el error más común: tienen su propia columna.
-        motivos.push(FORMAS_PAGO[normalizar(fila.tipo_cuenta)] !== undefined
+        motivos.push(FORMAS_PAGO[normalizarOpcion(fila.tipo_cuenta)] !== undefined
             ? `«${texto(fila.tipo_cuenta)}» es una forma de pago: va en la columna forma_pago (tipo_cuenta es corriente, rut, ahorro o vista)`
             : "tipo_cuenta debe ser corriente, rut, ahorro o vista")
     }
 
     // Banco por nombre o por código (catálogo de src/shared/bancos.js).
-    const { bancoDeTexto } = require("../shared/bancos.js")
     const bancoCodigo = vacio("banco") ? null : bancoDeTexto(fila.banco)
     if (!vacio("banco") && bancoCodigo === null) {
         motivos.push("banco no reconocido: escriba el nombre (por ejemplo, BancoEstado, Santander) o su código de 3 dígitos")
@@ -228,8 +246,25 @@ function validarImportacion(filas, catalogos) {
     return { personas, errores }
 }
 
+// Guía de valores válidos por columna (hoja «Valores válidos» de la plantilla y panel de ayuda de la pantalla).
+function valoresValidos(catalogos) {
+    return [
+        { columna: "nacionalidad", valores: ["chilena", "extranjera"] },
+        { columna: "sexo", valores: ["masculino", "femenino"] },
+        { columna: "afp", valores: nombresDelCatalogo(catalogos.afps) },
+        { columna: "afiliado_afc", valores: ["sí", "no"] },
+        { columna: "sistema_salud", valores: ["Fonasa", "Isapre"] },
+        { columna: "isapre", valores: nombresDelCatalogo(catalogos.isapres) },
+        { columna: "forma_pago", valores: ["transferencia", "cheque", "efectivo", "vale vista"] },
+        { columna: "banco", valores: Object.values(BANCOS) },
+        { columna: "tipo_cuenta", valores: TIPOS_CUENTA_VALIDOS },
+        { columna: "crear_postulante", valores: ["sí", "no"] }
+    ]
+}
+
 module.exports = {
     COLUMNAS,
+    valoresValidos,
     COLUMNAS_OPCIONALES,
     FORMAS_PAGO,
     MAXIMO_FILAS,

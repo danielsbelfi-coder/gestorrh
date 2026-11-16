@@ -29,6 +29,11 @@
                 <label class="campo-ancho">Representante legal<input type="text" id="representanteLegalNombre" required></label>
                 <label>RUT del representante<input type="text" id="representanteLegalRut" placeholder="12.345.678-9" required></label>
                 <label class="campo-ancho">Dirección<input type="text" id="direccion" required></label>
+                <fieldset class="campo-ancho" id="accesoUsuarios">
+                    <legend>Acceso de otros usuarios (opcional)</legend>
+                    <p class="texto-suave">Tú quedas como ADMIN de la empresa. Aquí puedes dar acceso a usuarios que ya existen en la cuenta; no se crean usuarios nuevos (eso se hace en Usuarios).</p>
+                    <div id="listaAccesoUsuarios"></div>
+                </fieldset>
                 <button type="submit">Crear empresa</button>
             </form>
         </details>
@@ -38,6 +43,7 @@
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
     <script src="js/componentes.js"></script>
     <script src="js/empresas.js"></script>
 </body>

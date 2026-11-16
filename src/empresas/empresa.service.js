@@ -1,6 +1,7 @@
-const { Empresa, Rol, UsuarioEmpresaRol, Mutualidad } = require("../shared/associations.js")
+const { Empresa, Rol, UsuarioEmpresaRol, Mutualidad, Usuario } = require("../shared/associations.js")
 const { Op } = require("sequelize")
-const { exigirRol, PERMISOS, exigirCuentaActiva } = require("../shared/permisos.js")
+const { exigirRol, PERMISOS, exigirCuentaActiva, ROLES_ASIGNABLES } = require("../shared/permisos.js")
+const { validarRolesIniciales } = require("./roles_iniciales.js")
 const { NotFoundError, ConflictError, ForbiddenError, ValidationError } = require("../shared/errors.js")
 const { sequelize } = require("../shared/database.js")
 const { DIAS_CONSERVACION_DATOS } = require("../shared/constantes.js")
@@ -55,6 +56,14 @@ async function crearEmpresa(datos, usuario) {
         }
     })
 
+    // Roles opcionales para usuarios que ya existen en la cuenta (no se crean usuarios aquí).
+    const usuariosDeLaCuenta = await Usuario.findAll({ where: { cuenta_id: usuario.cuenta_id }, attributes: ["id", "nombre", "estado"] })
+    const { roles: rolesIniciales, errores: erroresRoles } = validarRolesIniciales(datos.roles_usuarios, usuariosDeLaCuenta, usuario.id, ROLES_ASIGNABLES)
+    if (erroresRoles.length > 0) {
+        throw new ValidationError(erroresRoles.join(". "))
+    }
+    const rolesPorCodigo = Object.fromEntries((await Rol.findAll({ where: { codigo: ROLES_ASIGNABLES } })).map((r) => [r.codigo, r.id]))
+
     try {
         return await sequelize.transaction(async (t) => {
             const empresa = await Empresa.create({
@@ -81,6 +90,15 @@ async function crearEmpresa(datos, usuario) {
             }, {
                 transaction: t
             })
+
+            for (const { usuario_id, rol } of rolesIniciales) {
+                await UsuarioEmpresaRol.create({
+                    usuario_id,
+                    empresa_id: empresa.id,
+                    rol_id: rolesPorCodigo[rol],
+                    estado: "activo"
+                }, { transaction: t })
+            }
 
             return empresa
         })

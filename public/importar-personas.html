@@ -24,8 +24,9 @@
         <div class="rejilla rejilla-ancha">
             <section class="tarjeta paso-carga">
                 <h2>1. Descarga la plantilla</h2>
-                <p class="texto-suave">Ábrela en Excel, llena una fila por persona y guárdala como CSV. No cambies los títulos de las columnas.</p>
-                <button type="button" class="secundario" id="btnPlantilla">Descargar plantilla</button>
+                <p class="texto-suave">Ábrela en Excel y llena una fila por persona en la hoja «Personas». Las columnas con opciones tienen lista desplegable, y las hojas «Valores válidos» y «Cómo llenar» te guían. No cambies los títulos de las columnas. Al terminar, con la hoja «Personas» a la vista, usa Guardar como → CSV UTF-8.</p>
+                <button type="button" class="secundario" id="btnPlantilla">Descargar plantilla (Excel)</button>
+                <button type="button" class="enlace" id="btnPlantillaCsv">o solo los títulos en CSV</button>
             </section>
             <section class="tarjeta paso-carga">
                 <h2>2. Sube la planilla</h2>
@@ -49,13 +50,19 @@
                     <tr><td><strong>fecha_nacimiento</strong> *</td><td>dd-mm-aaaa (por ejemplo 12-05-1990).</td></tr>
                     <tr><td><strong>direccion</strong> *</td><td>Domicilio del trabajador.</td></tr>
                     <tr><td><strong>sexo, estado_civil, telefono, email</strong></td><td>Opcionales. sexo: masculino o femenino.</td></tr>
-                    <tr><td><strong>afp</strong></td><td>Nombre de la AFP tal como aparece en la ficha de la persona (por ejemplo Habitat). Vacío si no tiene.</td></tr>
+                    <tr><td><strong>afp</strong></td><td>Nombre de la AFP (Habitat, ProVida, Capital…); no importan mayúsculas, tildes ni la palabra «AFP». Vacío si no tiene.</td></tr>
                     <tr><td><strong>afiliado_afc</strong></td><td>sí o no (vacío = sí).</td></tr>
-                    <tr><td><strong>sistema_salud, isapre, plan_isapre_uf</strong></td><td>Fonasa o Isapre. Si es Isapre, el nombre de la isapre y el valor del plan en UF (por ejemplo 3,5).</td></tr>
+                    <tr><td><strong>sistema_salud, isapre, plan_isapre_uf</strong></td><td>Fonasa o Isapre. Si es Isapre, el nombre de la isapre (basta el nombre corto: Colmena, Mas Vida) y el valor del plan en UF (por ejemplo 3,5).</td></tr>
                     <tr><td><strong>banco, tipo_cuenta, numero_cuenta</strong></td><td>Opcionales. tipo_cuenta: corriente, rut, ahorro o vista.</td></tr>
                     <tr><td><strong>crear_postulante, fecha_ingreso</strong></td><td>sí para crearla también como postulante, con su fecha de ingreso (dd-mm-aaaa).</td></tr>
                 </tbody>
             </table>
+        </details>
+
+        <details class="tarjeta" id="detalleValores">
+            <summary>Valores válidos de cada columna</summary>
+            <p class="texto-suave">Son los mismos de la hoja «Valores válidos» de la plantilla. No importan mayúsculas ni tildes.</p>
+            <div id="tablaValores"></div>
         </details>
 
         <section class="tarjeta" id="panelRevision" hidden>
@@ -70,6 +77,7 @@
 
     <script src="js/api.js"></script>
     <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
     <script src="js/componentes.js"></script>
     <script src="js/importar-personas.js"></script>
 </body>

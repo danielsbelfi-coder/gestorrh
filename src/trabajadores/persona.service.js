@@ -1,7 +1,8 @@
 const { Persona, Usuario, Trabajador, Afp, Isapre, PrevisionPersona } = require("../shared/associations.js")
 const { DESDE_SIEMPRE } = require("./prevision_del_mes.js")
 const { sequelize } = require("../shared/database.js")
-const { validarImportacion, MAXIMO_FILAS } = require("./importacion_personas.js")
+const { validarImportacion, valoresValidos, MAXIMO_FILAS } = require("./importacion_personas.js")
+const { generarPlantillaPersonas, AYUDA_COLUMNAS } = require("./plantilla_personas.js")
 const { Op } = require("sequelize")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { limpiarRut, rutEsValido } = require("../shared/rut.js")
@@ -102,6 +103,24 @@ async function actualizarPersona(id, datos, empresasPermitidas, usuarioId) {
     })
 }
 
+async function catalogosDeImportacion() {
+    const [afps, isapres] = await Promise.all([Afp.findAll({ order: [["nombre", "ASC"]] }), Isapre.findAll({ order: [["nombre", "ASC"]] })])
+    return { afps, isapres }
+}
+
+// Guía para llenar la planilla: valores válidos por columna y cómo se llena cada una.
+async function guiaDeImportacion() {
+    const catalogos = await catalogosDeImportacion()
+    return {
+        valores: valoresValidos(catalogos),
+        columnas: AYUDA_COLUMNAS.map(([columna, obligatoria, ayuda]) => ({ columna, obligatoria, ayuda }))
+    }
+}
+
+async function plantillaDeImportacion() {
+    return generarPlantillaPersonas(await catalogosDeImportacion())
+}
+
 async function importarPersonas(datos, empresasPermitidas, usuarioId) {
     const empresaId = Number(datos?.empresa_id)
 
@@ -161,5 +180,7 @@ module.exports = {
     listarPersonas,
     obtenerPersonaPorId,
     actualizarPersona,
-    importarPersonas
+    importarPersonas,
+    guiaDeImportacion,
+    plantillaDeImportacion
 }

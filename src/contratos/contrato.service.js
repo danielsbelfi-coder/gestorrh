@@ -20,6 +20,11 @@ const MENSAJE_POR_HORA = "El sistema de remuneración por hora corresponde a hon
 
 
 async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null) {
+    // Las funciones son opcionales: un texto en blanco se guarda como vacío (null).
+    if (typeof datos.funciones === "string") {
+        datos.funciones = datos.funciones.trim() === "" ? null : datos.funciones.trim()
+    }
+
     const cargo = await Cargo.findByPk(datos.cargo_id)
 
     if (cargo === null || cargo.empresa_id !== empresaId) {
