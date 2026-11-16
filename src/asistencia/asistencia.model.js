@@ -30,6 +30,13 @@ const Asistencia = sequelize.define("Asistencia", {
         ),
         allowNull: false
     },
+    // Recargo de las horas extra de esta marca: 50 (por defecto) o 100 (por trato o contrato).
+    recargo_hora_extra: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 50,
+        validate: { isIn: [[50, 100]] }
+    },
     fuente: {
         type: DataTypes.ENUM(
             "manual",

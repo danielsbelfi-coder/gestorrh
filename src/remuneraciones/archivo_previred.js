@@ -145,9 +145,12 @@ function camposEmpleador(datos) {
         campos[98] = datos.mutual.monto
     }
 
-    const { base, trabajador, empleador } = datos.cesantia
+    // Con licencia, el aporte del empleador (102) incluye los días de licencia sobre la renta del mes anterior
+    // (cálculo SC1 + SC2 de Previred); la renta del 100 es la del mes. Licencia todo el mes: la renta del mes es 0 y
+    // en el 100 va la base del aporte (renta del mes anterior), como indica Previred.
+    const { base, baseEmpleador, trabajador, empleador } = datos.cesantia
     if (trabajador + empleador > 0) {
-        campos[100] = base
+        campos[100] = base > 0 ? base : (baseEmpleador ?? 0)
         campos[101] = trabajador
         campos[102] = empleador
     }

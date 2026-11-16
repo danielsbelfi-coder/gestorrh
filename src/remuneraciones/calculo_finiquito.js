@@ -41,18 +41,21 @@ const CODIGOS_VARIABLES = [2103, 2104, 2112, 2113]
 const CODIGO_GRATIFICACION = 2106
 const CAUSALES_ART_161 = [18, 19]
 
-function basesFiniquito({ sueldoMensual, meses }) {
+// meses: montos de los últimos 3 meses calendario (indemnización, art. 172). mesesFeriado: los de los últimos 3 meses
+// trabajados completos (feriado, art. 71); por defecto, los mismos.
+function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses }) {
     const sumaCodigos = (montos, codigos) => codigos.reduce((suma, codigo) => suma + (montos[codigo] ?? 0), 0)
-    const promedio = (codigos) => meses.length === 0
+    const promedio = (lista, codigos) => lista.length === 0
         ? 0
-        : Math.round(meses.reduce((suma, montos) => suma + sumaCodigos(montos, codigos), 0) / meses.length)
+        : Math.round(lista.reduce((suma, montos) => suma + sumaCodigos(montos, codigos), 0) / lista.length)
 
     const fijos = meses.length > 0 ? sumaCodigos(meses[0], CODIGOS_FIJOS) : 0
-    const variables = promedio(CODIGOS_VARIABLES)
-    const gratificacion = promedio([CODIGO_GRATIFICACION])
+    const variables = promedio(mesesFeriado, CODIGOS_VARIABLES)
+    const variablesIndemnizacion = promedio(meses, CODIGOS_VARIABLES)
+    const gratificacion = promedio(meses, [CODIGO_GRATIFICACION])
     const baseFeriado = sueldoMensual + fijos + variables
 
-    return { fijos, variables, gratificacion, baseFeriado, baseIndemnizacion: baseFeriado + gratificacion }
+    return { fijos, variables, variablesIndemnizacion, gratificacion, baseFeriado, baseIndemnizacion: sueldoMensual + fijos + variablesIndemnizacion + gratificacion }
 }
 
 function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, baseFeriado, topeUF, valorUF, diasPendientes, diasInhabiles, imputacionAfc, descuentos }) {

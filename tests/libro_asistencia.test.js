@@ -142,3 +142,19 @@ test("salida anterior a la entrada: advertencia y no suma", () => {
     assert.strictEqual(dia(r, "2027-10-04").cuenta, false)
     assert.strictEqual(r.totales.minutos_atraso, 0)
 })
+
+test("recargo por marca: los totales separan horas al 50 % y al 100 % (sin recargo indicado = 50 %)", () => {
+    const r = libro([
+        marca("2027-10-04", "08:00", "19:00"),
+        marca("2027-10-05", "08:00", "18:30", { recargo_hora_extra: 50 }),
+        marca("2027-10-09", "09:00", "14:00", { recargo_hora_extra: 100 }),
+        marca("2027-10-06", "08:00", "19:30", { recargo_hora_extra: 100, estado_aprobacion: "pendiente" })
+    ])
+    assert.strictEqual(dia(r, "2027-10-04").recargo, 50)
+    assert.strictEqual(dia(r, "2027-10-09").recargo, 100)
+    assert.strictEqual(r.totales.minutos_extra_50, 90 + 60)
+    assert.strictEqual(r.totales.minutos_extra_100, 240)
+    assert.strictEqual(r.totales.horas_extra_50, 2.5)
+    assert.strictEqual(r.totales.horas_extra_100, 4)
+    assert.strictEqual(r.totales.horas_extra, 6.5)
+})

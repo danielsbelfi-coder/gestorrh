@@ -11,6 +11,8 @@
 // - Lo trabajado después de la salida que no compensa un atraso es hora extra. Más de 2 horas extra en el día: advertencia (art. 31).
 // - Trabajo en día libre o feriado: todas las horas (menos la colación habitual) se proponen como extra, con advertencia.
 // - Solo las marcas aprobadas suman a los totales; las pendientes se calculan y se muestran, pero no suman.
+// - Cada marca indica el recargo de sus horas extra: 50 % (por defecto) o 100 % (por trato o contrato). Los totales
+//   separan minutos_extra_50 y minutos_extra_100 (16-11-2026: las horas extra del mes solo se registran aquí).
 
 const TOLERANCIA_MINUTOS = 5
 const MAXIMO_EXTRA_DIARIO = 120
@@ -106,13 +108,13 @@ function calcularDiaLaboral(esperado, marca) {
 
 function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], feriados = [], licencias = [], marcas = [] }) {
     const marcaPorFecha = new Map(marcas.map((m) => [String(m.fecha).slice(0, 10), m]))
-    const totales = { minutos_atraso: 0, minutos_extra: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0 }
+    const totales = { minutos_atraso: 0, minutos_extra: 0, minutos_extra_50: 0, minutos_extra_100: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0 }
     const advertencias = []
 
     const dias = diasDelMes(anio, mes).map((fecha) => {
         const esperado = esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencias })
         const marca = marcaPorFecha.get(fecha) ?? null
-        const fila = { fecha, diaSemana: diaDeLaSemana(fecha), esperado, marca, minutosDescuento: 0, minutosExtra: 0, advertencias: [], cuenta: false }
+        const fila = { fecha, diaSemana: diaDeLaSemana(fecha), esperado, marca, minutosDescuento: 0, minutosExtra: 0, recargo: 50, advertencias: [], cuenta: false }
 
         if (marca === null || marca.estado_aprobacion === "rechazada") {
             return fila
@@ -179,12 +181,14 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
             Object.assign(fila, calculo)
         }
 
+        fila.recargo = Number(marca.recargo_hora_extra) === 100 ? 100 : 50
         if (fila.minutosExtra > MAXIMO_EXTRA_DIARIO) {
             fila.advertencias.push("Más de 2 horas extra en el día: supera el máximo del art. 31")
         }
         if (aprobada) {
             totales.minutos_atraso += fila.minutosDescuento
             totales.minutos_extra += fila.minutosExtra
+            totales[`minutos_extra_${fila.recargo}`] += fila.minutosExtra
         }
         return fila
     })
@@ -194,6 +198,8 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
     }
 
     totales.horas_extra = Math.round(totales.minutos_extra / 60 * 100) / 100
+    totales.horas_extra_50 = Math.round(totales.minutos_extra_50 / 60 * 100) / 100
+    totales.horas_extra_100 = Math.round(totales.minutos_extra_100 / 60 * 100) / 100
     return { dias, totales, advertencias }
 }
 

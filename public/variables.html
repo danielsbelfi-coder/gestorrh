@@ -14,7 +14,7 @@
         <div class="encabezado-pagina">
             <div>
                 <h1>Variables del mes</h1>
-                <p>Bonos, horas extra y descuentos del periodo. Solo las aprobadas entran a la liquidación; el periodo no se cierra con variables pendientes.</p>
+                <p>Bonos, horas extra pendientes de meses cerrados y descuentos del periodo. Solo las aprobadas entran a la liquidación; el periodo no se cierra con variables pendientes.</p>
             </div>
             <label>Periodo<select id="periodo"></select></label>
         </div>
@@ -28,6 +28,8 @@
                 <label class="campo-ancho">Trabajador<input type="search" id="trabajador" placeholder="Escribe nombre o RUT…" required></label>
                 <label class="campo-ancho">Concepto<select id="concepto" required></select></label>
                 <label id="etiquetaValor">Monto ($)<input type="number" id="valor" min="0" step="1" required></label>
+                <label id="etiquetaMesOrigen" hidden>Mes de origen (ya cerrado)<input type="month" id="mesOrigen"></label>
+                <p class="texto-suave campo-ancho" id="ayudaHoras" hidden>Las horas extra del mes se anotan en el <a href="libro.html">libro de asistencia</a> (al 50 % o al 100 %) y llegan aquí al generar el resumen. Esta variable es solo para horas pendientes de un mes ya cerrado.</p>
                 <label class="campo-ancho">Glosa (opcional)<input type="text" id="glosa" maxlength="255"></label>
                 <button type="submit" id="botonGuardar">Agregar</button>
                 <button type="button" class="secundario" id="cancelarEdicion" hidden>Cancelar edición</button>

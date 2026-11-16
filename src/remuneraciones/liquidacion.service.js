@@ -99,7 +99,9 @@ async function obtenerVariablesDelMes(periodoId, trabajadorId) {
         .map((variable) => ({
             concepto: variable.ConceptoRemuneracion,
             cantidad: variable.cantidad,
-            monto: variable.monto
+            monto: variable.monto,
+            fuente: variable.fuente,
+            mes_origen: variable.mes_origen
         }))
 
     return { aprobadas, pendientes: variables.length - aprobadas.length }
@@ -131,8 +133,9 @@ async function depositoConvenidoDelAnio(periodo, trabajador) {
     return lineas.reduce((suma, linea) => suma + Number(linea.monto), 0)
 }
 
-// Art. 71: días corridos de vacaciones aprobadas en el mes y promedio de comisiones, tratos y bonos variables de las
-// tres liquidaciones anteriores de la relación. null si no tuvo vacaciones en el mes.
+// Art. 71: días de feriado aprobados que caen en el mes (corridos, como se cuentan en la liquidación) y promedio de
+// comisiones, tratos, semana corrida y bonos variables de los tres últimos meses trabajados completos de la relación.
+// null si no tuvo vacaciones en el mes.
 async function remuneracionVariableDelMes(periodo, trabajador) {
     const { Vacacion } = require("../shared/associations.js")
     const { diasCorridosEnMes, remuneracionVariableVacaciones } = require("../asistencia/vacaciones.js")
@@ -143,7 +146,9 @@ async function remuneracionVariableDelMes(periodo, trabajador) {
         return null
     }
     const { montosMesesAnteriores } = require("./finiquito.service.js")
-    const meses = await montosMesesAnteriores(trabajador, periodo.anio, periodo.mes)
+    const { mesesTrabajadosArt71 } = require("../asistencia/vacaciones.js")
+    // Los 3 meses trabajados completos anteriores: sin licencia, permiso sin goce ni días sin contrato (Dict. DT 2921/55).
+    const meses = mesesTrabajadosArt71(await montosMesesAnteriores(trabajador, periodo.anio, periodo.mes))
     return { ...remuneracionVariableVacaciones(meses.map((m) => m.montos), dias), periodos: meses.map((m) => m.periodo) }
 }
 
@@ -198,10 +203,12 @@ async function huellaAsistencia(trabajadorId, periodo) {
     const { primerDia, ultimoDia } = rangoDelPeriodo(periodo)
     const marcas = await Asistencia.findAll({
         where: { trabajador_id: trabajadorId, fecha: { [Op.between]: [primerDia, ultimoDia] } },
-        attributes: ["fecha", "tipo", "estado_aprobacion", "hora_entrada", "hora_salida"],
+        attributes: ["fecha", "tipo", "estado_aprobacion", "hora_entrada", "hora_salida", "recargo_hora_extra"],
         order: [["fecha", "ASC"], ["id", "ASC"]]
     })
-    const texto = marcas.map((m) => [m.fecha, m.tipo, m.estado_aprobacion, m.hora_entrada ?? "", m.hora_salida ?? ""].join("|")).join(";")
+    // El recargo entra a la huella solo si no es el 50 % por defecto: las huellas guardadas antes siguen coincidiendo.
+    const texto = marcas.map((m) => [m.fecha, m.tipo, m.estado_aprobacion, m.hora_entrada ?? "", m.hora_salida ?? "",
+        ...(Number(m.recargo_hora_extra) === 100 ? ["100"] : [])].join("|")).join(";")
     return require("crypto").createHash("sha256").update(texto).digest("hex")
 }
 
@@ -585,6 +592,12 @@ async function prepararCalculo(periodo, trabajador) {
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)
+    // Horas extra de un solo origen: las del mes vienen del libro; una variable manual solo trae horas de un mes cerrado.
+    const { problemasOrigenHorasExtra } = require("./horas_extra.js")
+    const problemasHoras = problemasOrigenHorasExtra(aprobadas, periodo)
+    if (problemasHoras.length > 0) {
+        throw new ConflictError(problemasHoras.join(". "))
+    }
     const conceptos = await obtenerConceptosSistema()
     const saldoPendiente = await obtenerSaldoAnterior(periodo, trabajador.id)
 
@@ -672,11 +685,20 @@ async function prepararCalculo(periodo, trabajador) {
 
 
     const rimaMes = rimaDelMes(licenciasDelMes, periodo.anio, periodo.mes)
-    const baseSeguroSocial = Math.min(resultado.baseCotizaciones + rimaMes, resultado.topeImponible)
+    const { basesConLicencia } = require("./aportes_empleador.js")
+    const { baseSeguroSocial, baseCesantiaEmpleador } = basesConLicencia({
+        baseCotizaciones: resultado.baseCotizaciones,
+        baseCesantia: resultado.baseCesantia,
+        rimaMes,
+        topeImponible: resultado.topeImponible,
+        topeCesantia: resultado.topeCesantia,
+        usadoCesantia: Number(relacionAnterior?.baseCesantia ?? 0)
+    })
     const { aportes, totalAportes } = calcularAportesEmpleador({
         baseCotizaciones: resultado.baseCotizaciones,
         baseCesantia: resultado.baseCesantia,
         baseSeguroSocial,
+        baseCesantiaEmpleador,
         tasas: tasasAportes,
         fijos: resultado.ahorros.apvc?.empleador > 0 ? [{ concepto: conceptos.APORTE_APVC, monto: resultado.ahorros.apvc.empleador }] : [],
         conceptos
@@ -771,7 +793,7 @@ async function prepararCalculo(periodo, trabajador) {
         sueldoPorDias: porDias.sueldoPorDias,
         semanaCorrida: porDias.semanaCorrida,
         huellaAsistencia: porDias.sueldoPorDias || porDias.semanaCorrida ? await huellaAsistencia(trabajador.id, periodo) : null,
-        cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, tope: resultado.topeCesantia },
+        cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, baseEmpleador: baseCesantiaEmpleador, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
         relacionAnterior,

@@ -104,6 +104,17 @@ test("ISL, plazo fijo, jornada parcial y sin licencia", () => {
     assert.deepStrictEqual(campos.slice(99, 104), [1072299, 0, 32169, 0, ""])
 })
 
+test("licencia parcial: el 100 es la renta del mes y el 102 incluye los días de licencia (SC1 + SC2)", () => {
+    const campos = asignar(lineaVacia(), camposEmpleador({ ...empleador, rima: 300000, cesantia: { base: 600000, baseEmpleador: 900000, trabajador: 3600, empleador: 21600 } }))
+    assert.strictEqual(campos[91], 300000)
+    assert.deepStrictEqual(campos.slice(99, 102), [600000, 3600, 21600])
+})
+
+test("licencia todo el mes: renta 0, en el 100 va la base del aporte del empleador (renta del mes anterior)", () => {
+    const campos = asignar(lineaVacia(), camposEmpleador({ ...empleador, rentaImponible: 0, rima: 900000, cesantia: { base: 0, baseEmpleador: 900000, trabajador: 0, empleador: 21600 } }))
+    assert.deepStrictEqual(campos.slice(99, 102), [900000, 0, 21600])
+})
+
 test("sin seguro de cesantía: los campos 100 a 102 quedan en cero", () => {
     const campos = asignar(lineaVacia(), camposEmpleador({ ...empleador, cesantia: { base: 1072299, trabajador: 0, empleador: 0 } }))
 

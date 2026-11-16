@@ -101,7 +101,7 @@ function datosPrevired({ liquidacion, anio, mes, limitesTramo, codigoMutual, tip
             expectativaVida: monto("APORTE_EXPECTATIVA_VIDA"),
             rentabilidadProtegida: monto("APORTE_RENTABILIDAD_PROTEGIDA"),
             mutual: { codigo: codigoMutual, monto: monto("APORTE_MUTUAL") + monto("APORTE_SANNA") },
-            cesantia: { base: detalle.cesantia.base, trabajador: monto("CESANTIA"), empleador: monto("APORTE_CESANTIA") },
+            cesantia: { base: detalle.cesantia.base, baseEmpleador: detalle.cesantia.baseEmpleador ?? detalle.cesantia.base, trabajador: monto("CESANTIA"), empleador: monto("APORTE_CESANTIA") },
             pagador: licencias.length > 0 ? { rut: licencias[0].pagador_rut, dv: licencias[0].pagador_dv } : null
         },
         movimientos: movimientosDelMes({

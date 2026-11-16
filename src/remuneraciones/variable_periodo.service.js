@@ -2,6 +2,28 @@ const { VariablePeriodo, Trabajador, ConceptoRemuneracion, PeriodoRemuneracion }
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
+const { leerMesOrigen } = require("./horas_extra.js")
+
+// Horas extra manuales: solo de un mes ya cerrado (anterior al periodo y sin periodo abierto en la empresa).
+// Las del mes se registran en el libro de asistencia. Para los demás conceptos el mes de origen no aplica (null).
+async function mesOrigenDeVariable(concepto, datos, periodo) {
+    if (concepto.recargo_hora_extra === null) {
+        return null
+    }
+    let mesOrigen
+    try {
+        mesOrigen = leerMesOrigen(datos.mes_origen, periodo)
+    } catch (error) {
+        throw new ValidationError(error.message)
+    }
+    const abierto = await PeriodoRemuneracion.findOne({
+        where: { empresa_id: periodo.empresa_id, anio: Number(mesOrigen.slice(0, 4)), mes: Number(mesOrigen.slice(5, 7)), estado: "abierto" }
+    })
+    if (abierto !== null) {
+        throw new ConflictError("El mes de origen sigue abierto: registra esas horas extra en el libro de asistencia de ese mes")
+    }
+    return mesOrigen
+}
 
 async function obtenerConceptoParaVariable(conceptoId, empresaId) {
     const concepto = await ConceptoRemuneracion.findByPk(conceptoId)
@@ -89,6 +111,7 @@ async function crearVariable(datos, empresasPermitidas, usuarioId) {
 
     const concepto = await obtenerConceptoParaVariable(datos.concepto_id, periodo.empresa_id)
     const { cantidad, monto } = valorDeVariable(concepto, datos)
+    const mesOrigen = await mesOrigenDeVariable(concepto, datos, periodo)
     await exigirSaldoDeRelacionAnterior(concepto, trabajador, monto)
 
     return await VariablePeriodo.create({
@@ -97,6 +120,7 @@ async function crearVariable(datos, empresasPermitidas, usuarioId) {
         concepto_id: concepto.id,
         cantidad,
         monto,
+        mes_origen: mesOrigen,
         glosa: glosaDeVariable(datos.glosa),
         estado: "pendiente",
         fuente: "manual",
@@ -140,10 +164,15 @@ async function editarVariable(id, datos, empresasPermitidas, usuarioId) {
     const concepto = await ConceptoRemuneracion.findByPk(variable.concepto_id)
     const { cantidad, monto } = valorDeVariable(concepto, datos)
     await exigirSaldoDeRelacionAnterior(concepto, await Trabajador.findByPk(variable.trabajador_id), monto, variable.id)
+    // Las propuestas del libro (fuente asistencia) son del mes: se editan sin mes de origen. Las manuales lo exigen.
+    const mesOrigen = variable.fuente === "asistencia"
+        ? null
+        : await mesOrigenDeVariable(concepto, { mes_origen: datos.mes_origen !== undefined ? datos.mes_origen : variable.mes_origen }, variable.PeriodoRemuneracion)
 
     return await variable.update({
         cantidad,
         monto,
+        mes_origen: mesOrigen,
         glosa: datos.glosa !== undefined ? glosaDeVariable(datos.glosa) : variable.glosa
     })
 }

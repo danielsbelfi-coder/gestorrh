@@ -6,7 +6,19 @@ const { calcularDiaLaboral } = require("./libro_asistencia.js")
 // Tipos que se registran en el libro. licencia_medica no: las licencias se cargan en su propio módulo.
 const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones"]
 const TIPOS_CON_HORA = ["normal", "atraso"]
-const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "observaciones"]
+const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "recargo_hora_extra", "observaciones"]
+
+// Recargo de las horas extra de la marca: 50 (por defecto) o 100 %. Solo tiene sentido en marcas con hora.
+function leerRecargo(valor) {
+    if (valor === undefined || valor === null || valor === "") {
+        return 50
+    }
+    const recargo = Number(valor)
+    if (recargo !== 50 && recargo !== 100) {
+        throw new ValidationError("Las horas extra van al 50 % o al 100 %")
+    }
+    return recargo
+}
 
 function normalizarHora(hora, nombre) {
     if (hora === undefined || hora === null || hora === "") {
@@ -36,6 +48,7 @@ async function validarMarca(trabajador, entrada) {
         tipo: entrada.tipo,
         hora_entrada: normalizarHora(entrada.hora_entrada, "entrada"),
         hora_salida: normalizarHora(entrada.hora_salida, "salida"),
+        recargo_hora_extra: leerRecargo(entrada.recargo_hora_extra),
         observaciones: typeof entrada.observaciones === "string" && entrada.observaciones.trim() !== "" ? entrada.observaciones.trim() : null
     }
 
@@ -53,6 +66,7 @@ async function validarMarca(trabajador, entrada) {
     } else {
         datos.hora_entrada = null
         datos.hora_salida = null
+        datos.recargo_hora_extra = 50
     }
 
     await exigirPeriodoAbierto(trabajador.empresa_id, datos.fecha)
@@ -116,6 +130,7 @@ async function crearAsistencia(datos, empresasPermitidas, usuarioId) {
             "hora_entrada",
             "hora_salida",
             "tipo",
+            "recargo_hora_extra",
             "fuente",
             "observaciones",
             "usuario_registro_id"

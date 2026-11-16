@@ -22,6 +22,11 @@ const VariablePeriodo = sequelize.define("VariablePeriodo", {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    // Horas extra manuales: primer día del mes (ya cerrado) en que se trabajaron. Las del mes van en el libro de asistencia.
+    mes_origen: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     glosa: {
         type: DataTypes.STRING,
         allowNull: true

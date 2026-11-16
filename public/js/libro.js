@@ -119,7 +119,8 @@ function dibujarResumen() {
     const t = libro.totales
     const tarjetas = [
         ["Atrasos y salidas a descontar", minutosATexto(t.minutos_atraso) || "0 min", t.minutos_atraso > 0 ? "advertencia" : ""],
-        ["Horas extra", minutosATexto(t.minutos_extra) || "0", t.minutos_extra > 0 ? "exito" : ""],
+        ["Horas extra al 50 %", minutosATexto(t.minutos_extra_50) || "0", t.minutos_extra_50 > 0 ? "exito" : ""],
+        ["Horas extra al 100 %", minutosATexto(t.minutos_extra_100) || "0", t.minutos_extra_100 > 0 ? "exito" : ""],
         ["Inasistencias", t.dias_inasistencia, t.dias_inasistencia > 0 ? "peligro" : ""],
         ["Permisos sin goce", t.dias_permiso_sin_goce, ""],
         ["Vacaciones", t.dias_vacaciones, ""],
@@ -165,7 +166,7 @@ function dibujarFilas() {
             <td>${escaparHtml(textoEsperado(dia.esperado))}</td>
             <td>${escaparHtml(textoMarca(dia.marca))}${dia.marca?.observaciones ? `<div class="texto-suave">${escaparHtml(dia.marca.observaciones)}</div>` : ""}</td>
             <td class="numero">${escaparHtml(minutosATexto(dia.minutosDescuento))}${dia.compensado ? `<div class="texto-suave">compensó ${dia.compensado} min</div>` : ""}</td>
-            <td class="numero">${escaparHtml(minutosATexto(dia.minutosExtra))}</td>
+            <td class="numero">${escaparHtml(minutosATexto(dia.minutosExtra))}${dia.minutosExtra > 0 ? `<div class="texto-suave">al ${dia.recargo} %</div>` : ""}</td>
             <td>${dia.marca ? insignia("aprobacion", dia.marca.estado_aprobacion) : ""}</td>
             <td class="libro-avisos">${dia.advertencias.map((a) => escaparHtml(a)).join("<br>")}</td>
             <td class="libro-acciones">${accionesDeFila(dia)}</td>
@@ -187,6 +188,10 @@ function editorDeFila(dia) {
             <label>Tipo<select id="tipoMarca">${Object.entries(tipos).map(([v, t]) => `<option value="${v}"${v === tipo ? " selected" : ""}>${escaparHtml(t)}</option>`).join("")}</select></label>
             <label class="solo-hora">Entrada real<input type="time" id="entradaMarca" value="${escaparHtml((m?.hora_entrada ?? "").slice(0, 5))}"></label>
             <label class="solo-hora">Salida real<input type="time" id="salidaMarca" value="${escaparHtml((m?.hora_salida ?? "").slice(0, 5))}"></label>
+            <label class="solo-hora">Horas extra al<select id="recargoMarca">
+                <option value="50"${Number(m?.recargo_hora_extra ?? 50) === 50 ? " selected" : ""}>50 %</option>
+                <option value="100"${Number(m?.recargo_hora_extra) === 100 ? " selected" : ""}>100 % (por trato o contrato)</option>
+            </select></label>
             <label class="campo-ancho">Observaciones<input type="text" id="obsMarca" maxlength="300" value="${escaparHtml(m?.observaciones ?? "")}"></label>
             <div class="acciones-grupo">
                 <button type="submit">Guardar</button>
@@ -225,6 +230,7 @@ async function guardarMarca(evento) {
         tipo,
         hora_entrada: tipo === "normal" ? document.getElementById("entradaMarca").value || null : null,
         hora_salida: tipo === "normal" ? document.getElementById("salidaMarca").value || null : null,
+        recargo_hora_extra: tipo === "normal" ? Number(document.getElementById("recargoMarca").value) : 50,
         observaciones: document.getElementById("obsMarca").value.trim() || null
     }
     const resultado = dia.marca

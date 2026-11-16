@@ -29,6 +29,7 @@ const tabla = crearTabla({
         { titulo: "Concepto", valor: (v) => conceptoPorId.get(v.concepto_id)?.nombre ?? `Concepto ${v.concepto_id}` },
         { titulo: "Tipo", valor: (v) => conceptoPorId.get(v.concepto_id)?.tipo === "descuento" ? "Descuento" : "Haber" },
         { titulo: "Valor", valor: (v) => Number(v.monto ?? v.cantidad ?? 0), html: (v) => escaparHtml(valorVariable(v)), numero: true },
+        { titulo: "Mes de origen", valor: (v) => v.mes_origen ?? "", html: (v) => v.mes_origen ? escaparHtml(v.mes_origen.slice(5, 7) + "-" + v.mes_origen.slice(0, 4)) : "" },
         { titulo: "Glosa", valor: (v) => v.glosa ?? "" },
         { titulo: "Fuente", valor: (v) => TEXTOS.fuenteRegistro[v.fuente] ?? v.fuente },
         { titulo: "Estado", valor: (v) => textoEstado("variable", v.estado), html: (v) => insignia("variable", v.estado) },
@@ -71,6 +72,11 @@ function ajustarCampoValor() {
     const entrada = document.getElementById("valor")
     etiqueta.firstChild.textContent = esHoras(concepto) ? "Horas" : "Monto ($)"
     entrada.step = esHoras(concepto) ? "0.01" : "1"
+    // Horas extra manuales: solo de un mes ya cerrado (las propuestas del libro no llevan mes de origen).
+    const pideMes = esHoras(concepto) && variableEnEdicion?.fuente !== "asistencia"
+    document.getElementById("etiquetaMesOrigen").hidden = !pideMes
+    document.getElementById("mesOrigen").required = pideMes
+    document.getElementById("ayudaHoras").hidden = !esHoras(concepto)
 }
 
 document.getElementById("concepto").addEventListener("change", ajustarCampoValor)
@@ -112,7 +118,8 @@ formulario.addEventListener("submit", async function (evento) {
     const valor = Number(document.getElementById("valor").value)
     const cuerpo = {
         glosa: document.getElementById("glosa").value.trim() || null,
-        ...(esHoras(concepto) ? { cantidad: valor } : { monto: valor })
+        ...(esHoras(concepto) ? { cantidad: valor } : { monto: valor }),
+        ...(esHoras(concepto) && variableEnEdicion?.fuente !== "asistencia" ? { mes_origen: document.getElementById("mesOrigen").value || null } : {})
     }
 
     let resultado
@@ -157,6 +164,7 @@ document.getElementById("tablaVariables").addEventListener("click", async functi
         ajustarCampoValor()
         document.getElementById("valor").value = variable.monto ?? variable.cantidad ?? ""
         document.getElementById("glosa").value = variable.glosa ?? ""
+        document.getElementById("mesOrigen").value = variable.mes_origen ? variable.mes_origen.slice(0, 7) : ""
         document.getElementById("botonGuardar").textContent = "Guardar cambios"
         document.getElementById("cancelarEdicion").hidden = false
         document.getElementById("panelCrear").open = true

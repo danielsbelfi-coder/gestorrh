@@ -31,7 +31,7 @@ test("bases: sueldo del contrato, fijos del último mes, promedio de variables y
         ]
     })
 
-    assert.deepStrictEqual(bases, { fijos: 50000, variables: 60000, gratificacion: 205792, baseFeriado: 930000, baseIndemnizacion: 1135792 })
+    assert.deepStrictEqual(bases, { fijos: 50000, variables: 60000, variablesIndemnizacion: 60000, gratificacion: 205792, baseFeriado: 930000, baseIndemnizacion: 1135792 })
 })
 
 test("bases: sin meses anteriores, solo el sueldo", () => {
@@ -81,4 +81,16 @@ test("bases: la semana corrida (2104) entra al promedio de variables (art. 71 in
         meses: [{ 2103: 300000, 2104: 75000 }, { 2103: 210000, 2104: 50000 }, { 2103: 90000, 2104: 25000 }]
     })
     assert.deepStrictEqual([bases.variables, bases.baseFeriado], [250000, 850000])
+})
+
+test("bases: el feriado usa los meses trabajados completos; la indemnización, los 3 últimos meses calendario", () => {
+    const bases = basesFiniquito({
+        sueldoMensual: 600000,
+        meses: [{ 2103: 30000 }, { 2103: 300000 }, { 2103: 300000 }],
+        mesesFeriado: [{ 2103: 300000 }, { 2103: 300000 }, { 2103: 270000 }]
+    })
+    assert.strictEqual(bases.variables, 290000)
+    assert.strictEqual(bases.baseFeriado, 890000)
+    assert.strictEqual(bases.variablesIndemnizacion, 210000)
+    assert.strictEqual(bases.baseIndemnizacion, 810000)
 })

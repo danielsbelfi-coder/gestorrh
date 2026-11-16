@@ -116,3 +116,23 @@ test("art. 71: la semana corrida (2104) entra al promedio (art. 71 inciso 5°)",
     const meses = [{ 2103: 300000, 2104: 60000 }, { 2103: 240000, 2104: 48000 }, { 2103: 0 }]
     assert.deepEqual(v.remuneracionVariableVacaciones(meses, 15), { promedio: 216000, dias: 15, monto: 108000, meses: 3 })
 })
+
+test("art. 71: se saltan los meses con licencia, permiso sin goce o sin contrato completo y se retrocede (Dict. DT 2921/55)", () => {
+    const meses = [
+        { periodo: "2026-10", completo: true, montos: { 2103: 100 } },
+        { periodo: "2026-09", completo: false, montos: { 2103: 10 } },   // licencia
+        { periodo: "2026-08", completo: true, montos: { 2103: 200 } },
+        { periodo: "2026-07", completo: false, montos: { 2103: 20 } },   // permiso sin goce
+        { periodo: "2026-06", completo: true, montos: { 2103: 300 } },
+        { periodo: "2026-05", completo: true, montos: { 2103: 400 } }
+    ]
+    assert.deepEqual(v.mesesTrabajadosArt71(meses).map((m) => m.periodo), ["2026-10", "2026-08", "2026-06"])
+    const r = v.remuneracionVariableVacaciones(v.mesesTrabajadosArt71(meses).map((m) => m.montos), 15)
+    assert.equal(r.promedio, 200)
+})
+
+test("art. 71: con menos de 3 meses completos se usan los que haya; sin ninguno, los meses disponibles", () => {
+    assert.deepEqual(v.mesesTrabajadosArt71([{ periodo: "a", completo: false }, { periodo: "b", completo: true }]).map((m) => m.periodo), ["b"])
+    assert.deepEqual(v.mesesTrabajadosArt71([{ periodo: "a", completo: false }, { periodo: "b", completo: false }]).map((m) => m.periodo), ["a", "b"])
+    assert.deepEqual(v.mesesTrabajadosArt71([]), [])
+})

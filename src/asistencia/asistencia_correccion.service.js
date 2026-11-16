@@ -8,6 +8,7 @@ async function crearCorreccion(datos, empresasPermitidas, usuarioId) {
         "hora_entrada",
         "hora_salida",
         "tipo",
+        "recargo_hora_extra",
         "observaciones"
     ]
 
@@ -26,6 +27,9 @@ async function crearCorreccion(datos, empresasPermitidas, usuarioId) {
 
     if (!CAMPOS_MODIFICABLES.includes(datos.campo_modificado)) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
+    }
+    if (datos.campo_modificado === "recargo_hora_extra" && !["50", "100"].includes(String(datos.valor_nuevo))) {
+        throw new ValidationError("Las horas extra van al 50 % o al 100 %")
     }
 
     return await AsistenciaCorreccion.create({

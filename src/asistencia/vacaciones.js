@@ -198,6 +198,15 @@ function diasCorridosEnMes(vacaciones, anio, mes) {
     return Math.min(dias, DIAS_MES)
 }
 
+// «Últimos tres meses trabajados» (art. 71; Dict. DT 2921/55 de 2011): los tres meses completos que preceden al feriado.
+// Se saltan los meses con licencia médica, permiso sin goce o días sin contrato (ingreso o término a mitad de mes) y se
+// retrocede a los anteriores; las inasistencias injustificadas no los excluyen. meses: [{ periodo, montos, completo }]
+// del más reciente al más antiguo. Sin ningún mes completo (por ejemplo, recién contratado), se usan los que haya.
+function mesesTrabajadosArt71(meses) {
+    const completos = meses.filter((m) => m.completo !== false)
+    return (completos.length > 0 ? completos : meses).slice(0, 3)
+}
+
 // meses: montos por código LRE de las liquidaciones anteriores (máximo 3). → { promedio, dias, monto, meses }.
 function remuneracionVariableVacaciones(meses, diasCorridos) {
     const usados = meses.slice(0, 3)
@@ -206,4 +215,4 @@ function remuneracionVariableVacaciones(meses, diasCorridos) {
     return { promedio, dias: diasCorridos, monto: Math.round(promedio / DIAS_MES * diasCorridos), meses: usados.length }
 }
 
-module.exports = { CODIGOS_VARIABLES_ART71, diasCorridosEnMes, remuneracionVariableVacaciones, feriadoFiniquito, DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }
+module.exports = { CODIGOS_VARIABLES_ART71, mesesTrabajadosArt71, diasCorridosEnMes, remuneracionVariableVacaciones, feriadoFiniquito, DIAS_POR_PERIODO, TOPE_ANIOS_PREVIOS, diasProgresivos, fechasHabiles, diasHabiles, sumarAnios, periodosAnuales, saldoVacaciones }

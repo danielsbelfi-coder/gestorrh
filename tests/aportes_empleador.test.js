@@ -1,6 +1,6 @@
 const test = require("node:test")
 const assert = require("node:assert")
-const { calcularAportesEmpleador } = require("../src/remuneraciones/aportes_empleador.js")
+const { calcularAportesEmpleador, basesConLicencia } = require("../src/remuneraciones/aportes_empleador.js")
 
 const CONCEPTOS = Object.fromEntries([
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
@@ -62,4 +62,33 @@ test("mes con licencia: el SIS y la expectativa de vida suman la RIMA; los demá
     assert.strictEqual(monto(r, "APORTE_CUENTA_INDIVIDUAL"), 600)
     assert.strictEqual(monto(r, "APORTE_RENTABILIDAD_PROTEGIDA"), 5400)
     assert.strictEqual(monto(r, "APORTE_MUTUAL"), 11100)
+})
+// 20 días trabajados (renta 600.000) y 10 de licencia; renta del mes anterior 900.000 → RIMA del mes = 300.000.
+test("licencia parcial: SIS, expectativa de vida y cesantía del empleador corren sobre la RIMA; cuenta individual y rentabilidad protegida no", () => {
+    const bases = basesConLicencia({ baseCotizaciones: 600000, baseCesantia: 600000, rimaMes: 300000, topeImponible: 3600000, topeCesantia: 5408000 })
+    assert.deepStrictEqual(bases, { baseSeguroSocial: 900000, baseCesantiaEmpleador: 900000 })
+    const r = calcularAportesEmpleador({ baseCotizaciones: 600000, baseCesantia: 600000, ...bases, tasas: TASAS, conceptos: CONCEPTOS })
+    assert.strictEqual(monto(r, "APORTE_CESANTIA"), 21600) // 2,4 % de 600.000 (SC1) + 2,4 % de 300.000 (SC2)
+    assert.strictEqual(monto(r, "APORTE_SIS"), Math.round(900000 * 1.78 / 100))
+    assert.strictEqual(monto(r, "APORTE_EXPECTATIVA_VIDA"), Math.round(900000 * 0.72 / 100))
+    assert.strictEqual(monto(r, "APORTE_CUENTA_INDIVIDUAL"), 600)
+    assert.strictEqual(monto(r, "APORTE_RENTABILIDAD_PROTEGIDA"), 5400)
+})
+
+test("licencia todo el mes (renta 0): el aporte de cesantía del empleador sigue (plazo fijo 3 %)", () => {
+    const bases = basesConLicencia({ baseCotizaciones: 0, baseCesantia: 0, rimaMes: 900000, topeImponible: 3600000, topeCesantia: 5408000 })
+    const r = calcularAportesEmpleador({ baseCotizaciones: 0, baseCesantia: 0, ...bases, tasas: { ...TASAS, cesantia: 3 }, conceptos: CONCEPTOS })
+    assert.strictEqual(monto(r, "APORTE_CESANTIA"), 27000)
+    assert.strictEqual(monto(r, "APORTE_CUENTA_INDIVIDUAL"), 0)
+    assert.strictEqual(monto(r, "APORTE_RENTABILIDAD_PROTEGIDA"), 0)
+})
+
+test("licencia: la base de cesantía del empleador respeta el tope del seguro (y lo ya usado por otra relación del mes)", () => {
+    assert.strictEqual(basesConLicencia({ baseCotizaciones: 3600000, baseCesantia: 5000000, rimaMes: 2000000, topeImponible: 3600000, topeCesantia: 5408000 }).baseCesantiaEmpleador, 5408000)
+    assert.strictEqual(basesConLicencia({ baseCotizaciones: 300000, baseCesantia: 300000, rimaMes: 500000, topeImponible: 3600000, topeCesantia: 5408000, usadoCesantia: 5000000 }).baseCesantiaEmpleador, 408000)
+})
+
+test("sin licencia: la base del empleador es la misma del trabajador (sin cambios)", () => {
+    const bases = basesConLicencia({ baseCotizaciones: 1072299, baseCesantia: 1072299, rimaMes: 0, topeImponible: 3600000, topeCesantia: 5408000 })
+    assert.deepStrictEqual(bases, { baseSeguroSocial: 1072299, baseCesantiaEmpleador: 1072299 })
 })

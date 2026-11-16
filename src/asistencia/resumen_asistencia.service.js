@@ -9,6 +9,7 @@ const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 const { diasLicenciaEnMes, anotarDiasTrabajados } = require("../remuneraciones/dias_pago.js")
 const { libroDelTrabajador } = require("./libro_asistencia.service.js")
+const { RECARGOS, horasPorRecargo } = require("../remuneraciones/horas_extra.js")
 
 
 
@@ -167,7 +168,7 @@ async function devolverResumen(id, empresasPermitidas, usuarioId) {
 }
 
 // Resumen y horas extra del mes a partir del libro de asistencia (solo marcas aprobadas).
-async function generarParaTrabajador(trabajador, periodo, conceptoHoras, usuarioId, transaction) {
+async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuarioId, transaction) {
     const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes, transaction)
     const { totales } = libro
 
@@ -214,12 +215,12 @@ async function generarParaTrabajador(trabajador, periodo, conceptoHoras, usuario
         return resultado
     }
 
-    const horas = totales.horas_extra
-
+    // Las horas extra del mes salen solo del libro: una variable por recargo (50 % y 100 %) con fuente "asistencia".
+    const horas = horasPorRecargo(totales)
     const filtroHoras = {
         periodo_id: periodo.id,
         trabajador_id: trabajador.id,
-        concepto_id: conceptoHoras.id,
+        concepto_id: Object.values(conceptosHoras).map((c) => c.id),
         fuente: "asistencia"
     }
 
@@ -232,18 +233,26 @@ async function generarParaTrabajador(trabajador, periodo, conceptoHoras, usuario
 
     await VariablePeriodo.destroy({ where: { ...filtroHoras, estado: "pendiente" }, transaction })
 
-    if (horas > 0) {
-        await VariablePeriodo.create({
-            ...filtroHoras,
-            cantidad: horas,
-            monto: null,
-            glosa: "Propuesta desde el libro de asistencia",
-            estado: "pendiente",
-            usuario_registro_id: usuarioId
-        }, { transaction })
+    for (const recargo of RECARGOS) {
+        if (horas[recargo] > 0) {
+            await VariablePeriodo.create({
+                periodo_id: periodo.id,
+                trabajador_id: trabajador.id,
+                concepto_id: conceptosHoras[recargo].id,
+                fuente: "asistencia",
+                cantidad: horas[recargo],
+                monto: null,
+                mes_origen: null,
+                glosa: "Propuesta desde el libro de asistencia",
+                estado: "pendiente",
+                usuario_registro_id: usuarioId
+            }, { transaction })
+        }
     }
 
-    resultado.horas_extra = horas
+    resultado.horas_extra = Math.round((horas[50] + horas[100]) * 100) / 100
+    resultado.horas_extra_50 = horas[50]
+    resultado.horas_extra_100 = horas[100]
     return resultado
 }
 
@@ -258,13 +267,17 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
 
     const trabajadores = await trabajadoresDelPeriodo(periodo)
 
-    const conceptoHoras = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "HORAS_EXTRA_50" } })
+    const conceptos = await ConceptoRemuneracion.findAll({ where: { empresa_id: null, codigo: ["HORAS_EXTRA_50", "HORAS_EXTRA_100"] } })
+    const conceptosHoras = Object.fromEntries(conceptos.map((c) => [Number(c.recargo_hora_extra), c]))
+    if (!conceptosHoras[50] || !conceptosHoras[100]) {
+        throw new ConflictError("Faltan los conceptos comunes HORAS_EXTRA_50 y HORAS_EXTRA_100")
+    }
 
     return await sequelize.transaction(async (transaction) => {
         const resultados = []
 
         for (const trabajador of trabajadores) {
-            resultados.push(await generarParaTrabajador(trabajador, periodo, conceptoHoras, usuarioId, transaction))
+            resultados.push(await generarParaTrabajador(trabajador, periodo, conceptosHoras, usuarioId, transaction))
         }
 
         return resultados

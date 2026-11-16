@@ -28,6 +28,15 @@ function calcularMontosSeguro(calcular, descuentos) {
     }
 }
 
+// Mes completo para el art. 71: sin licencia médica, sin permiso sin goce y con contrato todo el mes. Una liquidación
+// antigua sin ese detalle se considera completa.
+function mesCompleto(diasPago) {
+    if (!diasPago) {
+        return true
+    }
+    return Number(diasPago.licenciaMedica ?? 0) === 0 && Number(diasPago.permisoSinGoce ?? 0) === 0 && Number(diasPago.diasNoContratado ?? 0) === 0
+}
+
 async function montosMesesAnteriores(trabajador, anio, mes) {
     const liquidaciones = await Liquidacion.findAll({
         where: { trabajador_id: trabajador.id, vigente: true, estado: { [Op.ne]: "calculada" } },
@@ -45,8 +54,11 @@ async function montosMesesAnteriores(trabajador, anio, mes) {
         order: [[PeriodoRemuneracion, "anio", "DESC"], [PeriodoRemuneracion, "mes", "DESC"]]
     })
 
-    return liquidaciones.slice(0, 3).map((liquidacion) => ({
+    // Del más reciente al más antiguo, con todos los meses: la indemnización usa los 3 últimos y el feriado (art. 71)
+    // los 3 últimos completos (mesesTrabajadosArt71). Hasta 12 meses atrás.
+    return liquidaciones.slice(0, 12).map((liquidacion) => ({
         periodo: `${liquidacion.PeriodoRemuneracion.anio}-${String(liquidacion.PeriodoRemuneracion.mes).padStart(2, "0")}`,
+        completo: mesCompleto(liquidacion.detalle_calculo?.diasPago),
         montos: camposMontosLre(liquidacion.LiquidacionLineas.map((linea) => ({
             codigo: linea.codigo,
             codigo_lre: linea.ConceptoRemuneracion.codigo_lre,
@@ -163,7 +175,14 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     const mes = Number(trabajador.fecha_termino.slice(5, 7))
     const sueldoMensual = await sueldoDelMesDeTermino(trabajador, anio, mes)
     const meses = await montosMesesAnteriores(trabajador, anio, mes)
-    const bases = basesFiniquito({ sueldoMensual, meses: meses.map((m) => m.montos) })
+    // Indemnización (art. 172): últimos 3 meses calendario. Feriado (art. 73 → art. 71): últimos 3 meses trabajados completos.
+    const { mesesTrabajadosArt71 } = require("../asistencia/vacaciones.js")
+    const mesesFeriado = mesesTrabajadosArt71(meses)
+    const bases = {
+        ...basesFiniquito({ sueldoMensual, meses: meses.slice(0, 3).map((m) => m.montos), mesesFeriado: mesesFeriado.map((m) => m.montos) }),
+        mesesIndemnizacion: meses.slice(0, 3).map((m) => m.periodo),
+        mesesFeriado: mesesFeriado.map((m) => m.periodo)
+    }
 
     const uf = await obtenerParametroVigente("UF", `${datos.fecha_finiquito.slice(0, 7)}-01`)
     if (uf === null) {
