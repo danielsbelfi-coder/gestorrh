@@ -358,6 +358,7 @@ async function licenciasConRima(trabajadorId, periodo) {
             fecha_inicio: licencia.fecha_inicio,
             fecha_termino: licencia.fecha_termino,
             tipo: licencia.tipo,
+            folio: licencia.folio,
             pagador_rut: licencia.pagador_rut,
             pagador_dv: licencia.pagador_dv,
             rima: await rimaDeLicencia(licencia, periodo.empresa_id)

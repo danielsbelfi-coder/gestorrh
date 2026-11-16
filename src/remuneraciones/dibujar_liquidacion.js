@@ -1,3 +1,5 @@
+const { textoLicencia } = require("./presentacion_liquidacion.js")
+
 const TAMANO_PAGINA = "LETTER"
 const ANCHO_PAGINA = 612
 const MARGEN = 40
@@ -52,10 +54,10 @@ function miles(monto) {
     return monto.toLocaleString("es-CL")
 }
 
-function barra(doc, x, y, texto, alineacion = "left") {
-    doc.rect(x, y, ANCHO_COLUMNA, ALTO_FILA + 2).fill("#e6e6e6")
+function barra(doc, x, y, texto, alineacion = "left", ancho = ANCHO_COLUMNA) {
+    doc.rect(x, y, ancho, ALTO_FILA + 2).fill("#e6e6e6")
     doc.fillColor("black").font("Helvetica-Bold").fontSize(9)
-        .text(texto, x + 3, y + 3, { width: ANCHO_COLUMNA - 6, align: alineacion })
+        .text(texto, x + 3, y + 3, { width: ancho - 6, align: alineacion })
     return y + ALTO_FILA + 4
 }
 
@@ -63,9 +65,23 @@ function textoFila(f) {
     return f.cantidad === null ? f.nombre : `${f.nombre} (${String(f.cantidad).replace(".", ",")})`
 }
 
+const ANCHO_GLOSA = ANCHO_COLUMNA - 80
+
+// Si la glosa no cabe en la columna, se achica la letra (hasta 7 pt) antes de cortarla con puntos suspensivos.
+function tamanoParaGlosa(doc, texto) {
+    let tamano = 9
+    doc.font("Helvetica")
+    while (tamano > 7 && doc.fontSize(tamano).widthOfString(texto) > ANCHO_GLOSA) {
+        tamano -= 0.5
+    }
+    return tamano
+}
+
 function filaColumna(doc, x, y, texto, monto) {
-    doc.font("Helvetica").fontSize(9)
-    doc.text(texto, x + 3, y, { width: ANCHO_COLUMNA - 80, height: ALTO_FILA, ellipsis: true })
+    const tamano = tamanoParaGlosa(doc, texto)
+    doc.font("Helvetica").fontSize(tamano)
+    doc.text(texto, x + 3, y + (9 - tamano) / 2, { width: ANCHO_GLOSA, height: ALTO_FILA, ellipsis: true })
+    doc.fontSize(9)
     doc.text(miles(monto), x + ANCHO_COLUMNA - 80, y, { width: 77, align: "right" })
     return y + ALTO_FILA
 }
@@ -81,6 +97,22 @@ function columna(doc, x, y, bloques) {
         y = y + ALTO_FILA + 6
     }
     return y
+}
+
+// Licencias médicas del mes (fechas, días y folio). Si no hay, no se dibuja nada.
+function licencias(doc, d) {
+    if (!d.licencias || d.licencias.length === 0) {
+        return
+    }
+
+    doc.x = MARGEN
+    doc.y = barra(doc, MARGEN, doc.y, "LICENCIAS MÉDICAS DEL MES", "left", ANCHO)
+    doc.font("Helvetica").fontSize(8.5)
+    for (const licencia of d.licencias) {
+        doc.text(textoLicencia(licencia), MARGEN + 3, doc.y, { width: ANCHO - 6 })
+    }
+    doc.x = MARGEN
+    doc.moveDown(0.8)
 }
 
 function liquido(doc, d) {
@@ -162,6 +194,7 @@ function dibujarLiquidacion(doc, d, { conAportes = false } = {}) {
 
     doc.x = MARGEN
     doc.y = ySuma + ALTO_FILA + 12
+    licencias(doc, d)
     liquido(doc, d)
     firmas(doc, d)
 

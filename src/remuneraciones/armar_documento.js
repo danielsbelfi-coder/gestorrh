@@ -1,6 +1,7 @@
 const { pesosEnPalabras } = require("../shared/numero_en_palabras.js")
 const { formatearRut } = require("../shared/rut.js")
 const { fechaChilena } = require("../shared/fechas.js")
+const { glosaCorta, lineasSueldoPorTramo, licenciasParaDocumento } = require("./presentacion_liquidacion.js")
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -11,7 +12,7 @@ const DESCUENTOS_LEGALES = ["AFP", "SALUD", "SALUD_ADICIONAL_ISAPRE", "CESANTIA"
 
 function aFila(linea, signo = 1) {
     return {
-        nombre: linea.nombre,
+        nombre: glosaCorta(linea.codigo, linea.nombre),
         cantidad: linea.cantidad === null ? null : Number(linea.cantidad),
         monto: signo * linea.monto
     }
@@ -30,8 +31,13 @@ function armarDocumento(liquidacion, cargo) {
     const haberes = lineas.filter((l) => l.tipo === "haber")
     const descuentos = lineas.filter((l) => l.tipo === "descuento")
 
+    const detalle = liquidacion.detalle_calculo ?? {}
+    // Con anexo de sueldo en el mes, el sueldo se muestra en una línea por tramo (el total no cambia).
+    const tramosSueldo = detalle.sueldoPorDias ? null : detalle.sueldo?.tramos
+    const filasHaber = (l) => l.codigo === "SUELDO_BASE" ? lineasSueldoPorTramo(aFila(l), tramosSueldo) : [aFila(l)]
+
     const imponibles = [
-        ...haberes.filter((l) => l.imponible).map((l) => aFila(l)),
+        ...haberes.filter((l) => l.imponible).flatMap(filasHaber),
         ...descuentos.filter((l) => l.imponible).map((l) => aFila(l, -1))
     ]
     const noImponibles = haberes.filter((l) => !l.imponible).map((l) => aFila(l))
@@ -70,6 +76,7 @@ function armarDocumento(liquidacion, cargo) {
             sueldoBase: Number(liquidacion.snapshot_contrato.sueldo_base),
             diasTrabajados: liquidacion.dias_trabajados
         },
+        licencias: licenciasParaDocumento(detalle.licencias, periodo.anio, periodo.mes),
         secciones: { imponibles, noImponibles, legales, otros, aportes },
         totales: {
             imponible: totalImponible,
