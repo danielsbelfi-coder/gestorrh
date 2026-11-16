@@ -1,6 +1,6 @@
 const { ValidationError, NotFoundError } = require("../shared/errors");
 const { corregirValorParametro, obtenerParametroVigente, listarVersionesPorCodigo,
-    parametrosDelMes, abrirMesParametros, historialParametros } = require("./parametro_legal.service");
+    parametrosDelMes, abrirMesParametros, cargarValorDelMes, historialParametros } = require("./parametro_legal.service");
 
 async function corregir(req, res) {
     const parametro = await corregirValorParametro(req.params.id, req.body, req.usuario.id)
@@ -37,6 +37,12 @@ async function abrirMes(req, res) {
     res.status(200).json(resultado)
 }
 
+// Solo soporte: carga la UF o la UTM de un mes que todavía no la tiene.
+async function cargarMes(req, res) {
+    const creado = await cargarValorDelMes(req.body?.mes, req.body?.codigo, req.body, req.usuario.id)
+    res.status(201).json(creado)
+}
+
 // Solo soporte.
 async function historial(req, res) {
     res.status(200).json(await historialParametros())
@@ -48,5 +54,6 @@ module.exports = {
     obtenerVigente,
     listarPorCodigo,
     delMes,
-    abrirMes
+    abrirMes,
+    cargarMes
 }

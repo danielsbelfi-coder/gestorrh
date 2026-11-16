@@ -10,14 +10,25 @@ const MAXIMO_FILAS = 500
 const COLUMNAS = [
     "rut", "dv", "nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento",
     "sexo", "estado_civil", "direccion", "telefono", "email", "afp", "afiliado_afc", "sistema_salud",
-    "isapre", "plan_isapre_uf", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
+    "isapre", "plan_isapre_uf", "forma_pago", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
 ]
+
+// Columnas que una planilla antigua puede no traer (la pantalla y la validación las dejan vacías).
+const COLUMNAS_OPCIONALES = ["forma_pago"]
 
 const TIPOS_CUENTA = {
     corriente: "cuenta corriente", "cuenta corriente": "cuenta corriente",
     rut: "cuenta Rut", "cuenta rut": "cuenta Rut",
     ahorro: "cuenta de ahorro", "cuenta de ahorro": "cuenta de ahorro",
     vista: "cuenta vista", "cuenta vista": "cuenta vista"
+}
+
+// Forma de pago de la remuneración. Vacía = transferencia (lo que ya se hacía antes de existir la columna).
+const FORMAS_PAGO = {
+    transferencia: "transferencia",
+    cheque: "cheque",
+    efectivo: "efectivo",
+    "vale vista": "vale_vista", "vale_vista": "vale_vista", valevista: "vale_vista"
 }
 
 function texto(valor) {
@@ -123,9 +134,17 @@ function validarFila(fila, catalogos) {
         }
     }
 
+    const formaPago = vacio("forma_pago") ? "transferencia" : FORMAS_PAGO[normalizar(fila.forma_pago).replace(/\s+/g, " ")]
+    if (formaPago === undefined) {
+        motivos.push("forma_pago debe ser transferencia, cheque, efectivo o vale vista")
+    }
+
     const tipoCuenta = vacio("tipo_cuenta") ? null : TIPOS_CUENTA[normalizar(fila.tipo_cuenta)]
     if (tipoCuenta === undefined) {
-        motivos.push("tipo_cuenta debe ser corriente, rut, ahorro o vista")
+        // «Cheque», «efectivo» o «vale vista» en esta columna es el error más común: tienen su propia columna.
+        motivos.push(FORMAS_PAGO[normalizar(fila.tipo_cuenta)] !== undefined
+            ? `«${texto(fila.tipo_cuenta)}» es una forma de pago: va en la columna forma_pago (tipo_cuenta es corriente, rut, ahorro o vista)`
+            : "tipo_cuenta debe ser corriente, rut, ahorro o vista")
     }
 
     // Banco por nombre o por código (catálogo de src/shared/bancos.js).
@@ -168,6 +187,7 @@ function validarFila(fila, catalogos) {
             sistema_salud: sistemaSalud ?? null,
             isapre_id: isapreId,
             plan_isapre_uf: sistemaSalud === "Isapre" ? planUf : null,
+            forma_pago: formaPago ?? "transferencia",
             banco: opcional("banco"),
             banco_codigo: bancoCodigo,
             tipo_cuenta: tipoCuenta ?? null,
@@ -210,6 +230,8 @@ function validarImportacion(filas, catalogos) {
 
 module.exports = {
     COLUMNAS,
+    COLUMNAS_OPCIONALES,
+    FORMAS_PAGO,
     MAXIMO_FILAS,
     leerFecha,
     leerSiNo,

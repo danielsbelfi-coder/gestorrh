@@ -51,7 +51,7 @@ Los botones se ven iguales para todos. Si tu rol no alcanza, aparece un aviso de
 
 ## 5. Personas, trabajadores y contratos
 
-1. **Personas → Nueva persona**: identificación, contacto, previsión y salud (AFP, salud, Isapre), datos para el pago. Alternativa: **Inscripción masiva de personas**: Descargar plantilla, completar el CSV, **Subir y revisar** y luego **Cargar personas**.
+1. **Personas → Nueva persona**: identificación, contacto, previsión y salud (AFP, salud, Isapre), datos para el pago. Alternativa: **Inscripción masiva de personas**: Descargar plantilla, completar el CSV, **Subir y revisar** y luego **Cargar personas**. La columna **forma_pago** es transferencia, cheque, efectivo o vale vista (vacía = transferencia); no se escribe en *tipo_cuenta*, que es solo corriente, rut, ahorro o vista.
 2. En la ficha de la persona, **Relaciones con la empresa → Agregar** la deja como **postulante** o la crea como trabajador. También puedes hacerlo desde **Trabajadores** (persona + fecha de ingreso → Crear).
 3. **Contratos → Crear contrato** (o **＋ Nuevo contrato** en la ficha del trabajador): tipo (indefinido, plazo fijo, obra o faena), fecha de inicio y término, cargo, funciones, lugar y comuna de prestación (la comuna define los feriados locales), jornada (completa, parcial, excluido de limitación, y el horario definido en Jornadas), sistema de remuneración, sueldo base y periodicidad de pago. Con sistema **semanal** el sueldo base es el de la semana y se liquida como mensual con sueldo semanal × 30 / 7 (el finiquito usa ese mismo sueldo mensual). Con sistema **diario** (se usa en contratos a plazo fijo cortos) el sueldo base es el valor del día: el contrato necesita una jornada (horario), porque la liquidación paga los días laborales del mes según esa jornada y la asistencia. No hay sistema **por hora**: corresponde a honorarios, que el sistema todavía no contempla.
 4. El contrato nace **vigente con firma pendiente**. Al crearlo, el postulante pasa a **trabajador activo**.
@@ -100,7 +100,7 @@ En el pie del menú, **Mi seguridad** reúne:
 - **El administrador principal** solo lo restablece soporte, después de comprobar su identidad; queda en el registro que ve la cuenta.
 
 ### 6.1 Parámetros (soporte, una vez por mes)
-En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**. Después corrige con valores oficiales la **UF del último día del mes**, la **UTM** y cualquier valor que haya cambiado por ley (**Corregir**). Sin esto no se pueden calcular liquidaciones. Una vez al año (diciembre) carga también los **factores de actualización** de la DJ 1887 que publica el SII, al final de la misma pantalla.
+En **Parámetros legales**, soporte usa **Ver qué se copiaría** y luego **Abrir mes**: copia los parámetros y tramos del mes anterior, **menos la UF y la UTM**, así que el mes queda «Incompleto» hasta cargarlas. Después, en **Cargar los valores oficiales del mes**, escribe la **UF del último día del mes** (la tabla muestra la fecha: «UF al 31-10-2026») y la **UTM** del mes; para cambiar un valor ya cargado o uno que cambió por ley usa **Corregir**. Sin esto no se pueden calcular liquidaciones. Una vez al año (diciembre) carga también los **factores de actualización** de la DJ 1887 que publica el SII, al final de la misma pantalla.
 
 ### 6.2 Periodo
 **Periodos → Abrir periodo** (mes, año, fecha de apertura).

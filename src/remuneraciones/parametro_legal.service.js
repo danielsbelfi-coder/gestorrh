@@ -1,7 +1,8 @@
 const { ParametroLegal, TramoImpuesto, ParametroHistorial, Usuario } = require("../shared/associations.js")
 const { Op } = require("sequelize")
-const { ValidationError, NotFoundError } = require("../shared/errors.js")
+const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors.js")
 const { sequelize } = require("../shared/database.js")
+const { CODIGOS_DEL_MES, parametrosACopiar, codigosSinCopiar } = require("./apertura_mes.js")
 
 async function corregirValorParametro(id, datos, usuarioId) {
     const parametro = await ParametroLegal.findByPk(id)
@@ -122,6 +123,8 @@ async function parametrosDelMes(mesTexto) {
 
     return {
         mes: mesTexto,
+        // La UF que usa la remuneración del mes es la del último día de ese mes.
+        fecha_uf: rangoDelMes(mes).ultimoDia,
         parametros: parametros.sort((a, b) => a.codigo.localeCompare(b.codigo)),
         tramos: tramos.sort((a, b) => Number(a.desde_utm) - Number(b.desde_utm)),
         faltantes
@@ -148,7 +151,7 @@ async function abrirMesParametros(destinoTexto, origenTexto, simular = true, usu
         const parametros = await vigentesEn(ParametroLegal, desdeOrigen, transaction)
         const tramos = await vigentesEn(TramoImpuesto, desdeOrigen, transaction)
         const codigosExistentes = new Set((await vigentesEn(ParametroLegal, primerDia, transaction)).map((p) => p.codigo))
-        const aCopiar = parametros.filter((p) => !codigosExistentes.has(p.codigo))
+        const aCopiar = parametrosACopiar(parametros, codigosExistentes)
         const tramosDestino = (await vigentesEn(TramoImpuesto, primerDia, transaction)).length
         const copiarTramos = tramosDestino === 0 && tramos.length > 0
 
@@ -206,6 +209,8 @@ async function abrirMesParametros(destinoTexto, origenTexto, simular = true, usu
             destino: primerDia.slice(0, 7),
             copiados: aCopiar.map((p) => ({ codigo: p.codigo, valor: p.valor })),
             yaExistian: [...codigosExistentes],
+            // UF y UTM no se copian: hay que cargarlas con el valor oficial del mes (si aún no existen).
+            sinCopiar: codigosSinCopiar(codigosExistentes),
             tramosCopiados: copiarTramos ? tramos.length : 0,
             faltantes
         }
@@ -215,7 +220,68 @@ async function abrirMesParametros(destinoTexto, origenTexto, simular = true, usu
     }
 }
 
+// Carga la UF o la UTM de un mes que todavía no la tiene (después de «Abrir mes»). Para cambiar una ya cargada
+// se usa «Corregir». El nombre y el tipo se toman de la versión más reciente del mismo código.
+async function cargarValorDelMes(mesTexto, codigo, datos, usuarioId) {
+    const mes = leerMes(mesTexto)
+    if (mes === null) {
+        throw new ValidationError("El mes debe tener el formato AAAA-MM")
+    }
+    if (!CODIGOS_DEL_MES.includes(codigo)) {
+        throw new ValidationError(`Solo se cargan así: ${CODIGOS_DEL_MES.join(" y ")}`)
+    }
+
+    // Acepta la coma decimal (41.500,55 no: sin separador de miles).
+    const valor = typeof datos?.valor === "string" ? datos.valor.trim().replace(",", ".") : datos?.valor
+    const esNumero = (typeof valor === "number" || typeof valor === "string") && String(valor) !== "" && Number.isFinite(Number(valor))
+    if (!esNumero || Number(valor) <= 0) {
+        throw new ValidationError("El valor debe ser un número mayor a 0, con punto o coma decimal y sin separador de miles")
+    }
+
+    const { primerDia, ultimoDia } = rangoDelMes(mes)
+
+    return await sequelize.transaction(async (transaction) => {
+        if (await obtenerParametroVigente(codigo, primerDia) !== null) {
+            throw new ConflictError(`${codigo} de ${mesTexto} ya está cargada: usa «Corregir» para cambiar su valor`)
+        }
+
+        const modelo = await ParametroLegal.findOne({
+            where: { codigo, vigencia_desde: { [Op.lt]: primerDia } },
+            order: [["vigencia_desde", "DESC"]],
+            transaction
+        })
+        const fuente = typeof datos.fuente === "string" && datos.fuente.trim() !== "" ? datos.fuente.trim() : null
+
+        const creado = await ParametroLegal.create({
+            codigo,
+            nombre: modelo?.nombre ?? (codigo === "UF" ? "Unidad de fomento" : "Unidad tributaria mensual"),
+            valor: String(valor),
+            tipo: "monto",
+            descripcion: codigo === "UF" ? `valor UF al ${ultimoDia}` : `valor UTM ${mesTexto}`,
+            fuente,
+            vigencia_desde: primerDia,
+            vigencia_hasta: ultimoDia
+        }, { transaction })
+
+        await ParametroHistorial.create({
+            // Es parte de abrir el mes (el valor oficial que «Abrir mes» no copia): sin acción nueva, no hace falta migración.
+            accion: "apertura_mes",
+            parametro_id: creado.id,
+            codigo,
+            vigencia_desde: primerDia,
+            valor_anterior: null,
+            valor_nuevo: creado.valor,
+            detalle: `Carga de ${codigo}${fuente ? ` · Fuente: ${fuente}` : ""}`,
+            usuario_id: usuarioId
+        }, { transaction })
+
+        return creado
+    })
+}
+
 module.exports = {
+    CODIGOS_DEL_MES,
+    cargarValorDelMes,
     corregirValorParametro,
     obtenerParametroVigente,
     listarVersionesPorCodigo,

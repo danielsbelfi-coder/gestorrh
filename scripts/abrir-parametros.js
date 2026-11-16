@@ -16,12 +16,15 @@ async function main() {
         console.log(`  Ya existían: ${r.yaExistian.join(", ") || "ninguno"}`)
         console.log(`  Se copian: ${r.copiados.map((p) => `${p.codigo}=${p.valor}`).join(", ") || "ninguno"}`)
         console.log(`  Tramos copiados: ${r.tramosCopiados}`)
+        if (r.sinCopiar.length > 0) {
+            console.log(`  No se copian (se cargan con el valor oficial del mes): ${r.sinCopiar.join(", ")}`)
+        }
         if (r.faltantes.length > 0) {
             console.log(`  ATENCIÓN: seguirán faltando: ${r.faltantes.join(", ")}`)
         }
         console.log(r.simulado
             ? "SIMULACIÓN: no se guardó nada. Para guardar, agregue --confirmar"
-            : "Apertura guardada. Revise la UF (último día del mes) y la UTM del mes nuevo.")
+            : "Apertura guardada. Cargue la UF (último día del mes) y la UTM del mes nuevo en Parámetros legales.")
     } catch (error) {
         console.error(error.message)
         process.exitCode = 1

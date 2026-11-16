@@ -54,11 +54,23 @@ function edadAl(fechaNacimiento, fecha) {
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
-function fechaEnTexto(fecha) {
+// Lleva un valor de fecha a "aaaa-mm-dd". Acepta el texto de una fecha ("aaaa-mm-dd" o con hora) y un Date
+// (por ejemplo `createdAt` o un `new Date()` recién guardado, que Sequelize deja como Date en memoria); un Date se
+// pasa a la fecha de Chile, no a la UTC, para que de noche no salga el día siguiente.
+function fechaISO(valor) {
+    if (valor instanceof Date) {
+        return Number.isNaN(valor.getTime()) ? "" : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(valor)
+    }
+    return String(valor ?? "").slice(0, 10)
+}
+
+function fechaEnTexto(valor) {
+    const fecha = fechaISO(valor)
     return `${Number(fecha.slice(8, 10))} de ${MESES[Number(fecha.slice(5, 7)) - 1]} de ${fecha.slice(0, 4)}`
 }
 
 module.exports = {
+    fechaISO,
     esFechaValida,
     sumarDias,
     fechaChilena,

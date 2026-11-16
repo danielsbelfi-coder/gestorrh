@@ -24,3 +24,25 @@ test("textoModificacion: renovación y sueldo", () => {
     assert.match(textoModificacion({ campo_modificado: "fecha_termino", valor_nuevo: "2026-12-31", fecha_vigencia: "2026-10-16" }), /durará hasta el 31 de diciembre de 2026/)
     assert.match(textoModificacion({ campo_modificado: "sueldo_base", valor_nuevo: "950000", fecha_vigencia: "2026-11-01" }), /\$950\.000/)
 })
+
+test("anexo sin firmar: la fecha de suscripción sale de la creación (un Date) y no queda «undefined»", () => {
+    const d = armarAnexo({
+        anexo: { id: 5, campo_modificado: "sueldo_base", valor_anterior: "800000", valor_nuevo: "850000", fecha_vigencia: "2026-12-01", fecha_firma: null, createdAt: new Date("2026-11-16T15:00:00Z"), estado_firma: "pendiente" },
+        contrato: { fecha_inicio: "2026-08-01" },
+        tipoOriginal: "indefinido",
+        persona, empresa, cargo: "Bodeguero"
+    })
+    assert.match(d.lugarFecha, /a 16 de noviembre de 2026$/)
+    assert.doesNotMatch(JSON.stringify(d), /undefined|NaN/)
+})
+
+test("anexo firmado hoy: fecha_firma como Date en memoria (recién guardado) también sale bien", () => {
+    const d = armarAnexo({
+        anexo: { id: 6, campo_modificado: "sueldo_base", valor_nuevo: "850000", fecha_vigencia: "2026-12-01", fecha_firma: new Date("2026-11-17T01:30:00Z"), estado_firma: "firmado" },
+        contrato: { fecha_inicio: "2026-08-01" },
+        tipoOriginal: "indefinido",
+        persona, empresa, cargo: "Bodeguero"
+    })
+    // 01:30 UTC del 17 son las 22:30 del 16 en Chile (UTC-3 en verano): la fecha es la chilena.
+    assert.match(d.lugarFecha, /a 16 de noviembre de 2026$/)
+})

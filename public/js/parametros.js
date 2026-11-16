@@ -3,6 +3,7 @@ requiereLogin()
 const campoMes = document.getElementById("mes")
 let esSoporte = false
 let parametros = []
+let fechaUF = null // último día del mes elegido: la UF que usa la remuneración de ese mes
 
 const TIPOS = { porcentaje: "Porcentaje", monto: "Monto", factor: "Factor", otro: "Otro" }
 
@@ -28,7 +29,10 @@ const tabla = crearTabla({
     vacio: "Este mes no tiene parámetros cargados.",
     columnas: [
         { titulo: "Código", valor: (p) => p.codigo },
-        { titulo: "Nombre", valor: (p) => p.nombre ?? "" },
+        {
+            titulo: "Nombre", valor: (p) => p.nombre ?? "",
+            html: (p) => escaparHtml(p.codigo === "UF" && fechaUF ? `${p.nombre ?? "UF"} (al ${fechaCorta(fechaUF)})` : (p.nombre ?? ""))
+        },
         { titulo: "Valor", valor: (p) => Number(p.valor), html: (p) => `<strong>${escaparHtml(valorParametro(p))}</strong>`, numero: true },
         { titulo: "Tipo", valor: (p) => TIPOS[p.tipo] ?? p.tipo },
         { titulo: "Vigencia", valor: (p) => p.vigencia_desde, html: (p) => escaparHtml(`${fechaCorta(p.vigencia_desde)} al ${p.vigencia_hasta ? fechaCorta(p.vigencia_hasta) : "sin término"}`) },
@@ -76,7 +80,9 @@ async function cargarMes() {
     }
     const datos = resultado.datos
     parametros = datos.parametros
+    fechaUF = datos.fecha_uf ?? null
     tabla.mostrar(parametros)
+    mostrarCargaMes(datos.faltantes)
     tablaTramos.mostrar(datos.tramos)
     await cargarFactores()
 
@@ -85,6 +91,44 @@ async function cargarMes() {
         ? `<span class="insignia exito">Completo</span> ${escaparHtml(nombreMes)} tiene todos los parámetros que necesita el cálculo.`
         : `<span class="insignia peligro">Incompleto</span> A ${escaparHtml(nombreMes)} le faltan: <strong>${escaparHtml(datos.faltantes.join(", "))}</strong>. Sin ellos no se pueden calcular las liquidaciones de este mes.${esSoporte ? "" : " La plataforma los carga cada mes; si ya es tiempo de liquidar, escribe a soporte."}`
 }
+
+// ---------- UF y UTM del mes (no se copian al abrir el mes) ----------
+function mostrarCargaMes(faltantes) {
+    const faltaUF = faltantes.includes("UF")
+    const faltaUTM = faltantes.includes("UTM")
+    document.getElementById("cargaMes").hidden = !esSoporte || (!faltaUF && !faltaUTM)
+    document.getElementById("etiquetaUF").hidden = !faltaUF
+    document.getElementById("etiquetaUTM").hidden = !faltaUTM
+    document.getElementById("fechaUF").textContent = fechaUF ? fechaCorta(fechaUF) : "último día del mes"
+}
+
+document.getElementById("btnCargarMes").addEventListener("click", async function () {
+    limpiarMensajes()
+    const fuente = document.getElementById("fuenteCarga").value.trim()
+    const cargas = [["UF", "valorUF"], ["UTM", "valorUTM"]]
+        .filter(([codigo, campo]) => !document.getElementById(`etiqueta${codigo}`).hidden && document.getElementById(campo).value.trim() !== "")
+        .map(([codigo, campo]) => ({ codigo, valor: document.getElementById(campo).value.trim().replace(",", ".") }))
+    if (cargas.length === 0) {
+        mensaje("error", "Escribe el valor de la UF o de la UTM.")
+        return
+    }
+    for (const carga of cargas) {
+        const resultado = await llamarApi("/api/parametros-legales/cargar-mes", {
+            method: "POST",
+            body: JSON.stringify({ mes: mesTexto(), codigo: carga.codigo, valor: carga.valor, fuente })
+        })
+        if (resultado.status !== 201) {
+            mensaje("error", resultado.datos?.error ?? `No se pudo cargar la ${carga.codigo}`)
+            await cargarMes()
+            return
+        }
+    }
+    document.getElementById("valorUF").value = ""
+    document.getElementById("valorUTM").value = ""
+    await cargarMes()
+    cargarCambios()
+    mensaje("info", `${cargas.map((c) => c.codigo).join(" y ")} cargada${cargas.length > 1 ? "s" : ""}.`)
+})
 
 // ---------- Factores de actualización de la DJ 1887 (del año del mes elegido) ----------
 const NOMBRES_MES_FACTOR = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -117,7 +161,7 @@ document.getElementById("btnGuardarFactores").addEventListener("click", async ()
 
 async function abrirMes(confirmar) {
     limpiarMensajes()
-    if (confirmar && !confirm(`¿Abrir los parámetros de ${mesTexto()} copiando los del mes anterior?`)) {
+    if (confirmar && !confirm(`¿Abrir los parámetros de ${mesTexto()} copiando los del mes anterior (menos la UF y la UTM)?`)) {
         return
     }
     const resultado = await llamarApi("/api/parametros-legales/abrir-mes", {
@@ -133,8 +177,9 @@ async function abrirMes(confirmar) {
         <div class="resultado-apertura">
             <p><strong>${r.simulado ? "Simulación (no se guardó nada)" : "Mes abierto"}</strong>: desde ${escaparHtml(r.origen)} hacia ${escaparHtml(r.destino)}.</p>
             <p>Se ${r.simulado ? "copiarían" : "copiaron"} ${r.copiados.length} parámetro(s)${r.copiados.length ? `: ${escaparHtml(r.copiados.map((p) => `${p.codigo} = ${p.valor}`).join(", "))}` : ""}. Tramos del impuesto: ${r.tramosCopiados}.</p>
+            ${r.sinCopiar.length ? `<p>No se copia${r.sinCopiar.length > 1 ? "n" : ""}: ${escaparHtml(r.sinCopiar.join(" ni "))} (se cargan con el valor oficial del mes).</p>` : ""}
             ${r.faltantes.length ? `<p class="nota peligro">Seguirán faltando: ${escaparHtml(r.faltantes.join(", "))}.</p>` : ""}
-            ${r.simulado ? "" : `<p>Ahora corrige la UF (último día del mes) y la UTM con los valores oficiales.</p>`}
+            ${r.simulado ? "" : `<p>Ahora carga la UF (último día del mes) y la UTM con los valores oficiales.</p>`}
         </div>`
     if (!r.simulado) {
         const aviso = document.getElementById("resultadoApertura").innerHTML

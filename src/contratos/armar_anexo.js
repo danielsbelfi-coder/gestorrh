@@ -1,7 +1,7 @@
 // Documento del anexo de contrato: deja constancia de la modificación sin tocar el contrato original.
 const { pesosEnPalabras } = require("../shared/numero_en_palabras.js")
 const { formatearRut } = require("../shared/rut.js")
-const { fechaEnTexto } = require("../shared/fechas.js")
+const { fechaEnTexto, fechaISO } = require("../shared/fechas.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { textoDistribucion } = require("./jornada_legal.js")
 
@@ -55,7 +55,8 @@ function armarAnexo({ anexo, contrato, tipoOriginal, persona, empresa, cargo, jo
     const rutEmpresa = formatearRut(empresa.rut, empresa.dv)
     const tratamiento = persona.sexo_genero === "femenino" ? "doña" : persona.sexo_genero === "masculino" ? "don" : "don(ña)"
     const comunaEmpresa = nombreComuna(empresa.comuna)
-    const fechaSuscripcion = String(anexo.fecha_firma ?? anexo.createdAt ?? anexo.fecha_vigencia).slice(0, 10)
+    // Sin firma, la fecha es la de creación (un Date): String(Date) daba "Mon Nov 16" y la fecha salía con «undefined».
+    const fechaSuscripcion = fechaISO(anexo.fecha_firma ?? anexo.createdAt ?? anexo.fecha_vigencia)
 
     const clausulas = [
         `Las partes celebraron con fecha ${fechaEnTexto(contrato.fecha_inicio)} un contrato de trabajo ${TIPOS[tipoOriginal] ?? ""}, en virtud del cual el TRABAJADOR se desempeña como ${cargo.toUpperCase()}.`.replace("  ", " "),

@@ -29,12 +29,23 @@
 
         <section class="tarjeta" id="panelSoporte" hidden>
             <h2>Soporte: cargar el mes</h2>
-            <p class="texto-suave">"Abrir mes" copia los parámetros y tramos del mes anterior que este mes todavía no tenga. Después corrige la <strong>UF (valor del último día del mes)</strong> y la <strong>UTM del mes</strong> con los valores oficiales, y cualquier valor que haya cambiado por ley.</p>
+            <p class="texto-suave">"Abrir mes" copia los parámetros y tramos del mes anterior que este mes todavía no tenga, <strong>menos la UF y la UTM</strong>: esas se cargan con el valor oficial (la <strong>UF del último día del mes</strong> y la <strong>UTM del mes</strong>) y, hasta entonces, el mes sale «Incompleto». Corrige además cualquier valor que haya cambiado por ley.</p>
             <div class="acciones-grupo">
                 <button type="button" class="secundario" id="btnSimular">Ver qué se copiaría</button>
                 <button type="button" id="btnAbrir">Abrir mes</button>
             </div>
             <div id="resultadoApertura"></div>
+            <div id="cargaMes" hidden>
+                <h3>Cargar los valores oficiales del mes</h3>
+                <div class="campos">
+                    <label id="etiquetaUF">UF del <span id="fechaUF"></span> ($)<input type="text" inputmode="decimal" id="valorUF" placeholder="Ej.: 41247,63"></label>
+                    <label id="etiquetaUTM">UTM del mes ($)<input type="text" inputmode="decimal" id="valorUTM" placeholder="Ej.: 69889"></label>
+                    <label>Fuente<input type="text" id="fuenteCarga" value="SII"></label>
+                </div>
+                <div class="acciones-grupo">
+                    <button type="button" id="btnCargarMes">Cargar valores</button>
+                </div>
+            </div>
         </section>
 
         <h2>Parámetros vigentes</h2>

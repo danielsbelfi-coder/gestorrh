@@ -4,8 +4,11 @@ requiereLogin()
 const COLUMNAS = [
     "rut", "dv", "nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento",
     "sexo", "estado_civil", "direccion", "telefono", "email", "afp", "afiliado_afc", "sistema_salud",
-    "isapre", "plan_isapre_uf", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
+    "isapre", "plan_isapre_uf", "forma_pago", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
 ]
+
+// Una planilla descargada antes de existir esta columna sigue sirviendo (queda en blanco = transferencia).
+const COLUMNAS_OPCIONALES = ["forma_pago"]
 
 let filas = []
 
@@ -136,7 +139,7 @@ botonRevisar.addEventListener("click", async function () {
     }
 
     const encabezado = matriz[0].map(nombreColumna)
-    const faltantes = COLUMNAS.filter((columna) => !encabezado.includes(columna))
+    const faltantes = COLUMNAS.filter((columna) => !COLUMNAS_OPCIONALES.includes(columna) && !encabezado.includes(columna))
     if (faltantes.length > 0) {
         mensaje("error", `A la planilla le faltan columnas: ${faltantes.join(", ")}. Usa la plantilla sin cambiar los títulos.`)
         return

@@ -78,3 +78,22 @@ test("informa todos los campos obligatorios que faltan", () => {
     const { errores } = validarImportacion([{ rut: "", dv: "" }], catalogos)
     assert.strictEqual(errores[0].motivos.length, 7)
 })
+
+test("forma de pago: vacía = transferencia; acepta cheque sin importar mayúsculas ni tildes; rechaza lo desconocido", () => {
+    const { personas, errores } = validarImportacion([
+        fila(),
+        fila({ rut: "9876543", dv: "3", forma_pago: "Cheque" }),
+        fila({ rut: "7654321", dv: "6", forma_pago: " VALE  vista " }),
+        fila({ rut: "6543210", dv: "2", forma_pago: "Efectivo" }),
+        fila({ rut: "5432109", dv: "0", forma_pago: "paypal" })
+    ], catalogos)
+    assert.deepStrictEqual(personas.map((p) => p.persona.forma_pago), ["transferencia", "cheque", "vale_vista", "efectivo"])
+    assert.strictEqual(errores.length, 1)
+    assert.match(errores[0].motivos.join(" "), /forma_pago debe ser transferencia, cheque, efectivo o vale vista/)
+})
+
+test("«Cheque» escrito en tipo_cuenta: el error dice que va en forma_pago", () => {
+    const { errores } = validarImportacion([fila({ tipo_cuenta: "Cheque" })], catalogos)
+    assert.strictEqual(errores.length, 1)
+    assert.match(errores[0].motivos.join(" "), /forma de pago: va en la columna forma_pago/)
+})
