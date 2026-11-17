@@ -255,7 +255,9 @@ function mostrarDetalle(fila) {
                 <tbody>
                     ${filaMonto(`Feriado legal y proporcional (${feriado.diasPorPagar === undefined ? "—" : dias(feriado.diasPorPagar)} días)`, f.monto_feriado)}
                     ${filaMonto("Indemnización sustitutiva del aviso previo", f.monto_aviso_previo)}
-                    ${filaMonto(`Indemnización por años de servicio (${d.anios ?? 0} años)`, f.monto_anios_servicio)}
+                    ${filaMonto(d.indemnizacionObra
+                        ? `Indemnización por término de obra o faena (${d.indemnizacionObra.meses} meses × 2,5 = ${dias(d.indemnizacionObra.dias)} días)`
+                        : `Indemnización por años de servicio (${d.anios ?? 0} años)`, f.monto_anios_servicio)}
                 </tbody>
             </table>
             <table>

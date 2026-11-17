@@ -94,3 +94,37 @@ test("bases: el feriado usa los meses trabajados completos; la indemnización, l
     assert.strictEqual(bases.variablesIndemnizacion, 210000)
     assert.strictEqual(bases.baseIndemnizacion, 810000)
 })
+
+test("obra o faena (Ley 21.122): 2,5 días por mes trabajado y fracción superior a 15 días, base topada en 90 UF", () => {
+    const { indemnizacionObraFaena, montosFiniquito, tiempoServido } = require("../src/remuneraciones/calculo_finiquito.js")
+    // 03-08-2026 al 13-02-2027: 6 meses y 11 días → 6 meses → 15 días.
+    assert.deepStrictEqual(indemnizacionObraFaena(tiempoServido("2026-08-03", "2027-02-13")), { meses: 6, dias: 15 })
+    // 02-11-2026 al 31-01-2027: 2 meses y 30 días → 3 meses → 7,5 días.
+    assert.deepStrictEqual(indemnizacionObraFaena(tiempoServido("2026-11-02", "2027-01-31")), { meses: 3, dias: 7.5 })
+    // 16 días de fracción suman un mes; 15 no.
+    assert.deepStrictEqual(indemnizacionObraFaena({ anios: 0, meses: 2, dias: 16 }), { meses: 3, dias: 7.5 })
+    assert.deepStrictEqual(indemnizacionObraFaena({ anios: 0, meses: 2, dias: 15 }), { meses: 2, dias: 5 })
+    // Menos de un mes: no corresponde.
+    assert.deepStrictEqual(indemnizacionObraFaena({ anios: 0, meses: 0, dias: 28 }), { meses: 0, dias: 0 })
+
+    const base = { avisoPrevioDado: true, tiempo: { anios: 0, meses: 6, dias: 11 }, baseIndemnizacion: 1200000, baseFeriado: 900000, topeUF: 90, valorUF: 40000, diasPendientes: 0, diasInhabiles: 0, imputacionAfc: 20000, descuentos: [] }
+    const obra = montosFiniquito({ ...base, causal: 7, obraFaena: true })
+    assert.strictEqual(obra.montoAniosServicio, 600000) // 1.200.000 / 30 × 15
+    assert.strictEqual(obra.imputacion, 20000)
+    assert.deepStrictEqual(obra.indemnizacionObra, { meses: 6, dias: 15 })
+    // Misma causal con contrato indefinido, o contrato por obra con otra causal: no corresponde.
+    assert.strictEqual(montosFiniquito({ ...base, causal: 7, obraFaena: false }).montoAniosServicio, 0)
+    assert.strictEqual(montosFiniquito({ ...base, causal: 4, obraFaena: true }).montoAniosServicio, 0)
+    // Tope de 90 UF en la base.
+    assert.strictEqual(montosFiniquito({ ...base, causal: 7, obraFaena: true, baseIndemnizacion: 5000000 }).montoAniosServicio, Math.round(3600000 / 30 * 15))
+})
+
+test("contrato por día: sin semana corrida en el promedio (ya está en el sueldo × 30)", () => {
+    const { basesFiniquito } = require("../src/remuneraciones/calculo_finiquito.js")
+    const meses = [{ 2104: 150000, 2112: 60000, 2106: 190000 }]
+    const conSC = basesFiniquito({ sueldoMensual: 960000, meses })
+    const sinSC = basesFiniquito({ sueldoMensual: 960000, meses, sinSemanaCorrida: true })
+    assert.strictEqual(conSC.variables, 210000)
+    assert.strictEqual(sinSC.variables, 60000)
+    assert.strictEqual(sinSC.baseFeriado, 1020000)
+})

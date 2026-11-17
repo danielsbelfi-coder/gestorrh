@@ -13,7 +13,14 @@ function armarFiniquito({ finiquito, empresa, cargo, lugarServicios }) {
     const haberes = [
         { nombre: "Feriado legal y proporcional", monto: finiquito.monto_feriado },
         { nombre: "Indemnización sustitutiva del aviso previo", monto: finiquito.monto_aviso_previo },
-        { nombre: "Indemnización por años de servicio", monto: finiquito.monto_anios_servicio }
+        {
+            // Ley 21.122: en un contrato por obra o faena terminado por el art. 159 N° 5, el mismo monto es la indemnización
+            // por término de obra (2,5 días por mes trabajado y fracción superior a 15 días).
+            nombre: detalle?.indemnizacionObra
+                ? `Indemnización por término de obra o faena (art. 163 inc. 3°, ${String(detalle.indemnizacionObra.dias).replace(".", ",")} días)`
+                : "Indemnización por años de servicio",
+            monto: finiquito.monto_anios_servicio
+        }
     ].filter((fila) => fila.monto > 0)
 
     const descuentos = [

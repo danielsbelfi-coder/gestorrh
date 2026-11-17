@@ -40,35 +40,57 @@ const CODIGOS_FIJOS = [2111]
 const CODIGOS_VARIABLES = [2103, 2104, 2112, 2113]
 const CODIGO_GRATIFICACION = 2106
 const CAUSALES_ART_161 = [18, 19]
+// Art. 159 N° 5: conclusión del trabajo o servicio que dio origen al contrato.
+const CAUSAL_CONCLUSION_OBRA = 7
+const DIAS_POR_MES_OBRA = 2.5
+
+// Indemnización por término de obra o faena (Ley 21.122, art. 163 inciso 3° del Código del Trabajo): si el contrato por
+// obra o faena terminó por el art. 159 N° 5 y estuvo vigente un mes o más, 2,5 días de remuneración por cada mes
+// trabajado y fracción superior a 15 días, con la base del art. 172 (tope de 90 UF). Devuelve los meses y los días.
+function indemnizacionObraFaena(tiempo) {
+    const mesesCompletos = tiempo.anios * 12 + tiempo.meses
+    if (mesesCompletos < 1) {
+        return { meses: 0, dias: 0 }
+    }
+    const meses = mesesCompletos + (tiempo.dias > 15 ? 1 : 0)
+    return { meses, dias: meses * DIAS_POR_MES_OBRA }
+}
 
 // meses: montos de los últimos 3 meses calendario (indemnización, art. 172). mesesFeriado: los de los últimos 3 meses
 // trabajados completos (feriado, art. 71); por defecto, los mismos.
-function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses }) {
+// sinSemanaCorrida: contrato por día, cuyo sueldo mensual (× 30) ya incluye los domingos y festivos.
+function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses, sinSemanaCorrida = false }) {
     const sumaCodigos = (montos, codigos) => codigos.reduce((suma, codigo) => suma + (montos[codigo] ?? 0), 0)
     const promedio = (lista, codigos) => lista.length === 0
         ? 0
         : Math.round(lista.reduce((suma, montos) => suma + sumaCodigos(montos, codigos), 0) / lista.length)
 
+    const codigosVariables = sinSemanaCorrida ? CODIGOS_VARIABLES.filter((c) => c !== 2104) : CODIGOS_VARIABLES
     const fijos = meses.length > 0 ? sumaCodigos(meses[0], CODIGOS_FIJOS) : 0
-    const variables = promedio(mesesFeriado, CODIGOS_VARIABLES)
-    const variablesIndemnizacion = promedio(meses, CODIGOS_VARIABLES)
+    const variables = promedio(mesesFeriado, codigosVariables)
+    const variablesIndemnizacion = promedio(meses, codigosVariables)
     const gratificacion = promedio(meses, [CODIGO_GRATIFICACION])
     const baseFeriado = sueldoMensual + fijos + variables
 
     return { fijos, variables, variablesIndemnizacion, gratificacion, baseFeriado, baseIndemnizacion: sueldoMensual + fijos + variablesIndemnizacion + gratificacion }
 }
 
-function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, baseFeriado, topeUF, valorUF, diasPendientes, diasInhabiles, imputacionAfc, descuentos }) {
+// obraFaena: el contrato de la relación es por obra o faena (con la causal 159 N° 5 da la indemnización de la Ley 21.122).
+function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, baseFeriado, topeUF, valorUF, diasPendientes, diasInhabiles, imputacionAfc, descuentos, obraFaena = false }) {
     const art161 = CAUSALES_ART_161.includes(causal)
     const baseTopada = Math.min(baseIndemnizacion, Math.round(topeUF * valorUF))
     const anios = aniosIndemnizacion(tiempo)
+    const obra = obraFaena && causal === CAUSAL_CONCLUSION_OBRA ? indemnizacionObraFaena(tiempo) : { meses: 0, dias: 0 }
 
-    const montoAniosServicio = art161 && tiempo.anios >= 1 ? baseTopada * anios : 0
+    const montoAniosServicio = art161 && tiempo.anios >= 1
+        ? baseTopada * anios
+        : Math.round(baseTopada / 30 * obra.dias)
     const montoAvisoPrevio = art161 && !avisoPrevioDado ? baseTopada : 0
     const diasFeriado = Math.round((diasPendientes + diasInhabiles) * 100) / 100
     const montoFeriado = Math.round(baseFeriado / 30 * diasFeriado)
 
-    const imputacion = art161 ? Math.min(imputacionAfc, montoAniosServicio) : 0
+    // Imputación del seguro de cesantía: art. 161 y, por la Ley 21.122 (art. 13 inc. 2° Ley 19.728), la de obra o faena.
+    const imputacion = art161 || obra.dias > 0 ? Math.min(imputacionAfc, montoAniosServicio) : 0
     const totalDescuentos = imputacion + descuentos.reduce((suma, descuento) => suma + descuento.monto, 0)
     const totalHaberes = montoFeriado + montoAvisoPrevio + montoAniosServicio
 
@@ -78,6 +100,7 @@ function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, b
 
     return {
         anios, baseTopada, diasFeriado, imputacion,
+        indemnizacionObra: obra.dias > 0 ? obra : null,
         montoFeriado, montoAvisoPrevio, montoAniosServicio,
         totalHaberes, totalDescuentos, totalAPagar: totalHaberes - totalDescuentos
     }
@@ -88,5 +111,6 @@ module.exports = {
     aniosIndemnizacion,
     diasFeriadoGanados,
     basesFiniquito,
-    montosFiniquito
+    montosFiniquito,
+    indemnizacionObraFaena
 }

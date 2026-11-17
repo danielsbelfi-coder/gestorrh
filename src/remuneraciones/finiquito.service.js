@@ -79,7 +79,13 @@ async function sueldoDelMesDeTermino(trabajador, anio, mes) {
     const { contrato } = contratoDelMes({ contrato: vigente.toJSON(), anexos: anexos.map((a) => a.toJSON()), anio, mes })
 
     const { sueldoMensualDe } = require("./contrato_del_mes.js")
-    return sueldoMensualDe(contrato.sistema_remuneracion, contrato.sueldo_base)
+    // Contrato por día (jornal): el sueldo del contrato es el valor del día. Su equivalente mensual es × 30 (incluye los
+    // domingos y festivos, que la semana corrida paga): así el valor diario del feriado es el jornal y la base de las
+    // indemnizaciones es un mes de remuneración. Ver «Finiquito de un contrato por día» en el SPEC.
+    if (contrato.sistema_remuneracion === "diario") {
+        return { sueldoMensual: Math.round(Number(contrato.sueldo_base) * 30), porDia: true }
+    }
+    return { sueldoMensual: sueldoMensualDe(contrato.sistema_remuneracion, contrato.sueldo_base), porDia: false }
 }
 
 function validarDatosFiniquito(datos, fechaTermino) {
@@ -173,13 +179,14 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
 
     const anio = Number(trabajador.fecha_termino.slice(0, 4))
     const mes = Number(trabajador.fecha_termino.slice(5, 7))
-    const sueldoMensual = await sueldoDelMesDeTermino(trabajador, anio, mes)
+    const { sueldoMensual, porDia } = await sueldoDelMesDeTermino(trabajador, anio, mes)
     const meses = await montosMesesAnteriores(trabajador, anio, mes)
     // Indemnización (art. 172): últimos 3 meses calendario. Feriado (art. 73 → art. 71): últimos 3 meses trabajados completos.
     const { mesesTrabajadosArt71 } = require("../asistencia/vacaciones.js")
     const mesesFeriado = mesesTrabajadosArt71(meses)
     const bases = {
-        ...basesFiniquito({ sueldoMensual, meses: meses.slice(0, 3).map((m) => m.montos), mesesFeriado: mesesFeriado.map((m) => m.montos) }),
+        // Por día: la semana corrida ya está en el × 30, no se promedia otra vez.
+        ...basesFiniquito({ sueldoMensual, meses: meses.slice(0, 3).map((m) => m.montos), mesesFeriado: mesesFeriado.map((m) => m.montos), sinSemanaCorrida: porDia }),
         mesesIndemnizacion: meses.slice(0, 3).map((m) => m.periodo),
         mesesFeriado: mesesFeriado.map((m) => m.periodo)
     }
@@ -197,7 +204,15 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     const diasPendientes = feriado.habiles
     const diasInhabiles = feriado.inhabiles
 
+    // Contrato de la relación (no anulado): si es por obra o faena, la causal 159 N° 5 da la indemnización de la Ley 21.122.
+    const contratoRelacion = await ContratoTrabajo.findOne({
+        where: { trabajador_id: trabajador.id, estado: { [Op.ne]: "anulado" } },
+        order: [["fecha_inicio", "DESC"]]
+    })
+    const obraFaena = contratoRelacion?.tipo_contrato === "obra_faena"
+
     const calcularMontos = (lista) => montosFiniquito({
+        obraFaena,
         causal: trabajador.causal_termino,
         avisoPrevioDado: datos.aviso_previo_dado,
         tiempo,
@@ -256,6 +271,8 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
             causal: trabajador.causal_termino,
             tiempo,
             anios: montos.anios,
+            // Ley 21.122: { meses, dias } de la indemnización por término de obra o faena (va en monto_anios_servicio, LRE 2314).
+            indemnizacionObra: montos.indemnizacionObra,
             sueldoMensual,
             mesesPromedio: meses.map((m) => m.periodo),
             bases,

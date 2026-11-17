@@ -68,7 +68,10 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
         // enJornada: si ese día de la semana se trabaja según la jornada (semana corrida: un festivo en un día de
         // descanso convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
         const delDia = dias === null ? null : dias.find((d) => Number(d.dia) === diaDeLaSemana(fecha))
-        return { tipo: "feriado", nombre: feriado.nombre, colacion: colacionHabitual(dias), enJornada: dias === null ? null : Boolean(delDia?.trabaja) }
+        // Colación: la de ese día si la jornada lo trabaja (un viernes corto sin colación no descuenta nada);
+        // si no, la más frecuente de la plantilla, como en un día libre.
+        const colacion = delDia?.trabaja ? Number(delDia.colacion ?? 0) : colacionHabitual(dias)
+        return { tipo: "feriado", nombre: feriado.nombre, colacion, enJornada: dias === null ? null : Boolean(delDia?.trabaja) }
     }
     if (dias === null) {
         return { tipo: "sin_horario" }

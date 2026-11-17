@@ -158,3 +158,14 @@ test("recargo por marca: los totales separan horas al 50 % y al 100 % (sin recar
     assert.strictEqual(r.totales.horas_extra_100, 4)
     assert.strictEqual(r.totales.horas_extra, 6.5)
 })
+
+test("trabajo en feriado: descuenta la colación de ese día de la jornada, no la habitual", () => {
+    // Viernes 8:00 a 14:00 sin colación (como la jornada J1 de la prueba 3); el resto con 60 min.
+    const corta = JORNADA.map((d) => d.dia === 5 ? { dia: 5, trabaja: true, entrada: "08:00", salida: "14:00", colacion: 0 } : d)
+    const viernesSanto = [{ fecha: "2027-10-01", nombre: "Feriado de prueba" }]
+    const r = calcularLibro({ anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [{ desde: "2027-01-01", dias: corta }], feriados: viernesSanto, marcas: [marca("2027-10-01", "08:00", "14:00")] })
+    assert.strictEqual(r.totales.minutos_extra, 360)
+    // Un sábado (día libre) sigue descontando la colación habitual.
+    const sabado = calcularLibro({ anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [{ desde: "2027-01-01", dias: corta }], feriados: [], marcas: [marca("2027-10-02", "08:00", "13:00")] })
+    assert.strictEqual(sabado.totales.minutos_extra, 240)
+})
