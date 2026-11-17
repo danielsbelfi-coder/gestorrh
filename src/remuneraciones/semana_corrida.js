@@ -99,7 +99,12 @@ function diasDeDescanso(dias, trabajaDomingo) {
     }
 
     return dias.filter((fila) => {
-        const descanso = fila.esperado.tipo === "feriado"
+        // Festivo: se paga si cae en domingo o en un día que la jornada trabaja. En un día de descanso convencional
+        // (el sábado de una jornada de lunes a viernes) no se paga (DT: no procede remunerar el sábado festivo).
+        // Con jornada que incluye el domingo (art. 38), los días libres ya son el descanso y se pagan como tal.
+        const festivoPagado = fila.esperado.tipo === "feriado"
+            && (fila.diaSemana === DOMINGO || trabajaDomingo || fila.esperado.enJornada !== false)
+        const descanso = festivoPagado
             || (fila.esperado.tipo === "libre" && (fila.diaSemana === DOMINGO || trabajaDomingo))
         if (!descanso) {
             return false
@@ -137,4 +142,4 @@ function valorHoraPorDias({ sistema, sueldo, diasSemana, horasSemanales, minimoP
     return Math.max(diario * (diasSemana + 1) / horasSemanales, minimoPorHora)
 }
 
-module.exports = { horasDelDia, clasificarDias, sueldoPorDias, diasDeDescanso, calcularSemanaCorrida, valorHoraPorDias }
+module.exports = { horasDelDia, sueldoDelDia, clasificarDias, sueldoPorDias, diasDeDescanso, calcularSemanaCorrida, valorHoraPorDias }

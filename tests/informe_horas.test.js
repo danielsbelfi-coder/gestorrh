@@ -66,3 +66,17 @@ test("el Excel guarda los números como números", () => {
     assert.match(xml, /<c r="B2"><v>1.5<\/v><\/c>/)
     assert.match(xml, /<c r="A2" t="inlineStr">/)
 })
+
+test("con anexo en el mes y horas de un mes anterior: cada parte pesa con su valor hora", () => {
+    // Día 05 (antes del anexo, hora 4.000): 1,5 h → peso 6.000. Una hora de septiembre (hora 3.500) → peso 3.500.
+    const liquidacion = {
+        estado: "calculada", valorHora: 4500,
+        valoresHora: { porTramo: [{ desdeDia: 1, valorHora: 4000 }, { desdeDia: 16, valorHora: 4500 }], horasExtra: [{ recargo: 50, mesOrigen: "2026-09", valorHora: 3500 }] },
+        lineas: { 50: { cantidad: 2.5, monto: 15000 }, 100: { cantidad: 2, monto: 16000 }, atraso: { cantidad: 20, monto: 1333 } }
+    }
+    const r = armarInformeHoras({ libro, pendientes: [{ recargo: 50, horas: 1, mesOrigen: "2026-09-01" }], liquidacion })
+    // El reparto es proporcional a horas × valor hora y suma exacto la línea.
+    const dia = r.filas.find((f) => f.fecha === "2026-10-05")
+    assert.strictEqual(dia.montoExtra + r.anteriores[0].monto, 15000)
+    assert.strictEqual(dia.montoExtra, Math.round(15000 * 6000 / (6000 + 3500)))
+})

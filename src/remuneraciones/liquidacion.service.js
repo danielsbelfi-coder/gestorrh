@@ -500,6 +500,65 @@ async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
     return trabajador
 }
 
+// Valor hora de las horas extra y atrasos con sueldo mensual (ver valor_hora.js y «Valor hora: día y mes de origen» en el
+// SPEC). Devuelve las variables con su valorHora (cuando corresponde), el valor hora de los atrasos y lo que se guarda
+// en el detalle para el informe de horas extra y atrasos.
+async function valoresHoraDelMes({ periodo, trabajador, contratoVigente, anexos, contrato, tramosSueldo, aprobadas }) {
+    const vh = require("./valor_hora.js")
+    const { sueldoMensualDe } = require("./contrato_del_mes.js")
+    const horas = Number(contrato.horas_semanales)
+    const porTramo = vh.valoresHoraPorTramo(tramosSueldo, horas)
+    const delMes = porTramo[porTramo.length - 1].valorHora
+
+    // Anexo de sueldo en el mes: cada día del libro con su sueldo.
+    let delLibro = { 50: null, 100: null, atraso: null }
+    if (tramosSueldo.length > 1) {
+        const { libroDelTrabajador } = require("../asistencia/libro_asistencia.service.js")
+        const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
+        delLibro = vh.valoresHoraDelLibro(libro.dias, porTramo)
+    }
+
+    const mesDelPeriodo = `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}`
+    const horasExtra = []
+    const variables = aprobadas.map((variable) => {
+        const recargo = variable.concepto.recargo_hora_extra
+        if (recargo === null || recargo === undefined) {
+            return variable
+        }
+        const origen = variable.mes_origen ? String(variable.mes_origen).slice(0, 7) : null
+        let valorHora = null
+        if (origen && origen !== mesDelPeriodo) {
+            // Horas pendientes de un mes cerrado: sueldo y jornada vigentes al cierre del mes de origen.
+            const [anio, mes] = origen.split("-").map(Number)
+            const enOrigen = contratoDelMes({ contrato: contratoVigente.toJSON(), anexos: anexos.map((a) => a.toJSON()), anio, mes })
+            if (enOrigen.contrato !== null) {
+                const sueldo = enOrigen.tramosSueldo[enOrigen.tramosSueldo.length - 1].sueldo
+                valorHora = vh.valorHoraOrdinaria(sueldoMensualDe(enOrigen.contrato.sistema_remuneracion, sueldo), Number(enOrigen.contrato.horas_semanales))
+            }
+        } else if (delLibro[Number(recargo)] !== null) {
+            valorHora = delLibro[Number(recargo)]
+        }
+        horasExtra.push({
+            codigo: variable.concepto.codigo,
+            recargo: Number(recargo),
+            cantidad: Number(variable.cantidad ?? 0),
+            mesOrigen: origen && origen !== mesDelPeriodo ? origen : null,
+            valorHora: Math.round((valorHora ?? delMes) * 100) / 100
+        })
+        return valorHora === null ? variable : { ...variable, valorHora }
+    })
+
+    return {
+        variables,
+        valorHoraAtraso: delLibro.atraso ?? undefined,
+        detalle: {
+            porTramo: porTramo.map((t) => ({ desdeDia: t.desdeDia, valorHora: Math.round(t.valorHora * 100) / 100 })),
+            horasExtra,
+            atraso: Math.round((delLibro.atraso ?? delMes) * 100) / 100
+        }
+    }
+}
+
 async function prepararCalculo(periodo, trabajador) {
     const contratoVigente = await ContratoTrabajo.findOne({
         where: { trabajador_id: trabajador.id, estado: "vigente" }
@@ -646,13 +705,19 @@ async function prepararCalculo(periodo, trabajador) {
         sanna: parametros.sanna
     }
     const porDias = await sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueldo, resumen, variables: aprobadas, ingresoMinimoMensual: parametros.ingresoMinimoMensual })
+    // Sueldo mensual: horas extra y atrasos con el sueldo del día (anexo en el mes) o del mes de origen (horas pendientes).
+    // Contrato diario o por hora: su propio valor hora (valorHoraContrato), sin cambios.
+    const valoresHora = porDias.valorHoraContrato === undefined
+        ? await valoresHoraDelMes({ periodo, trabajador, contratoVigente, anexos, contrato, tramosSueldo, aprobadas })
+        : { variables: aprobadas, valorHoraAtraso: undefined, detalle: null }
     const datos = {
         sueldoBase: sueldoMensualDe(contrato.sistema_remuneracion, contrato.sueldo_base),
         horasSemanales: Number(contrato.horas_semanales),
         diasPagados,
         tramosSueldo: tramosConDias,
-        variables: aprobadas,
+        variables: valoresHora.variables,
         minutosAtraso: resumen.minutos_atraso,
+        valorHoraAtraso: valoresHora.valorHoraAtraso,
         ingresoMinimoMensual: parametros.ingresoMinimoMensual,
         asignacionFamiliar: {
             monto: asignacionFamiliar.monto,
@@ -782,6 +847,8 @@ async function prepararCalculo(periodo, trabajador) {
         fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
         cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
+        // Valor hora por tramo de sueldo, por variable de horas extra y de los atrasos (informe de horas extra y atrasos).
+        valoresHora: valoresHora.detalle,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
         // Los identificadores permiten que el PDF, el LRE y Previred usen la previsión de este mes aunque la persona cambie después.

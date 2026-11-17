@@ -65,7 +65,10 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
     const feriado = (feriados ?? []).find((f) => String(f.fecha).slice(0, 10) === fecha)
     const dias = jornadaEn(tramosJornada, fecha)
     if (feriado) {
-        return { tipo: "feriado", nombre: feriado.nombre, colacion: colacionHabitual(dias) }
+        // enJornada: si ese día de la semana se trabaja según la jornada (semana corrida: un festivo en un día de
+        // descanso convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
+        const delDia = dias === null ? null : dias.find((d) => Number(d.dia) === diaDeLaSemana(fecha))
+        return { tipo: "feriado", nombre: feriado.nombre, colacion: colacionHabitual(dias), enJornada: dias === null ? null : Boolean(delDia?.trabaja) }
     }
     if (dias === null) {
         return { tipo: "sin_horario" }

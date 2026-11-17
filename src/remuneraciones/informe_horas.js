@@ -4,7 +4,9 @@
 // - El detalle por día sale del libro de asistencia: solo las marcas aprobadas suman; las pendientes se muestran sin sumar.
 // - Los montos salen de la liquidación del periodo (calculada o cerrada): se reparten las líneas «Horas extra 50 %»,
 //   «Horas extra 100 %» y «Descuento por atrasos» entre los días en proporción a sus horas o minutos (método del resto
-//   mayor), así la suma de los días es exactamente lo que se pagó o descontó. Las horas pendientes de meses cerrados
+//   mayor), así la suma de los días es exactamente lo que se pagó o descontó. Cada día pesa sus horas × su valor hora
+//   (con un anexo de sueldo en el mes, el del sueldo vigente ese día); las horas de meses anteriores, con el valor hora
+//   de su mes de origen (detalle_calculo.valoresHora). Liquidaciones sin ese detalle: el peso son solo las horas. Las horas pendientes de meses cerrados
 //   (variables con mes de origen) van en su propia fila y también reciben su parte.
 // - Si las horas del libro ya no cuadran con las de la liquidación (cambió el libro después de calcular), cada día se
 //   valoriza con el valor hora de la liquidación y se avisa que hay que volver a generar el resumen y recalcular.
@@ -66,7 +68,7 @@ function filaDelDia(dia) {
 }
 
 // libro: resultado de calcularLibro. pendientes: [{ recargo, horas, mesOrigen }] (variables aprobadas de meses cerrados).
-// liquidacion: null o { estado, valorHora, lineas: { 50: { cantidad, monto }, 100: {…}, atraso: { cantidad, monto } } }.
+// liquidacion: null o { estado, valorHora, valoresHora?, lineas: { 50: { cantidad, monto }, 100: {…}, atraso: { cantidad, monto } } }.
 function armarInformeHoras({ libro, pendientes = [], liquidacion = null }) {
     const avisos = []
     const filas = libro.dias
@@ -95,24 +97,38 @@ function armarInformeHoras({ libro, pendientes = [], liquidacion = null }) {
     }
 
     const valorHora = Number(liquidacion.valorHora)
+    const valores = liquidacion.valoresHora ?? null
+    // Valor hora de un día (tramos de sueldo del mes) y de unas horas de un mes anterior.
+    const vhDia = (fecha) => {
+        const tramos = valores?.porTramo ?? []
+        let vh = tramos.length > 0 ? tramos[0].valorHora : valorHora
+        for (const t of tramos) {
+            if (Number(fecha.slice(8, 10)) >= t.desdeDia) {
+                vh = t.valorHora
+            }
+        }
+        return Number(vh)
+    }
+    const vhAnterior = (p) => Number(valores?.horasExtra?.find((h) => h.mesOrigen === p.mesOrigen && h.recargo === p.recargo)?.valorHora ?? valorHora)
     let desactualizado = false
 
     for (const recargo of RECARGOS) {
         const linea = liquidacion.lineas?.[recargo] ?? { cantidad: 0, monto: 0 }
         const dias = aprobadas.filter((f) => f.recargo === recargo)
         const deAnteriores = anteriores.filter((p) => p.recargo === recargo)
-        const pesos = [...dias.map((f) => f.minutosExtra / 60), ...deAnteriores.map((p) => p.horas)]
+        const horasItems = [...dias.map((f) => f.minutosExtra / 60), ...deAnteriores.map((p) => p.horas)]
+        const pesos = [...dias.map((f) => f.minutosExtra / 60 * vhDia(f.fecha)), ...deAnteriores.map((p) => p.horas * vhAnterior(p))]
         const factor = 1 + recargo / 100
 
-        if (Math.abs(pesos.reduce((s, p) => s + p, 0) - Number(linea.cantidad ?? 0)) <= TOLERANCIA_HORAS) {
+        if (Math.abs(horasItems.reduce((s, p) => s + p, 0) - Number(linea.cantidad ?? 0)) <= TOLERANCIA_HORAS) {
             const montos = repartir(Number(linea.monto ?? 0), pesos)
             dias.forEach((f, i) => { f.montoExtra = montos[i] })
             deAnteriores.forEach((p, i) => { p.monto = montos[dias.length + i] })
             totales[`monto${recargo}`] = Number(linea.monto ?? 0)
         } else {
             desactualizado = true
-            dias.forEach((f) => { f.montoExtra = Math.round(f.minutosExtra / 60 * valorHora * factor) })
-            deAnteriores.forEach((p) => { p.monto = Math.round(p.horas * valorHora * factor) })
+            dias.forEach((f) => { f.montoExtra = Math.round(f.minutosExtra / 60 * vhDia(f.fecha) * factor) })
+            deAnteriores.forEach((p) => { p.monto = Math.round(p.horas * vhAnterior(p) * factor) })
             totales[`monto${recargo}`] = [...dias.map((f) => f.montoExtra), ...deAnteriores.map((p) => p.monto)].reduce((s, m) => s + m, 0)
         }
     }
@@ -120,12 +136,12 @@ function armarInformeHoras({ libro, pendientes = [], liquidacion = null }) {
     const lineaAtraso = liquidacion.lineas?.atraso ?? { cantidad: 0, monto: 0 }
     const conAtraso = aprobadas.filter((f) => f.minutosDescuento > 0)
     if (totales.minutosAtraso === Number(lineaAtraso.cantidad ?? 0)) {
-        const montos = repartir(Number(lineaAtraso.monto ?? 0), conAtraso.map((f) => f.minutosDescuento))
+        const montos = repartir(Number(lineaAtraso.monto ?? 0), conAtraso.map((f) => f.minutosDescuento * vhDia(f.fecha)))
         conAtraso.forEach((f, i) => { f.montoAtraso = montos[i] })
         totales.montoAtraso = Number(lineaAtraso.monto ?? 0)
     } else {
         desactualizado = true
-        conAtraso.forEach((f) => { f.montoAtraso = Math.round(f.minutosDescuento / 60 * valorHora) })
+        conAtraso.forEach((f) => { f.montoAtraso = Math.round(f.minutosDescuento / 60 * vhDia(f.fecha)) })
         totales.montoAtraso = conAtraso.reduce((s, f) => s + f.montoAtraso, 0)
     }
 

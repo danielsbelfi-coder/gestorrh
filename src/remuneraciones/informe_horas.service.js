@@ -30,6 +30,7 @@ async function informeDelTrabajador(periodo, trabajador) {
         liquidacion: liquidacion === null ? null : {
             estado: liquidacion.estado,
             valorHora: Number(liquidacion.detalle_calculo?.valorHoraOrdinaria ?? 0),
+            valoresHora: liquidacion.detalle_calculo?.valoresHora ?? null,
             lineas: lineasDelInforme(liquidacion.LiquidacionLineas.map((l) => l.toJSON()))
         }
     })

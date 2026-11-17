@@ -1,23 +1,24 @@
 const { DIAS_MES_COMERCIAL } = require("./dias_pago.js")
 const { calcularAhorros, repartirDepositoConvenido } = require("./ahorro_voluntario.js")
 
-function valorHoraOrdinaria(sueldoBase, horasSemanales) {
-    return (sueldoBase / 30 * 28) / (horasSemanales * 4)
-}
+const { valorHoraOrdinaria } = require("./valor_hora.js")
 
-function agruparVariables(variables) {
+// valorHora: el del mes. Una variable de horas extra puede traer su propio valorHora (ver valor_hora.js: el ponderado de
+// los días del libro con anexo de sueldo en el mes, o el del mes de origen de horas pendientes).
+function agruparVariables(variables, valorHora) {
     const grupos = new Map()
 
     for (const variable of variables) {
         const codigo = variable.concepto.codigo
 
         if (!grupos.has(codigo)) {
-            grupos.set(codigo, { concepto: variable.concepto, cantidad: 0, monto: 0 })
+            grupos.set(codigo, { concepto: variable.concepto, cantidad: 0, monto: 0, horasValorizadas: 0 })
         }
 
         const grupo = grupos.get(codigo)
         grupo.cantidad += Number(variable.cantidad ?? 0)
         grupo.monto += Number(variable.monto ?? 0)
+        grupo.horasValorizadas += Number(variable.cantidad ?? 0) * Number(variable.valorHora ?? valorHora)
     }
 
     return [...grupos.values()]
@@ -35,7 +36,7 @@ function sumarSegun(lineas, marca) {
 
 // sueldoPorDias: contrato diario o por hora ({ cantidad, monto } de los días u horas del mes); si no, el sueldo es mensual.
 // semanaCorrida: { monto, dias } (art. 45). valorHoraContrato: valor de la hora ordinaria si no es el del sueldo mensual.
-function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, remuneracionVacaciones, sueldoPorDias, semanaCorrida, valorHoraContrato, conceptos }) {
+function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSueldo, variables, minutosAtraso, valorHoraAtraso, ingresoMinimoMensual, asignacionFamiliar, relacionAnterior, remuneracionVacaciones, sueldoPorDias, semanaCorrida, valorHoraContrato, conceptos }) {
     const valorHora = valorHoraContrato ?? valorHoraOrdinaria(sueldoBase, horasSemanales)
     const lineas = []
 
@@ -49,14 +50,14 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
             monto: Math.round(tramos.reduce((suma, tramo) => suma + tramo.sueldo * tramo.dias, 0) / DIAS_MES_COMERCIAL)
         })
 
-    for (const grupo of agruparVariables(variables)) {
+    for (const grupo of agruparVariables(variables, valorHora)) {
         if (grupo.concepto.recargo_hora_extra !== null) {
             const recargo = Number(grupo.concepto.recargo_hora_extra)
 
             lineas.push({
                 concepto: grupo.concepto,
                 cantidad: grupo.cantidad,
-                monto: Math.round(grupo.cantidad * valorHora * (1 + recargo / 100))
+                monto: Math.round(grupo.horasValorizadas * (1 + recargo / 100))
             })
         } else {
             lineas.push({ concepto: grupo.concepto, cantidad: null, monto: grupo.monto })
@@ -86,7 +87,8 @@ function calcularLineasBase({ sueldoBase, horasSemanales, diasPagados, tramosSue
         lineas.push({
             concepto: conceptos.DESCUENTO_ATRASOS,
             cantidad: minutosAtraso,
-            monto: Math.round(minutosAtraso / 60 * valorHora)
+            // Con anexo de sueldo en el mes: valor hora ponderado de los días del atraso (valorHoraAtraso).
+            monto: Math.round(minutosAtraso / 60 * (valorHoraAtraso ?? valorHora))
         })
     }
 
