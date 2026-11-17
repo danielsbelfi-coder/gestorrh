@@ -13,6 +13,7 @@ const { calcularDiasPago, DIAS_MES_COMERCIAL, rimaDelMes, diasPorTramo } = requi
 const { calcularLiquidacionPorLineas, valorHoraOrdinaria } = require("./calculo_lineas.js")
 const { calcularAportesEmpleador } = require("./aportes_empleador.js")
 const { contratoDelMes } = require("./contrato_del_mes.js")
+const { fechaPagoDelPeriodo } = require("./fecha_pago.service.js")
 const { fechasDeMarcas } = require("../asistencia/marcas_asistencia.js")
 const { sumarDias, edadAl } = require("../shared/fechas.js")
 const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
@@ -777,6 +778,8 @@ async function prepararCalculo(periodo, trabajador) {
             minutosAtraso: resumen.minutos_atraso
         },
         sueldo: { tramos: tramosConDias },
+        // Fecha de pago según la regla de la empresa al calcular (null si no tiene). El PDF y la nómina la muestran.
+        fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
         cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },
         valorHoraOrdinaria: Math.round(resultado.valorHora * 100) / 100,
         gratificacion: { base: resultado.baseGratificacion, tope: resultado.topeGratificacion },

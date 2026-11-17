@@ -3,7 +3,7 @@ const { BANCOS, motivoSinTransferencia } = require("../shared/bancos.js")
 
 const nombreDe = (persona) => [persona.nombres, persona.apellido_paterno, persona.apellido_materno].filter(Boolean).join(" ")
 
-// items: [{ trabajador_id, persona, monto, glosa, motivo? }]. motivo (por ejemplo, «borrador») excluye de inmediato.
+// items: [{ trabajador_id, persona, monto, glosa, motivo?, fecha_pago? }]. motivo (por ejemplo, «borrador») excluye de inmediato.
 function armarNomina(items) {
     const filas = []
     const excluidas = []
@@ -22,7 +22,9 @@ function armarNomina(items) {
             tipo_cuenta: persona.tipo_cuenta,
             numero_cuenta: String(persona.numero_cuenta).trim(),
             email: persona.email ?? "",
-            glosa: item.glosa
+            glosa: item.glosa,
+            // Solo las liquidaciones traen fecha de pago (regla de la empresa); los finiquitos no.
+            ...(item.fecha_pago ? { fecha_pago: item.fecha_pago } : {})
         })
     }
     const orden = (a, b) => a.nombre.localeCompare(b.nombre, "es")

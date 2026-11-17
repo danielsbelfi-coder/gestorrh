@@ -47,6 +47,11 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.STRING(5),
         allowNull: true
     },
+    // Sucursal donde presta servicios (null = casa matriz u otro lugar escrito a mano). El lugar y la comuna se copian de ella.
+    sucursal_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     tipo_jornada: {
         type: DataTypes.ENUM("completa", "parcial", "excluido_limitacion"),
         allowNull: false

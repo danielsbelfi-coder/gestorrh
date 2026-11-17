@@ -3,6 +3,7 @@ const { AsistenciaCorreccion } = require("../asistencia/asistencia_correccion.mo
 const { ContratoTrabajo } = require("../contratos/contrato.model");
 const { ContratoAnexo } = require("../contratos/contrato_anexo.model");
 const { Cargo } = require("../empresas/cargo.model");
+const { Sucursal } = require("../empresas/sucursal.model.js");
 const { Empresa } = require("../empresas/empresa.model");
 const { Persona } = require("../trabajadores/persona.model");
 const { Trabajador } = require("../trabajadores/trabajador.model");
@@ -73,6 +74,11 @@ ContratoTrabajo.belongsTo(Trabajador, {
 Trabajador.hasMany(ContratoTrabajo, {
     foreignKey: "trabajador_id"
 })
+
+Sucursal.belongsTo(Empresa, { foreignKey: "empresa_id" })
+Empresa.hasMany(Sucursal, { foreignKey: "empresa_id" })
+ContratoTrabajo.belongsTo(Sucursal, { foreignKey: "sucursal_id" })
+Sucursal.hasMany(ContratoTrabajo, { foreignKey: "sucursal_id" })
 
 ContratoTrabajo.belongsTo(Cargo, {
     foreignKey: "cargo_id"
@@ -372,6 +378,7 @@ module.exports = {
     Persona,
     Trabajador,
     Cargo,
+    Sucursal,
     ContratoTrabajo,
     ContratoAnexo,
     Usuario,

@@ -1,7 +1,7 @@
 const { QueryTypes } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 const {
-    Empresa, Cargo, Persona, Trabajador, ContratoTrabajo, ContratoAnexo,
+    Empresa, Cargo, Sucursal, Persona, Trabajador, ContratoTrabajo, ContratoAnexo,
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
     ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional, PrevisionPersona, CargaFamiliar, TramoAsignacionPersona, AhorroVoluntario,
@@ -14,6 +14,7 @@ const TRABAJADORES_DE_EMPRESA = "SELECT id FROM trabajadores WHERE empresa_id = 
 const TABLAS = [
     { archivo: "empresa.csv", modelo: Empresa, filtro: "id = :empresaId" },
     { archivo: "cargos.csv", modelo: Cargo, filtro: "empresa_id = :empresaId" },
+    { archivo: "sucursales.csv", modelo: Sucursal, filtro: "empresa_id = :empresaId" },
     { archivo: "jornadas.csv", modelo: Jornada, filtro: "empresa_id = :empresaId" },
     { archivo: "conceptos_propios.csv", modelo: ConceptoRemuneracion, filtro: "empresa_id = :empresaId" },
     { archivo: "personas.csv", modelo: Persona, filtro: "empresa_id = :empresaId" },

@@ -1,3 +1,5 @@
+const { expandirAnexos } = require("../contratos/anexo_sucursal.js")
+
 function ordenarPorVigencia(anexos) {
     return [...anexos].sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia) || a.id - b.id)
 }
@@ -18,7 +20,8 @@ function contratoDelMes({ contrato, anexos, anio, mes }) {
     const mm = String(mes).padStart(2, "0")
     const primerDia = `${anio}-${mm}-01`
     const ultimoDia = `${anio}-${mm}-${new Date(Date.UTC(anio, mes, 0)).getUTCDate()}`
-    const firmados = anexos.filter((anexo) => anexo.estado_firma === "firmado")
+    // El anexo de sucursal se mira como tres anexos (sucursal, lugar y comuna).
+    const firmados = expandirAnexos(anexos.filter((anexo) => anexo.estado_firma === "firmado"))
 
     const delMes = { ...contrato }
     for (const campo of new Set(firmados.map((anexo) => anexo.campo_modificado))) {

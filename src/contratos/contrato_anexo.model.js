@@ -14,12 +14,13 @@ const ContratoAnexo = sequelize.define("ContratoAnexo", {
         type: DataTypes.STRING,
         allowNull: false
     },
+    // TEXT: el anexo de sucursal guarda sucursal, lugar y comuna juntos (ver anexo_sucursal.js).
     valor_anterior: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true
     },
     valor_nuevo: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false
     },
     motivo: {

@@ -1,6 +1,7 @@
 // El contrato firmado es inamovible: sus cambios constan en anexos. La fila del contrato guarda las condiciones
 // vigentes (para el cálculo), así que el documento del contrato se arma con los valores originales, que son el
 // valor anterior del primer anexo firmado de cada campo. Funciones puras.
+const { expandirAnexos } = require("./anexo_sucursal.js")
 
 function ordenFirma(a, b) {
     return String(a.fecha_firma ?? "").localeCompare(String(b.fecha_firma ?? "")) || a.id - b.id
@@ -8,7 +9,8 @@ function ordenFirma(a, b) {
 
 function contratoOriginal(contrato, anexos) {
     const original = { ...contrato }
-    const firmados = anexos.filter((anexo) => anexo.estado_firma === "firmado").sort(ordenFirma)
+    // El anexo de sucursal se mira como tres anexos (sucursal, lugar y comuna).
+    const firmados = expandirAnexos(anexos.filter((anexo) => anexo.estado_firma === "firmado")).sort(ordenFirma)
     const vistos = new Set()
     for (const anexo of firmados) {
         if (!vistos.has(anexo.campo_modificado)) {

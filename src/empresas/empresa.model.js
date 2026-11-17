@@ -34,6 +34,15 @@ const Empresa = sequelize.define("Empresa", {
     type: DataTypes.STRING(5),
     allowNull: true
   },
+  // Fecha de pago de remuneraciones: null = sin regla (no se muestra). Ver remuneraciones/fecha_pago.js.
+  regla_fecha_pago: {
+    type: DataTypes.ENUM("ultimo_dia_habil", "dia_mes_siguiente"),
+    allowNull: true
+  },
+  dia_pago: {
+    type: DataTypes.SMALLINT,
+    allowNull: true
+  },
   tipo_empleador:
   {
     type: DataTypes.ENUM("juridica", "natural"),

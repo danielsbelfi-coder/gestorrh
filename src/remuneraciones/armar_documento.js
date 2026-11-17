@@ -22,7 +22,7 @@ function sumar(filas) {
     return filas.reduce((suma, fila) => suma + fila.monto, 0)
 }
 
-function armarDocumento(liquidacion, cargo) {
+function armarDocumento(liquidacion, cargo, { fechaPago = null } = {}) {
     const periodo = liquidacion.PeriodoRemuneracion
     const empresa = periodo.Empresa
     const persona = liquidacion.Trabajador.Persona
@@ -60,6 +60,7 @@ function armarDocumento(liquidacion, cargo) {
         borrador: liquidacion.estado === "calculada",
         version: liquidacion.version,
         periodo: `${MESES[periodo.mes - 1]} ${periodo.anio}`,
+        fechaPago: fechaPago ? fechaChilena(fechaPago) : null,
         empresa: {
             razonSocial: empresa.razon_social,
             rut: formatearRut(empresa.rut, empresa.dv),

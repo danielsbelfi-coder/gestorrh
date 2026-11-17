@@ -1,4 +1,6 @@
-const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo } = require("../shared/associations.js")
+const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo, Sucursal } = require("../shared/associations.js")
+const { CAMPO_SUCURSAL, valorLugar, leerValorLugar, mismoLugar } = require("./anexo_sucursal.js")
+const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
 const { armarAnexo } = require("./armar_anexo.js")
 const { contratoOriginal } = require("./contrato_original.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
@@ -44,6 +46,29 @@ async function validarConversion(datos, contrato) {
     }
 }
 
+// Anexo de sucursal: valor_nuevo llega como "casa_matriz" o el id de una sucursal activa de la empresa, y se guarda
+// como el JSON con sucursal, lugar y comuna (ver anexo_sucursal.js).
+async function lugarNuevoDelAnexo(valorNuevo, contrato) {
+    const empresaId = contrato.Trabajador.empresa_id
+    let lugar
+    if (valorNuevo === "casa_matriz") {
+        lugar = lugarDeCasaMatriz(await Empresa.findByPk(empresaId))
+        if (lugar.error) {
+            throw new ValidationError(lugar.error)
+        }
+    } else {
+        const sucursal = /^\d+$/.test(String(valorNuevo)) ? await Sucursal.findByPk(valorNuevo) : null
+        if (sucursal === null || sucursal.empresa_id !== empresaId || !sucursal.activo) {
+            throw new NotFoundError("Sucursal no encontrada")
+        }
+        lugar = lugarDeSucursal(sucursal)
+    }
+    if (mismoLugar(contrato, lugar)) {
+        throw new ConflictError("El contrato ya tiene ese lugar de trabajo")
+    }
+    return valorLugar(lugar)
+}
+
 async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     const CAMPOS_MODIFICABLES = [
         "sueldo_base",
@@ -57,7 +82,8 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         "fecha_termino",
         "comuna_prestacion",
         "jornada_id",
-        "tipo_contrato"
+        "tipo_contrato",
+        CAMPO_SUCURSAL
     ]
     const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
         include: [Trabajador]
@@ -100,11 +126,13 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         throw new ConflictError("Un contrato indefinido no tiene fecha de término; el fin de la relación se registra como término en la ficha del trabajador")
     }
 
+    const esSucursal = datos.campo_modificado === CAMPO_SUCURSAL
+    if (esSucursal) {
+        datos.valor_nuevo = await lugarNuevoDelAnexo(datos.valor_nuevo, contrato)
+    }
 
     return await ContratoAnexo.create({
-        ...datos, valor_anterior: contrato[
-            datos.campo_modificado
-        ]
+        ...datos, valor_anterior: esSucursal ? valorLugar(contrato) : contrato[datos.campo_modificado]
     }, {
         fields: [
             "contrato_id",
@@ -147,8 +175,9 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     }
 
     await sequelize.transaction(async (t) => {
+        const esSucursal = anexo.campo_modificado === CAMPO_SUCURSAL
         await anexo.update({
-            valor_anterior: contrato[anexo.campo_modificado],
+            valor_anterior: esSucursal ? valorLugar(contrato) : contrato[anexo.campo_modificado],
             estado_firma: "firmado",
             fecha_firma: new Date(),
             usuario_firmo_id: usuarioId
@@ -160,7 +189,13 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
         // El contrato firmado no se reescribe: queda el original (ver contrato_original.js) y su estado vigente
         // se lleva en esta fila. Al pasar a indefinido, la fecha de término del plazo fijo deja de regir
         // (fechaTerminoVigente), pero se conserva para el documento original.
-        await contrato.update({
+        // El anexo de sucursal cambia tres campos a la vez: sucursal, lugar y comuna de prestación.
+        const lugar = esSucursal ? leerValorLugar(anexo.valor_nuevo) : null
+        await contrato.update(esSucursal ? {
+            sucursal_id: lugar.sucursal_id,
+            lugar_prestacion_servicios: lugar.lugar_prestacion_servicios,
+            comuna_prestacion: lugar.comuna_prestacion
+        } : {
             [anexo.campo_modificado]: anexo.valor_nuevo
         },
             {

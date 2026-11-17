@@ -472,6 +472,8 @@ function descargarCsv(nombreArchivo, columnas, registros) {
 // Nómina bancaria: descarga el CSV (genérico, para cargar o adaptar en el banco) y muestra a quienes quedaron fuera.
 // datos = { filas, excluidas, total } del servidor.
 function descargarNomina(nombreArchivo, datos) {
+    // Las liquidaciones traen la fecha de pago de la regla de la empresa (si está definida); los finiquitos no.
+    const conFecha = datos.filas.some((f) => f.fecha_pago)
     if (datos.filas.length > 0) {
         descargarCsv(nombreArchivo, [
             ["RUT", (f) => f.rut],
@@ -482,11 +484,12 @@ function descargarNomina(nombreArchivo, datos) {
             ["Número de cuenta", (f) => f.numero_cuenta],
             ["Monto", (f) => f.monto],
             ["Correo", (f) => f.email],
-            ["Glosa", (f) => f.glosa]
+            ["Glosa", (f) => f.glosa],
+            ...(conFecha ? [["Fecha de pago", (f) => fechaCorta(f.fecha_pago)]] : [])
         ], datos.filas)
     }
     const resumen = datos.filas.length > 0
-        ? `Nómina descargada: ${datos.filas.length} pago(s) por ${pesos(datos.total)}.`
+        ? `Nómina descargada: ${datos.filas.length} pago(s) por ${pesos(datos.total)}${datos.fecha_pago ? `, con fecha de pago ${fechaCorta(datos.fecha_pago)}` : ""}.`
         : "No hay pagos por transferencia para incluir en la nómina."
     if (datos.excluidas.length === 0) {
         mensaje("info", resumen)
@@ -518,7 +521,9 @@ const CAMPOS_ANEXO = {
     tipo_jornada: { texto: "Tipo de jornada", tipo: "lista", opciones: TEXTOS_CONTRATO.tipoJornada },
     dias_trabajados: { texto: "Días trabajados por semana", tipo: "numero" },
     funciones: { texto: "Funciones", tipo: "texto" },
-    lugar_prestacion_servicios: { texto: "Lugar de prestación de servicios", tipo: "texto" },
+    // Cambia sucursal, lugar y comuna juntos (casa matriz o una sucursal de la empresa). Ver anexo_sucursal.js.
+    sucursal: { texto: "Sucursal o casa matriz", tipo: "sucursal" },
+    lugar_prestacion_servicios: { texto: "Lugar de prestación de servicios (escrito a mano)", tipo: "texto" },
     sistema_remuneracion: { texto: "Sistema de remuneración", tipo: "lista", opciones: TEXTOS_CONTRATO.sistemaRemuneracion },
     periodicidad_pago: { texto: "Periodicidad de pago", tipo: "lista", opciones: TEXTOS_CONTRATO.periodicidadPago },
     fecha_termino: { texto: "Fecha de término", tipo: "fecha" },
@@ -551,6 +556,16 @@ function valorContrato(campo, valor) {
     }
     if (definicion?.tipo === "comuna") {
         return typeof COMUNAS !== "undefined" && COMUNAS[valor] ? `${COMUNAS[valor]} (${valor})` : String(valor)
+    }
+    if (definicion?.tipo === "sucursal") {
+        // valor_anterior y valor_nuevo son un JSON con sucursal, lugar y comuna.
+        try {
+            const lugar = JSON.parse(valor)
+            const comuna = typeof COMUNAS !== "undefined" && COMUNAS[lugar.comuna_prestacion] ? COMUNAS[lugar.comuna_prestacion] : lugar.comuna_prestacion
+            return `${lugar.lugar_prestacion_servicios ?? "—"}${comuna ? ` (${comuna})` : ""}`
+        } catch {
+            return String(valor)
+        }
     }
     return String(valor)
 }

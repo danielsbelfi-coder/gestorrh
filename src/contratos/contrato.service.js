@@ -1,5 +1,5 @@
 const {
-    ContratoTrabajo, ContratoAnexo, Trabajador, Cargo, Empresa, Persona, Afp, Isapre, SituacionPrevisional, Jornada,
+    ContratoTrabajo, ContratoAnexo, Trabajador, Cargo, Empresa, Persona, Sucursal, Afp, Isapre, SituacionPrevisional, Jornada,
     Asistencia, LicenciaMedica, ResumenAsistencia, VariablePeriodo, Liquidacion, Finiquito
 } = require("../shared/associations.js")
 const { sequelize } = require("../shared/database.js")
@@ -13,13 +13,38 @@ const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { exigirSinCruce } = require("../trabajadores/relaciones.js")
+const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
 
 // Los contratos por hora son honorarios, que el sistema todavía no contempla: no se crean nuevos (los que existan se
 // siguen liquidando). Ver «Sistema por hora» en el SPEC.
 const MENSAJE_POR_HORA = "El sistema de remuneración por hora corresponde a honorarios, que el sistema todavía no contempla"
 
 
-async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null) {
+// Lugar de prestación: en la casa matriz (en_casa_matriz: true), en una sucursal (sucursal_id) o escrito a mano.
+// Con casa matriz o sucursal, el lugar y la comuna se copian de ellas (lo escrito a mano se ignora).
+// Una sucursal desactivada se puede mantener en el contrato que ya la tenía, pero no asignarse de nuevo.
+async function resolverLugar(datos, empresaId, sucursalYaAsignada) {
+    if (datos.en_casa_matriz === true) {
+        const lugar = lugarDeCasaMatriz(await Empresa.findByPk(empresaId))
+        if (lugar.error) {
+            throw new ValidationError(lugar.error)
+        }
+        Object.assign(datos, lugar)
+    } else if (datos.sucursal_id !== undefined && datos.sucursal_id !== null && datos.sucursal_id !== "") {
+        const sucursal = /^\d+$/.test(String(datos.sucursal_id)) ? await Sucursal.findByPk(datos.sucursal_id) : null
+        if (sucursal === null || sucursal.empresa_id !== empresaId || (!sucursal.activo && sucursal.id !== sucursalYaAsignada)) {
+            throw new NotFoundError("Sucursal no encontrada")
+        }
+        Object.assign(datos, lugarDeSucursal(sucursal))
+    } else if (datos.sucursal_id === "") {
+        datos.sucursal_id = null
+    }
+    delete datos.en_casa_matriz
+}
+
+async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null, sucursalYaAsignada = null) {
+    await resolverLugar(datos, empresaId, sucursalYaAsignada)
+
     // Las funciones son opcionales: un texto en blanco se guarda como vacío (null).
     if (typeof datos.funciones === "string") {
         datos.funciones = datos.funciones.trim() === "" ? null : datos.funciones.trim()
@@ -94,7 +119,8 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
         "sistema_remuneracion",
         "sueldo_base",
         "periodicidad_pago",
-        "comuna_prestacion"
+        "comuna_prestacion",
+        "sucursal_id"
     ]
 
     if (trabajador.estado !== "postulante") {
@@ -233,7 +259,7 @@ async function corregirContrato(id, datos, empresasPermitidas, usuarioId) {
     if (datos.tipo_jornada === "excluido_limitacion" && datos.jornada_id === undefined) {
         finales.jornada_id = null
     }
-    await validarDatosContrato(finales, contrato.Trabajador.empresa_id, contrato.jornada_id)
+    await validarDatosContrato(finales, contrato.Trabajador.empresa_id, contrato.jornada_id, contrato.sucursal_id)
 
     if (finales.fecha_termino && finales.fecha_termino < finales.fecha_inicio) {
         throw new ValidationError("La fecha de término no puede ser anterior a la de inicio")
@@ -255,7 +281,8 @@ async function corregirContrato(id, datos, empresasPermitidas, usuarioId) {
         "sistema_remuneracion",
         "sueldo_base",
         "periodicidad_pago",
-        "comuna_prestacion"
+        "comuna_prestacion",
+        "sucursal_id"
     ]
 
     const cambios = {}

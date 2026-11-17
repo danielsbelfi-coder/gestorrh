@@ -2,8 +2,10 @@ const requiereAdminCuenta = require("../shared/middlewares/requiere-admin-cuenta
 const { crear, listar, obtenerPorId, actualizar, desactivar, reactivar } = require("./empresa.controller")
 const express = require("express")
 const router = express.Router()
+const sucursalRoutes = require("./sucursal.routes.js")
 
 
+router.use("/:empresaId/sucursales", sucursalRoutes)
 router.get("/", listar)
 router.post("/", requiereAdminCuenta, crear)
 router.get("/:id", obtenerPorId)

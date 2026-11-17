@@ -4,6 +4,7 @@ const { formatearRut } = require("../shared/rut.js")
 const { fechaEnTexto, fechaISO } = require("../shared/fechas.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
 const { textoDistribucion } = require("./jornada_legal.js")
+const { leerValorLugar } = require("./anexo_sucursal.js")
 
 const TIPOS = { indefinido: "indefinido", plazo_fijo: "a plazo fijo", obra_faena: "por obra o faena" }
 const JORNADAS = { completa: "completa", parcial: "parcial", excluido_limitacion: "excluida de la limitación de jornada (art. 22 inciso segundo del Código del Trabajo)" }
@@ -40,6 +41,11 @@ function textoModificacion(anexo, jornadaNueva) {
             return `Las partes acuerdan que, ${desde}, el TRABAJADOR prestará sus servicios en ${nuevo}.`
         case "comuna_prestacion":
             return `Las partes acuerdan que, ${desde}, el TRABAJADOR prestará sus servicios en la comuna de ${nombreComuna(nuevo)}.`
+        case "sucursal": {
+            const lugar = leerValorLugar(nuevo) ?? {}
+            const comuna = nombreComuna(lugar.comuna_prestacion)
+            return `Las partes acuerdan que, ${desde}, el TRABAJADOR prestará sus servicios en ${lugar.lugar_prestacion_servicios ?? ""}${comuna ? `, comuna de ${comuna}` : ""}.`
+        }
         case "sistema_remuneracion":
             return `Las partes acuerdan que, ${desde}, el sistema de remuneración será ${SISTEMAS[nuevo] ?? nuevo}.`
         case "periodicidad_pago":

@@ -75,6 +75,7 @@ async function cargarContratos() {
         Object.entries(COMUNAS).map(([codigo, nombre]) => ({ id: codigo, texto: `${nombre} (${codigo})` })))
 
     await cargarJornadas()
+    await cargarLugares()
 
     cargosDeLaEmpresa = deEmpresaActual(cargos)
     llenarSelect(document.getElementById("cargoId"),
@@ -136,6 +137,70 @@ function aplicarJornada() {
 document.getElementById("jornadaId").addEventListener("change", aplicarJornada)
 document.getElementById("tipoJornada").addEventListener("change", aplicarJornada)
 
+// ---------- Lugar de trabajo: casa matriz, una sucursal u otro lugar escrito a mano ----------
+// Con casa matriz o sucursal, el lugar y la comuna se llenan solos (el servidor los copia de ellas).
+let empresaDeTrabajo = null
+let sucursales = []
+
+const textoComuna = (codigo) => (codigo && COMUNAS[codigo] ? `${COMUNAS[codigo]} (${codigo})` : "")
+const lugarCasaMatriz = () => `Casa matriz, ${empresaDeTrabajo?.direccion ?? ""}`
+
+async function cargarLugares() {
+    const [empresa, lista] = await Promise.all([
+        llamarApi(`/api/empresas/${empresaActual()}`),
+        llamarApi(`/api/empresas/${empresaActual()}/sucursales`)
+    ])
+    empresaDeTrabajo = empresa.status === 200 ? empresa.datos : null
+    sucursales = lista.status === 200 ? lista.datos : []
+    llenarLugares()
+}
+
+function llenarLugares(sucursalActual = null) {
+    const opciones = []
+    if (empresaDeTrabajo?.comuna) {
+        opciones.push({ id: "matriz", texto: `Casa matriz · ${empresaDeTrabajo.direccion} (${COMUNAS[empresaDeTrabajo.comuna] ?? empresaDeTrabajo.comuna})` })
+    }
+    for (const s of sucursales.filter((x) => x.activo || x.id === sucursalActual)) {
+        opciones.push({ id: String(s.id), texto: `${s.nombre} · ${s.direccion} (${COMUNAS[s.comuna] ?? s.comuna})${s.activo ? "" : " · inactiva"}` })
+    }
+    opciones.push({ id: "otro", texto: "Otro lugar (escribir)" })
+    llenarSelect(document.getElementById("lugarTrabajo"), opciones)
+    aplicarLugar()
+}
+
+function aplicarLugar() {
+    const eleccion = document.getElementById("lugarTrabajo").value
+    const lugar = document.getElementById("lugarPrestacionServicios")
+    const comuna = document.getElementById("comuna")
+    const fijo = eleccion !== "otro"
+    lugar.readOnly = fijo
+    comuna.readOnly = fijo
+    if (eleccion === "matriz") {
+        lugar.value = lugarCasaMatriz()
+        comuna.value = textoComuna(empresaDeTrabajo.comuna)
+    } else if (fijo) {
+        const s = sucursales.find((x) => String(x.id) === eleccion)
+        lugar.value = s ? `${s.nombre}, ${s.direccion}` : ""
+        comuna.value = textoComuna(s?.comuna)
+    }
+}
+
+document.getElementById("lugarTrabajo").addEventListener("change", function () {
+    // Al pasar a «Otro lugar» se deja escrito lo que había, para editarlo.
+    aplicarLugar()
+})
+
+function datosDelLugar() {
+    const eleccion = document.getElementById("lugarTrabajo").value
+    if (eleccion === "matriz") {
+        return { en_casa_matriz: true, sucursal_id: null }
+    }
+    if (eleccion !== "otro") {
+        return { sucursal_id: Number(eleccion) }
+    }
+    return { sucursal_id: null }
+}
+
 const formulario = document.getElementById("formCrearContratos")
 
 formulario.addEventListener("submit", async function (evento) {
@@ -169,7 +234,8 @@ formulario.addEventListener("submit", async function (evento) {
         dias_trabajados: document.getElementById("diasTrabajados").value,
         sistema_remuneracion: document.getElementById("sistemaRemuneracion").value,
         sueldo_base: document.getElementById("sueldoBase").value,
-        periodicidad_pago: document.getElementById("periodicidadPago").value
+        periodicidad_pago: document.getElementById("periodicidadPago").value,
+        ...datosDelLugar()
     }
 
     if (contratoEnCorreccion) {
@@ -230,6 +296,17 @@ function abrirCorreccion(id) {
         aplicarJornada()
     })
 
+    // Lugar: su sucursal (aunque esté inactiva), la casa matriz si el texto coincide, o lo escrito a mano.
+    llenarLugares(c.sucursal_id)
+    const selectorLugar = document.getElementById("lugarTrabajo")
+    selectorLugar.value = c.sucursal_id ? String(c.sucursal_id)
+        : (empresaDeTrabajo?.comuna && c.lugar_prestacion_servicios === lugarCasaMatriz() && c.comuna_prestacion === empresaDeTrabajo.comuna ? "matriz" : "otro")
+    if (selectorLugar.value === "otro") {
+        document.getElementById("lugarPrestacionServicios").value = c.lugar_prestacion_servicios ?? ""
+        document.getElementById("comuna").value = textoComuna(c.comuna_prestacion)
+    }
+    aplicarLugar()
+
     document.getElementById("tituloPanel").textContent = `Corregir contrato #${c.id} (firma pendiente)`
     document.getElementById("botonGuardar").textContent = "Guardar corrección"
     document.getElementById("cancelarCorreccion").hidden = false
@@ -246,6 +323,7 @@ function salirDeCorreccion() {
     document.getElementById("botonGuardar").textContent = "Crear contrato"
     document.getElementById("cancelarCorreccion").hidden = true
     cargarJornadas()
+    llenarLugares()
 }
 
 document.getElementById("cancelarCorreccion").addEventListener("click", () => {

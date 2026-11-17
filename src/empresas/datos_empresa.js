@@ -2,6 +2,7 @@
 
 const { limpiarRut, rutEsValido, formatearRut } = require("../shared/rut.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
+const { validarReglaPago } = require("../remuneraciones/fecha_pago.js")
 
 // Cajas de compensación vigentes. Sus códigos en Previred y el LRE están en remuneraciones/ccaf.js.
 const CCAF = {
@@ -18,7 +19,8 @@ const CAMPOS_EMPRESA = [
     "tipo_empleador", "razon_social", "nombre_fantasia", "nombres", "apellido_paterno", "apellido_materno",
     "giro", "codigo_actividad", "direccion", "comuna", "telefono", "email",
     "representante_legal_nombre", "representante_legal_rut", "representante_legal_email",
-    "mutualidad_id", "tasa_adicional_mutual", "ccaf", "ccaf_agencia", "ccaf_numero_socio", "es_agricola"
+    "mutualidad_id", "tasa_adicional_mutual", "ccaf", "ccaf_agencia", "ccaf_numero_socio", "es_agricola",
+    "regla_fecha_pago", "dia_pago"
 ]
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -38,6 +40,14 @@ function validarDatosEmpresa(entrada) {
         if (campo in datos) {
             datos[campo] = vacio(datos[campo]) ? null : String(datos[campo]).trim()
         }
+    }
+
+    // Fecha de pago de remuneraciones: la regla y el día van juntos (ver remuneraciones/fecha_pago.js).
+    if ("regla_fecha_pago" in datos || "dia_pago" in datos) {
+        const regla = validarReglaPago(datos)
+        datos.regla_fecha_pago = regla.datos.regla_fecha_pago
+        datos.dia_pago = regla.datos.dia_pago
+        errores.push(...regla.errores)
     }
 
     if ("tipo_empleador" in datos && !TIPOS_EMPLEADOR.includes(datos.tipo_empleador)) {

@@ -44,9 +44,9 @@
                 <p class="texto-suave nota-ficha">Si el empleador es persona natural y dejas la razón social vacía, se usa su nombre completo. El código de actividad económica está en la carpeta tributaria de la empresa en el SII. «Empresa agrícola»: en la DJ 1887 sus trabajadores se informan con los códigos A/B en vez de C/P.</p>
             </section>
             <section class="tarjeta">
-                <h2>Domicilio y contacto</h2>
+                <h2>Casa matriz y contacto</h2>
                 <div class="campos">
-                    <label class="campo-ancho">Dirección *<input type="text" id="direccion" required></label>
+                    <label class="campo-ancho">Dirección de la casa matriz *<input type="text" id="direccion" required></label>
                     <label class="campo-ancho">Comuna<input type="search" id="comuna" placeholder="Escribe la comuna…"></label>
                     <label>Teléfono<input type="tel" id="telefono"></label>
                     <label class="campo-ancho">Correo de la empresa<input type="email" id="email"></label>
@@ -79,11 +79,40 @@
                 </div>
                 <p class="texto-suave nota-ficha">Por ahora la caja solo se registra. Su efecto en el cálculo (la parte del 7% de salud de los trabajadores en Fonasa que va a la caja) y en Previred se incorpora en un paso siguiente.</p>
             </section>
+            <section class="tarjeta">
+                <h2>Pago de remuneraciones</h2>
+                <div class="campos">
+                    <label class="campo-ancho">Fecha de pago
+                        <select id="regla_fecha_pago">
+                            <option value="">Sin definir</option>
+                            <option value="ultimo_dia_habil">Último día hábil del mes</option>
+                            <option value="dia_mes_siguiente">Día fijo del mes siguiente</option>
+                        </select>
+                    </label>
+                    <label id="campoDiaPago" hidden>Día del mes siguiente<input type="number" id="dia_pago" min="1" max="31" step="1"></label>
+                </div>
+                <p class="texto-suave nota-ficha">Si la fecha cae en sábado, domingo o feriado (los nacionales y los de la comuna de la casa matriz), se adelanta al día hábil anterior. Un día 31 en un mes de 30 días se toma como el último día del mes. La fecha aparece en la liquidación y en la nómina bancaria; cada liquidación guarda la fecha con que se calculó.</p>
+            </section>
             <div class="barra-guardar">
                 <button type="submit">Guardar cambios</button>
                 <a class="boton secundario" href="empresas.html">Cancelar</a>
             </div>
         </form>
+
+        <section class="tarjeta" id="panelSucursales" hidden>
+            <h2>Sucursales</h2>
+            <p class="texto-suave">Al hacer un contrato se elige la casa matriz o una sucursal, y el lugar y la comuna de prestación se llenan solos (la comuna llega al LRE). Si corriges la dirección de una sucursal, los contratos ya hechos conservan la anterior: para cambiarla en un contrato firmado, haz un anexo de sucursal.</p>
+            <div id="tablaSucursales"></div>
+            <form id="formSucursal" class="campos">
+                <label>Nombre<input type="text" id="sucursalNombre" maxlength="100" placeholder="Sucursal Centro" required></label>
+                <label class="campo-ancho">Dirección<input type="text" id="sucursalDireccion" maxlength="150" required></label>
+                <label class="campo-ancho">Comuna<input type="search" id="sucursalComuna" placeholder="Escribe la comuna…" required></label>
+                <div class="acciones-grupo campo-ancho">
+                    <button type="submit" id="botonSucursal">Agregar sucursal</button>
+                    <button type="button" class="secundario" id="cancelarSucursal" hidden>Cancelar</button>
+                </div>
+            </form>
+        </section>
     </main>
 
     <script src="js/api.js"></script>

@@ -1,7 +1,8 @@
 // Nómina bancaria de liquidaciones (por periodo) y de finiquitos (masiva por mes o individual).
 // Ver «Nómina bancaria» en el SPEC. Devuelve { filas, excluidas, total }; la pantalla arma el CSV.
 const { Op } = require("sequelize")
-const { Liquidacion, Finiquito, Trabajador, Persona } = require("../shared/associations.js")
+const { Liquidacion, Finiquito, Trabajador, Persona, Empresa } = require("../shared/associations.js")
+const { fechaPagoDelPeriodo } = require("./fecha_pago.service.js")
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ValidationError } = require("../shared/errors.js")
@@ -17,9 +18,14 @@ async function nominaLiquidaciones(periodoId, empresasPermitidas, usuarioId) {
 
     const liquidaciones = await Liquidacion.findAll({ where: { periodo_id: periodo.id, vigente: true }, include: [CON_PERSONA] })
     const glosa = `Remuneración ${MESES[periodo.mes - 1]} ${periodo.anio}`
+    // Fecha de pago: la guardada en cada liquidación al calcular; si no la tiene, la de la regla actual de la empresa.
+    const fechaPeriodo = await fechaPagoDelPeriodo(await Empresa.findByPk(periodo.empresa_id), periodo.anio, periodo.mes)
+    const guardadas = liquidaciones.map((l) => l.detalle_calculo?.fechaPago).filter(Boolean)
     return {
         periodo: { anio: periodo.anio, mes: periodo.mes },
+        fecha_pago: guardadas[0] ?? fechaPeriodo,
         ...armarNomina(liquidaciones.map((l) => ({
+            fecha_pago: l.detalle_calculo?.fechaPago ?? fechaPeriodo,
             trabajador_id: l.trabajador_id,
             persona: l.Trabajador.Persona,
             monto: l.liquido_a_pagar,

@@ -6,6 +6,8 @@ let trabajador = null
 let persona = null
 let cargoPorId = new Map()
 let jornadaPorId = new Map()
+let sucursalesEmpresa = []
+let empresaDelTrabajador = null
 let contratos = []
 let contratoParaAnexo = null
 let primeraEmpresa = true
@@ -31,6 +33,12 @@ async function cargarFicha() {
     const jornadas = await llamarApi(`/api/jornadas?empresa_id=${trabajador.empresa_id}`)
     jornadaPorId = jornadas.status === 200 ? porId(jornadas.datos) : new Map()
     jornadasConocidas = jornadaPorId
+    const [sucursales, empresa] = await Promise.all([
+        llamarApi(`/api/empresas/${trabajador.empresa_id}/sucursales`),
+        llamarApi(`/api/empresas/${trabajador.empresa_id}`)
+    ])
+    sucursalesEmpresa = sucursales.status === 200 ? sucursales.datos : []
+    empresaDelTrabajador = empresa.status === 200 ? empresa.datos : null
     contratos = listas[2]
         .filter((c) => c.trabajador_id === trabajador.id)
         .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))
@@ -225,6 +233,19 @@ function prepararCampoValor() {
         control = opciones.length > 0
             ? `<select id="valorAnexo" required>${opciones.map((j) => `<option value="${j.id}">${escaparHtml(`${j.nombre} · ${textoDistribucion(j.dias)}`)}</option>`).join("")}</select>`
             : `<select id="valorAnexo" required disabled><option value="">No hay otra jornada de ${Number(actual?.horas_semanales ?? 0)} h en ${actual?.dias_trabajados ?? "?"} días</option></select>`
+    } else if (definicion.tipo === "sucursal") {
+        // Casa matriz (si tiene comuna) y sucursales activas, menos el lugar que ya tiene el contrato.
+        const actual = contratoParaAnexo
+        const opciones = []
+        if (empresaDelTrabajador?.comuna) {
+            opciones.push([`casa_matriz`, `Casa matriz · ${empresaDelTrabajador.direccion}`])
+        }
+        for (const s of sucursalesEmpresa.filter((x) => x.activo && x.id !== actual?.sucursal_id)) {
+            opciones.push([String(s.id), `${s.nombre} · ${s.direccion} (${COMUNAS[s.comuna] ?? s.comuna})`])
+        }
+        control = opciones.length > 0
+            ? `<select id="valorAnexo" required>${opciones.map(([v, t]) => `<option value="${escaparHtml(v)}">${escaparHtml(t)}</option>`).join("")}</select>`
+            : `<select id="valorAnexo" required disabled><option value="">La empresa no tiene sucursales activas ni comuna de casa matriz</option></select>`
     } else if (definicion.tipo === "lista") {
         control = `<select id="valorAnexo" required>${Object.entries(definicion.opciones).filter(([v]) => !(document.getElementById("campoAnexo").value === "sistema_remuneracion" && v === "hora")).map(([v, t]) => `<option value="${escaparHtml(v)}">${escaparHtml(t)}</option>`).join("")}</select>`
     } else if (definicion.tipo === "numero") {

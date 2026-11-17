@@ -3,6 +3,7 @@ const { Liquidacion, LiquidacionLinea, PeriodoRemuneracion, Empresa, Trabajador,
 const { obtenerPeriodoPorId } = require("./periodo_remuneracion.service.js")
 const { NotFoundError } = require("../shared/errors.js")
 const { armarDocumento } = require("./armar_documento.js")
+const { fechaPagoDelPeriodo } = require("./fecha_pago.service.js")
 const { aplicarPrevisionGuardada } = require("./prevision_liquidacion.js")
 
 
@@ -22,9 +23,14 @@ async function obtenerLiquidacionCompleta(liquidacionId) {
     return { liquidacion, cargo }
 }
 
+// La fecha de pago es la guardada al calcular; las liquidaciones de antes de existir la regla usan la regla actual.
 async function prepararDocumento(liquidacionId) {
     const { liquidacion, cargo } = await obtenerLiquidacionCompleta(liquidacionId)
-    return armarDocumento(liquidacion.toJSON(), cargo)
+    const periodo = liquidacion.PeriodoRemuneracion
+    const fechaPago = liquidacion.detalle_calculo?.fechaPago !== undefined
+        ? liquidacion.detalle_calculo.fechaPago
+        : await fechaPagoDelPeriodo(periodo.Empresa, periodo.anio, periodo.mes)
+    return armarDocumento(liquidacion.toJSON(), cargo, { fechaPago })
 }
 
 async function documentoLiquidacion(periodo_id, liquidacion_id, empresasPermitidas) {

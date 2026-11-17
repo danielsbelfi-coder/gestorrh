@@ -19,3 +19,12 @@ test("armarNomina: filas con datos completos y excluidas con motivo", () => {
         ["Beto Soto", "Forma de pago: efectivo"], ["Carla Soto", "Faltan datos bancarios: banco"], ["Dani Soto", "Monto en $0"], ["Eva Soto", "Liquidación en borrador"]
     ])
 })
+
+test("las liquidaciones llevan su fecha de pago a la nómina; los finiquitos no", () => {
+    const conFecha = armarNomina([{ trabajador_id: 1, persona: persona(), monto: 500000, glosa: "Remuneración", fecha_pago: "2026-11-30" }])
+    const sinFecha = armarNomina([{ trabajador_id: 1, persona: persona(), monto: 500000, glosa: "Finiquito" }])
+    assert.strictEqual(conFecha.filas.length, 1)
+    assert.strictEqual(conFecha.filas[0].fecha_pago, "2026-11-30")
+    assert.strictEqual(sinFecha.filas.length, 1)
+    assert.strictEqual("fecha_pago" in sinFecha.filas[0], false)
+})
