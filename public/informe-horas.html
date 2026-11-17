@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Horas extra y atrasos</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Horas extra y atrasos">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Horas extra y atrasos</h1>
+                <p>Detalle por día de las horas extra (al 50 % y al 100 %) y de los descuentos por atraso de cada trabajador en el mes, con los montos de su liquidación.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <section class="tarjeta barra-acciones">
+            <p class="texto-suave sin-margen">Solo suman las marcas aprobadas del libro de asistencia. Los montos son los de la liquidación del periodo, repartidos entre los días según sus horas o minutos; sin liquidación calculada se ven solo horas y minutos. Las horas pendientes de meses cerrados que se pagan este mes aparecen aparte.</p>
+            <div class="acciones-grupo">
+                <label>Trabajador<select id="trabajador"></select></label>
+                <button type="button" id="btnExcel">Descargar Excel</button>
+            </div>
+        </section>
+
+        <div id="tablaResumen"></div>
+        <div id="detalles"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/informe-horas.js"></script>
+</body>
+
+</html>

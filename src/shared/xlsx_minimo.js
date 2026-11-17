@@ -1,7 +1,7 @@
 // Generador mínimo de archivos .xlsx (sin dependencias nuevas: un .xlsx es un zip con XML; el zip lo arma archiver).
 // Hojas con texto, encabezado en negrita, primera fila fija, anchos de columna y listas desplegables (validación de datos).
 //
-// hojas: [{ nombre, filas: [[texto…]…], anchos?: [número…], validaciones?: [{ rango: "H2:H501", formula: "'Hoja'!$A$2:$A$9" }] }]
+// hojas: [{ nombre, filas: [[texto o número…]…], anchos?: [número…], validaciones?: [{ rango: "H2:H501", formula: "'Hoja'!$A$2:$A$9" }] }]
 // La primera fila de cada hoja es el encabezado.
 
 const { ZipArchive } = require("archiver")
@@ -35,6 +35,10 @@ function xmlDeHoja({ filas, anchos = [], validaciones = [] }) {
         const celdas = fila.map((valor, j) => {
             const referencia = `${letraDeColumna(j)}${i + 1}`
             const estilo = i === 0 ? ' s="1"' : ""
+            // Los números van como celdas numéricas (Excel puede sumarlos); el resto, como texto.
+            if (typeof valor === "number" && Number.isFinite(valor)) {
+                return `<c r="${referencia}"${estilo}><v>${valor}</v></c>`
+            }
             return `<c r="${referencia}" t="inlineStr"${estilo}><is><t xml:space="preserve">${escaparXml(valor ?? "")}</t></is></c>`
         }).join("")
         return `<row r="${i + 1}">${celdas}</row>`
@@ -115,5 +119,6 @@ async function crearXlsx(hojas) {
 
 module.exports = {
     crearXlsx,
+    xmlDeHoja,
     letraDeColumna
 }
