@@ -43,7 +43,9 @@ function botones(v) {
         return ""
     }
     if (v.estado === "aprobada") {
-        return `<button type="button" class="chico secundario" data-accion="devolver" data-id="${v.id}">Devolver</button>`
+        // Una variable aprobada se puede desaprobar (vuelve a pendiente para editarla) o eliminar (ADMIN o JEFE_RRHH).
+        return `<button type="button" class="chico secundario" data-accion="devolver" data-id="${v.id}">Desaprobar</button>
+            <button type="button" class="chico peligro" data-accion="eliminar" data-id="${v.id}">Eliminar</button>`
     }
     return `<button type="button" class="chico secundario" data-accion="editar" data-id="${v.id}">Editar</button>
         <button type="button" class="chico secundario" data-accion="eliminar" data-id="${v.id}">Eliminar</button>
@@ -172,14 +174,17 @@ document.getElementById("tablaVariables").addEventListener("click", async functi
         return
     }
 
-    if (boton.dataset.accion === "eliminar" && !confirm("¿Eliminar esta variable?")) {
+    const aprobadaAEliminar = boton.dataset.accion === "eliminar" && variable.estado === "aprobada"
+    if (boton.dataset.accion === "eliminar" && !confirm(aprobadaAEliminar
+        ? "Esta variable está APROBADA. ¿Eliminarla? Si la liquidación del trabajador ya está calculada, recalcúlala después."
+        : "¿Eliminar esta variable?")) {
         return
     }
 
     const acciones = {
         eliminar: [`/api/variables/${variable.id}`, "DELETE", "Variable eliminada."],
         aprobar: [`/api/variables/${variable.id}/aprobar`, "PATCH", "Variable aprobada."],
-        devolver: [`/api/variables/${variable.id}/devolver`, "PATCH", "Variable devuelta a pendiente."]
+        devolver: [`/api/variables/${variable.id}/devolver`, "PATCH", "Variable desaprobada: quedó pendiente. Si la liquidación ya está calculada, recalcúlala después de aprobar."]
     }
     const [ruta, metodo, texto] = acciones[boton.dataset.accion]
     const resultado = await llamarApi(ruta, { method: metodo })

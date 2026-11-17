@@ -59,4 +59,33 @@ function horasPorRecargo(totales) {
     }
 }
 
-module.exports = { RECARGOS, esHoraExtra, leerMesOrigen, problemasOrigenHorasExtra, horasPorRecargo, claveMes }
+const textoHoras = (horas) => `${String(horas).replace(".", ",")} h`
+
+// Avisos cuando el libro de asistencia (marcas aprobadas) ya no coincide con lo que se va a liquidar: las horas extra
+// aprobadas desde la asistencia o el resumen aprobado. Pasa si se cambió una marca después de aprobar (caso de la prueba
+// 2: 1 hora extra aprobada, luego la marca se cambió a 2 horas). Ver «Libro y variables desincronizados» en el SPEC.
+// horasLibro: { 50, 100 } (horasPorRecargo). aprobadas: variables aprobadas ({ concepto, cantidad, fuente }).
+// resumen: resumen aprobado o null. totales: totales del libro.
+function avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales }) {
+    const avisos = []
+    const delLibro = aprobadas.filter((v) => v.fuente === "asistencia" && esHoraExtra(v.concepto))
+    for (const recargo of RECARGOS) {
+        const aprobado = Math.round(delLibro.filter((v) => Number(v.concepto.recargo_hora_extra) === recargo)
+            .reduce((s, v) => s + Number(v.cantidad ?? 0), 0) * 100) / 100
+        if (aprobado !== horasLibro[recargo]) {
+            avisos.push(`Horas extra al ${recargo} %: el libro de asistencia tiene ${textoHoras(horasLibro[recargo])} y lo aprobado es ${textoHoras(aprobado)}. ` +
+                "En Resumen de asistencia, «Generar desde la asistencia» reemplaza la propuesta; apruébala y vuelve a calcular")
+        }
+    }
+    if (resumen && resumen.fuente === "asistencia") {
+        const campos = [["minutos_atraso", "minutos de atraso"], ["dias_inasistencia", "días de inasistencia"], ["dias_permiso_sin_goce", "días de permiso sin goce"], ["dias_vacaciones", "días de vacaciones"]]
+        const distintos = campos.filter(([campo]) => Number(resumen[campo] ?? 0) !== Number(totales[campo] ?? 0))
+        if (distintos.length > 0) {
+            avisos.push(`El resumen de asistencia aprobado no coincide con el libro (${distintos.map(([campo, nombre]) => `${nombre}: ${Number(resumen[campo] ?? 0)} aprobados, ${Number(totales[campo] ?? 0)} en el libro`).join("; ")}). ` +
+                "Si el libro es el correcto: Desaprobar el resumen, «Generar desde la asistencia», aprobar y volver a calcular")
+        }
+    }
+    return avisos
+}
+
+module.exports = { RECARGOS, esHoraExtra, leerMesOrigen, problemasOrigenHorasExtra, horasPorRecargo, claveMes, avisosLibroDesincronizado }

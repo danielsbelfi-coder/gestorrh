@@ -98,6 +98,7 @@ async function obtenerVariablesDelMes(periodoId, trabajadorId) {
     const aprobadas = variables
         .filter((variable) => variable.estado === "aprobada")
         .map((variable) => ({
+            id: variable.id,
             concepto: variable.ConceptoRemuneracion,
             cantidad: variable.cantidad,
             monto: variable.monto,
@@ -790,7 +791,18 @@ async function prepararCalculo(periodo, trabajador) {
             tasa: Number(tasaCcaf.valor)
         })
     }
-    const avisos = [...porDias.avisos, ...(resultado.nuevoSaldoPendiente > 0
+    // Libro de asistencia contra lo aprobado: si se cambió una marca después de aprobar, se avisa (no se bloquea: una
+    // propuesta del libro se puede editar a propósito antes de aprobarla). Ver avisosLibroDesincronizado.
+    const avisosLibro = await (async () => {
+        const { libroDelTrabajador } = require("../asistencia/libro_asistencia.service.js")
+        const { avisosLibroDesincronizado, horasPorRecargo } = require("./horas_extra.js")
+        const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
+        if (libro.contrato === null) {
+            return []
+        }
+        return avisosLibroDesincronizado({ horasLibro: horasPorRecargo(libro.totales), aprobadas, resumen, totales: libro.totales })
+    })()
+    const avisos = [...porDias.avisos, ...avisosLibro, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : [])]
     // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
@@ -863,7 +875,10 @@ async function prepararCalculo(periodo, trabajador) {
         vacacionesArt71: remuneracionVacaciones,
         sueldoPorDias: porDias.sueldoPorDias,
         semanaCorrida: porDias.semanaCorrida,
-        huellaAsistencia: porDias.sueldoPorDias || porDias.semanaCorrida ? await huellaAsistencia(trabajador.id, periodo) : null,
+        // Variables aprobadas usadas: si después se elimina o desaprueba una, no se emite sin recalcular.
+        variablesUsadas: aprobadas.map((v) => v.id).sort((a, b) => a - b),
+        // Huella de las marcas del mes: si cambian después del cálculo, no se emite sin recalcular.
+        huellaAsistencia: await huellaAsistencia(trabajador.id, periodo),
         cesantia: { tasa: datos.tasaCesantia, base: resultado.baseCesantia, baseEmpleador: baseCesantiaEmpleador, tope: resultado.topeCesantia },
         impuesto: { baseTributable: resultado.baseTributable, baseTributableMes: resultado.baseTributableMes, baseEnUTM: resultado.baseEnUTM, tasa: resultado.tramo.tasa, rebajaUTM: resultado.tramo.rebajaUTM },
         // Dos relaciones en el mismo mes: lo que ya había usado la anterior (para detectar si después cambia).
@@ -1028,9 +1043,17 @@ async function validarEmision(periodo, liquidacion) {
     if (cambiosVariables + cambiosResumen > 0) {
         throw new ConflictError("Hubo cambios en las variables o en la asistencia después del cálculo; recalcule antes de emitir")
     }
+    // Una variable eliminada o desaprobada después del cálculo no deja rastro en updatedAt: se comparan las usadas.
+    const usadas = liquidacion.detalle_calculo?.variablesUsadas
+    if (Array.isArray(usadas)) {
+        const actuales = (await VariablePeriodo.findAll({ where: { ...filtro, estado: "aprobada" }, attributes: ["id"] })).map((v) => v.id).sort((a, b) => a - b)
+        if (actuales.join(",") !== usadas.join(",")) {
+            throw new ConflictError("Se eliminaron, desaprobaron o agregaron variables aprobadas después del cálculo; recalcule antes de emitir")
+        }
+    }
     const huella = liquidacion.detalle_calculo?.huellaAsistencia
     if (huella && huella !== await huellaAsistencia(liquidacion.trabajador_id, periodo)) {
-        throw new ConflictError("Cambiaron las marcas del libro de asistencia del mes después del cálculo (el sueldo diario o la semana corrida dependen de ellas); recalcule antes de emitir")
+        throw new ConflictError("Cambiaron las marcas del libro de asistencia del mes después del cálculo. Si cambian horas extra o atrasos, en Resumen de asistencia «Generar desde la asistencia» y aprueba lo propuesto; luego recalcule antes de emitir")
     }
 
     const saldo = await saldoDesactualizado(liquidacion, periodo)

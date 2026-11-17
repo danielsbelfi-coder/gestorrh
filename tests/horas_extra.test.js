@@ -63,3 +63,27 @@ test("horasPorRecargo: minutos del libro a horas con 2 decimales", () => {
     assert.deepEqual(horasPorRecargo({ minutos_extra_50: 210, minutos_extra_100: 100 }), { 50: 3.5, 100: 1.67 })
     assert.deepEqual(horasPorRecargo({}), { 50: 0, 100: 0 })
 })
+
+test("avisos cuando el libro cambió después de aprobar (caso de la prueba 2: 1 h aprobada, la marca pasó a 2 h)", () => {
+    const { avisosLibroDesincronizado } = require("../src/remuneraciones/horas_extra.js")
+    const he50 = { codigo: "HORAS_EXTRA_50", recargo_hora_extra: 50 }
+    const aprobadas = [{ concepto: he50, cantidad: "1", fuente: "asistencia" }, { concepto: { codigo: "TRATO", recargo_hora_extra: null }, cantidad: null, fuente: "manual" }]
+    const totales = { minutos_atraso: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0 }
+    const avisos = avisosLibroDesincronizado({ horasLibro: { 50: 2, 100: 0 }, aprobadas, resumen: null, totales })
+    assert.strictEqual(avisos.length, 1)
+    assert.match(avisos[0], /al 50 %: el libro de asistencia tiene 2 h y lo aprobado es 1 h/)
+    assert.deepStrictEqual(avisosLibroDesincronizado({ horasLibro: { 50: 1, 100: 0 }, aprobadas, resumen: null, totales }), [])
+    // Una hora pendiente de un mes cerrado (manual) no se compara con el libro.
+    const conPendiente = [...aprobadas, { concepto: he50, cantidad: 3, fuente: "manual" }]
+    assert.deepStrictEqual(avisosLibroDesincronizado({ horasLibro: { 50: 1, 100: 0 }, aprobadas: conPendiente, resumen: null, totales }), [])
+})
+
+test("avisos cuando el resumen aprobado desde el libro ya no coincide", () => {
+    const { avisosLibroDesincronizado } = require("../src/remuneraciones/horas_extra.js")
+    const totales = { minutos_atraso: 25, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0 }
+    const resumen = { fuente: "asistencia", minutos_atraso: 10, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0 }
+    const avisos = avisosLibroDesincronizado({ horasLibro: { 50: 0, 100: 0 }, aprobadas: [], resumen, totales })
+    assert.match(avisos[0], /minutos de atraso: 10 aprobados, 25 en el libro/)
+    // Un resumen manual no se compara.
+    assert.deepStrictEqual(avisosLibroDesincronizado({ horasLibro: { 50: 0, 100: 0 }, aprobadas: [], resumen: { ...resumen, fuente: "manual" }, totales }), [])
+})

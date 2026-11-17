@@ -43,7 +43,7 @@ function botones(fila) {
     }
     const id = fila.trabajador.id
     if (fila.estado === "aprobado") {
-        return `<a class="boton chico secundario" href="libro.html?trabajador=${id}&mes=${periodoElegido().anio}-${String(periodoElegido().mes).padStart(2, "0")}">Libro</a> <button type="button" class="chico secundario" data-accion="devolver" data-trabajador="${id}">Devolver</button>`
+        return `<a class="boton chico secundario" href="libro.html?trabajador=${id}&mes=${periodoElegido().anio}-${String(periodoElegido().mes).padStart(2, "0")}">Libro</a> <button type="button" class="chico secundario" data-accion="devolver" data-trabajador="${id}">Desaprobar</button>`
     }
     const enlaceLibro = `<a class="boton chico secundario" href="libro.html?trabajador=${id}&mes=${periodoElegido().anio}-${String(periodoElegido().mes).padStart(2, "0")}">Libro</a> `
     return `${enlaceLibro}<button type="button" class="chico secundario" data-accion="editar" data-trabajador="${id}">${fila.resumen ? "Editar" : "Crear"}</button>
@@ -177,6 +177,15 @@ document.getElementById("btnGenerar").addEventListener("click", async function (
     const resultados = Array.isArray(resultado.datos) ? resultado.datos : []
     const horas = resultados.reduce((suma, r) => suma + (Number(r.horas_extra) || 0), 0)
     mensaje("info", `Resúmenes generados para ${resultados.length} trabajador(es).${horas > 0 ? ` Se propusieron ${horas} horas extra como variables pendientes: revísalas en Variables.` : ""}`)
+    // El libro cambió después de aprobar: horas extra reemplazadas y resúmenes aprobados que ya no coinciden.
+    const reemplazadas = resultados.filter((r) => r.horas_extra_reemplazadas)
+    if (reemplazadas.length > 0) {
+        mensaje("error", `El libro de asistencia cambió después de aprobar las horas extra de ${reemplazadas.length} trabajador(es) (${reemplazadas.map((r) => r.horas_extra_reemplazadas).join(" · ")}). La propuesta se reemplazó por la del libro y quedó pendiente: apruébala en Variables y vuelve a calcular.`)
+    }
+    const desactualizados = resultados.filter((r) => r.resumen_desactualizado)
+    if (desactualizados.length > 0) {
+        mensaje("error", `${desactualizados.length} resumen(es) aprobado(s) ya no coinciden con el libro de asistencia (días o atrasos). Para tomar el libro: Desaprobar el resumen, «Generar desde la asistencia» y aprobar.`)
+    }
     cargarResumenes()
 })
 

@@ -177,14 +177,14 @@ async function editarVariable(id, datos, empresasPermitidas, usuarioId) {
     })
 }
 
+// Una variable pendiente la elimina quien registra variables; una aprobada, quien aprueba (ADMIN o JEFE_RRHH), con el
+// periodo abierto. Si la liquidación ya estaba calculada, emitirla exige recalcular (validarEmision detecta el cambio).
 async function eliminarVariable(id, empresasPermitidas, usuarioId) {
-    const variable = await obtenerVariable(id, empresasPermitidas, usuarioId, PERMISOS.REGISTRAR_VARIABLES)
+    const variable = await VariablePeriodo.findByPk(id)
+    const permiso = variable?.estado === "aprobada" ? PERMISOS.APROBAR_VARIABLES : PERMISOS.REGISTRAR_VARIABLES
+    const encontrada = await obtenerVariable(id, empresasPermitidas, usuarioId, permiso)
 
-    if (variable.estado !== "pendiente") {
-        throw new ConflictError("Solo se puede eliminar una variable pendiente")
-    }
-
-    await variable.destroy()
+    await encontrada.destroy()
 }
 
 async function aprobarVariable(id, empresasPermitidas, usuarioId) {

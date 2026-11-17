@@ -204,7 +204,11 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
         }, { transaction })
         resultado.resumen = "creado"
     } else if (existente.estado === "aprobado") {
-        resultado.resumen = "omitido: ya estaba aprobado"
+        // No se toca, pero se avisa si ya no coincide con el libro (se cambió una marca después de aprobarlo).
+        const distinto = ["dias_inasistencia", "dias_permiso_sin_goce", "dias_vacaciones", "minutos_atraso"]
+            .some((campo) => Number(existente[campo] ?? 0) !== Number(dias[campo] ?? 0))
+        resultado.resumen = distinto ? "omitido: está aprobado y no coincide con el libro" : "omitido: ya estaba aprobado"
+        resultado.resumen_desactualizado = distinto
     } else {
         await existente.update({ ...dias, fuente: "asistencia", usuario_registro_id: usuarioId }, { transaction })
         resultado.resumen = "actualizado"
@@ -224,14 +228,25 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
         fuente: "asistencia"
     }
 
-    const aprobadas = await VariablePeriodo.findOne({ where: { ...filtroHoras, estado: "aprobada" }, transaction })
-
-    if (aprobadas !== null) {
-        resultado.horas_extra = "omitidas: ya hay horas extra aprobadas desde la asistencia"
-        return resultado
+    // Horas ya aprobadas desde el libro: si siguen iguales, no se tocan. Si el libro cambió (se modificó una marca después
+    // de aprobar), la propuesta se reemplaza y queda pendiente de aprobar otra vez (el libro es el origen de las horas).
+    const aprobadas = await VariablePeriodo.findAll({ where: { ...filtroHoras, estado: "aprobada" }, transaction })
+    if (aprobadas.length > 0) {
+        const aprobadoPor = (recargo) => Math.round(aprobadas
+            .filter((v) => v.concepto_id === conceptosHoras[recargo].id)
+            .reduce((suma, v) => suma + Number(v.cantidad ?? 0), 0) * 100) / 100
+        const iguales = RECARGOS.every((recargo) => aprobadoPor(recargo) === horas[recargo])
+        if (iguales) {
+            resultado.horas_extra = "sin cambios: las horas aprobadas coinciden con el libro"
+            return resultado
+        }
+        resultado.horas_extra_reemplazadas = RECARGOS
+            .filter((recargo) => aprobadoPor(recargo) !== horas[recargo])
+            .map((recargo) => `al ${recargo} %: ${aprobadoPor(recargo)} h aprobadas → ${horas[recargo]} h en el libro`)
+            .join("; ")
     }
 
-    await VariablePeriodo.destroy({ where: { ...filtroHoras, estado: "pendiente" }, transaction })
+    await VariablePeriodo.destroy({ where: filtroHoras, transaction })
 
     for (const recargo of RECARGOS) {
         if (horas[recargo] > 0) {
