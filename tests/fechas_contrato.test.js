@@ -1,0 +1,38 @@
+const test = require("node:test")
+const assert = require("node:assert/strict")
+const { erroresFechasContrato, errorVigenciaAnexo, errorTerminoAnexo, limiteHaciaAdelante, hoyEnChile } = require("../src/contratos/fechas_contrato.js")
+
+const HOY = "2026-11-17"
+
+test("el año mal digitado se rechaza: inicio más de un año después de hoy", () => {
+    assert.match(erroresFechasContrato({ tipo_contrato: "indefinido", fecha_inicio: "2096-10-01" }, HOY)[0], /más de un año posterior a hoy: revisa el año/)
+    assert.deepEqual(erroresFechasContrato({ tipo_contrato: "indefinido", fecha_inicio: "2027-11-17" }, HOY), [])
+    assert.equal(limiteHaciaAdelante(HOY), "2027-11-17")
+    assert.match(erroresFechasContrato({ fecha_inicio: "1926-10-01" }, HOY)[0], /anterior a 1950/)
+    assert.match(erroresFechasContrato({ fecha_inicio: "2026-13-01" }, HOY)[0], /inválida/)
+})
+
+test("contratos antiguos se siguen aceptando (trabajadores con años de antigüedad)", () => {
+    assert.deepEqual(erroresFechasContrato({ tipo_contrato: "indefinido", fecha_inicio: "2012-03-01" }, HOY), [])
+})
+
+test("fecha de término: no antes del inicio, plazo fijo hasta 2 años y tope de 5 años", () => {
+    assert.match(erroresFechasContrato({ tipo_contrato: "plazo_fijo", fecha_inicio: "2026-10-01", fecha_termino: "2026-09-30" }, HOY)[0], /anterior a la de inicio/)
+    assert.match(erroresFechasContrato({ tipo_contrato: "plazo_fijo", fecha_inicio: "2026-10-01", fecha_termino: "2096-12-31" }, HOY)[0], /máximo 2 años/)
+    assert.deepEqual(erroresFechasContrato({ tipo_contrato: "plazo_fijo", fecha_inicio: "2026-10-01", fecha_termino: "2028-10-01" }, HOY), [])
+    assert.match(erroresFechasContrato({ tipo_contrato: "obra_faena", fecha_inicio: "2026-10-01", fecha_termino: "2036-10-01" }, HOY)[0], /más de 5 años/)
+})
+
+test("anexos: vigencia desde el inicio del contrato y hasta un año después de hoy", () => {
+    const contrato = { fecha_inicio: "2026-10-01" }
+    assert.equal(errorVigenciaAnexo("2026-11-16", contrato, HOY), null)
+    assert.match(errorVigenciaAnexo("2096-11-16", contrato, HOY), /revisa el año/)
+    assert.match(errorVigenciaAnexo("2026-09-01", contrato, HOY), /antes del inicio/)
+    assert.match(errorVigenciaAnexo(undefined, contrato, HOY), /Indica la fecha/)
+    assert.equal(errorTerminoAnexo("2027-03-31", "2026-12-01", contrato), null)
+    assert.match(errorTerminoAnexo("2097-03-31", "2026-12-01", contrato), /revisa el año/)
+})
+
+test("hoy en Chile", () => {
+    assert.equal(hoyEnChile(new Date("2026-11-18T02:00:00Z")), "2026-11-17")
+})

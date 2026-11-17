@@ -1,6 +1,7 @@
 const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo, Sucursal } = require("../shared/associations.js")
 const { CAMPO_SUCURSAL, valorLugar, leerValorLugar, mismoLugar } = require("./anexo_sucursal.js")
 const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
+const { errorVigenciaAnexo, errorTerminoAnexo, hoyEnChile } = require("./fechas_contrato.js")
 const { armarAnexo } = require("./armar_anexo.js")
 const { contratoOriginal } = require("./contrato_original.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
@@ -104,6 +105,17 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
 
     if (!CAMPOS_MODIFICABLES.includes(datos.campo_modificado)) {
         throw new ValidationError("Existen parámetros que no pueden ser modificados")
+    }
+
+    const errorVigencia = errorVigenciaAnexo(datos.fecha_vigencia, contrato, hoyEnChile())
+    if (errorVigencia) {
+        throw new ValidationError(errorVigencia)
+    }
+    if (datos.campo_modificado === "fecha_termino") {
+        const errorTermino = errorTerminoAnexo(datos.valor_nuevo, datos.fecha_vigencia, contrato)
+        if (errorTermino) {
+            throw new ValidationError(errorTermino)
+        }
     }
 
     if (datos.campo_modificado === "comuna_prestacion" && COMUNAS[datos.valor_nuevo] === undefined) {

@@ -661,9 +661,24 @@ function textoDistribucion(dias) {
     return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
-// Anula un contrato con la firma pendiente. Pide el motivo y devuelve true si se anuló.
-async function anularContratoConMotivo(id) {
-    const motivo = prompt(`Anular el contrato #${id}.\n\nÚsalo solo si el contrato no debió existir (por ejemplo, el trabajador no se presentó). Si era su único contrato, el trabajador vuelve a postulante.\n\nMotivo de la anulación:`)
+// Confirma la firma si el contrato empieza más de 60 días después de hoy.
+function confirmarInicioLejano(fechaInicio) {
+    const limite = new Date()
+    limite.setDate(limite.getDate() + 60)
+    const iso = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, "0")}-${String(limite.getDate()).padStart(2, "0")}`
+    if (!fechaInicio || fechaInicio <= iso) {
+        return true
+    }
+    return confirm(`El contrato empieza el ${fechaCorta(fechaInicio)}, más de 60 días después de hoy.\n\nRevisa que el año esté bien antes de firmar. ¿Firmar igual?`)
+}
+
+// Anula un contrato. Pide el motivo y devuelve true si se anuló. Un contrato firmado solo se anula si fue un error y no
+// produjo efectos (el servidor lo revisa: sin asistencia, licencias, variables, liquidaciones, finiquitos ni anexos firmados).
+async function anularContratoConMotivo(id, { firmado = false } = {}) {
+    const texto = firmado
+        ? `Anular el contrato #${id}, que YA ESTÁ FIRMADO.\n\nÚsalo solo si se firmó por error (por ejemplo, un año mal digitado) y todavía no tiene asistencia, licencias, variables, liquidaciones, finiquitos ni anexos firmados. Si ya produjo efectos, corresponde terminarlo con finiquito.\n\nEl contrato queda guardado como anulado, con el motivo. Si era su único contrato, el trabajador vuelve a postulante y puedes hacerle un contrato nuevo.\n\nMotivo de la anulación:`
+        : `Anular el contrato #${id}.\n\nÚsalo solo si el contrato no debió existir (por ejemplo, el trabajador no se presentó). Si era su único contrato, el trabajador vuelve a postulante.\n\nMotivo de la anulación:`
+    const motivo = prompt(texto)
     if (motivo === null) {
         return false
     }

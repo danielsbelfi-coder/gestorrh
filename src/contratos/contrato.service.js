@@ -14,6 +14,7 @@ const { COMUNAS } = require("../shared/comunas_lre.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { exigirSinCruce } = require("../trabajadores/relaciones.js")
 const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
+const { erroresFechasContrato, limiteHaciaAdelante, hoyEnChile } = require("./fechas_contrato.js")
 
 // Los contratos por hora son honorarios, que el sistema todavía no contempla: no se crean nuevos (los que existan se
 // siguen liquidando). Ver «Sistema por hora» en el SPEC.
@@ -43,6 +44,12 @@ async function resolverLugar(datos, empresaId, sucursalYaAsignada) {
 }
 
 async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null, sucursalYaAsignada = null) {
+    // Fechas dentro de rangos razonables (un año mal digitado deja un contrato imposible de liquidar).
+    const erroresFechas = erroresFechasContrato(datos, hoyEnChile())
+    if (erroresFechas.length > 0) {
+        throw new ValidationError(erroresFechas.join(". "))
+    }
+
     await resolverLugar(datos, empresaId, sucursalYaAsignada)
 
     // Las funciones son opcionales: un texto en blanco se guarda como vacío (null).
@@ -187,6 +194,10 @@ async function firmarContrato(id, fechaFirma, empresasPermitidas, usuarioId) {
         throw new ConflictError("El contrato ya fue firmado o rechazado")
     }
 
+    if (contrato.fecha_inicio > limiteHaciaAdelante(hoyEnChile())) {
+        throw new ValidationError("El contrato empieza más de un año después de hoy: revisa el año y corrígelo antes de firmar")
+    }
+
     const fecha = fechaFirma ?? new Date()
     if (fechaFirma !== undefined && (!esFechaValida(fechaFirma) || fechaFirma < contrato.fecha_inicio)) {
         throw new ValidationError("La fecha de firma debe ser válida (AAAA-MM-DD) y no anterior al inicio del contrato")
@@ -292,40 +303,68 @@ async function corregirContrato(id, datos, empresasPermitidas, usuarioId) {
         }
     }
 
-    return await contrato.update(cambios, { fields: campos })
+    const inicioAnterior = contrato.fecha_inicio
+    const actualizado = await contrato.update(cambios, { fields: campos })
+
+    // Si es el único contrato de la relación, la fecha de ingreso del trabajador sigue al inicio corregido.
+    if (cambios.fecha_inicio && cambios.fecha_inicio !== inicioAnterior) {
+        const otros = await ContratoTrabajo.count({ where: { trabajador_id: contrato.trabajador_id, id: { [Op.ne]: contrato.id }, estado: { [Op.ne]: "anulado" } } })
+        if (otros === 0) {
+            await Trabajador.update({ fecha_ingreso: cambios.fecha_inicio }, { where: { id: contrato.trabajador_id } })
+        }
+    }
+    return actualizado
 }
 
+// Anula un contrato que no debió existir. Con la firma pendiente basta GESTIONAR_FICHAS. Un contrato ya firmado se puede
+// anular solo si fue un error y no produjo efectos en el sistema (ni asistencia, licencias, resúmenes, variables,
+// liquidaciones ni finiquitos, ni anexos firmados), con FIRMAR_CONTRATO (ADMIN o JEFE_RRHH). Ver «Contrato firmado
+// por error» en el SPEC. El contrato queda guardado como anulado, con su motivo.
 async function anularContrato(id, motivo, empresasPermitidas, usuarioId) {
     const contrato = await obtenerContratoPorId(id, empresasPermitidas)
 
-    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
+    const firmado = contrato.estado_firma === "firmado"
+    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, firmado ? PERMISOS.FIRMAR_CONTRATO : PERMISOS.GESTIONAR_FICHAS)
 
     if (typeof motivo !== "string" || motivo.trim().length < 5) {
         throw new ValidationError("Indica el motivo de la anulación (mínimo 5 caracteres)")
     }
 
-    await exigirContratoSinFirmar(contrato)
+    if (!firmado) {
+        await exigirContratoSinFirmar(contrato)
+    } else {
+        if (contrato.estado !== "vigente") {
+            throw new ConflictError("Solo se puede anular un contrato vigente")
+        }
+        const anexosFirmados = await ContratoAnexo.count({ where: { contrato_id: contrato.id, estado_firma: "firmado" } })
+        if (anexosFirmados > 0) {
+            throw new ConflictError("El contrato tiene anexos firmados: produjo efectos y no se puede anular; corresponde terminarlo con finiquito")
+        }
+    }
 
     // Si ya hay movimientos del trabajador, el contrato produjo efectos: se termina con finiquito.
     const trabajadorId = contrato.trabajador_id
     const movimientos = [
-        [Asistencia, "asistencia"],
-        [LicenciaMedica, "licencias médicas"],
-        [ResumenAsistencia, "resúmenes de asistencia"],
-        [VariablePeriodo, "variables del mes"],
-        [Liquidacion, "liquidaciones"],
-        [Finiquito, "finiquitos"]
+        [Asistencia, "asistencia registrada"],
+        [LicenciaMedica, "licencias médicas registradas"],
+        [ResumenAsistencia, "resúmenes de asistencia registrados"],
+        [VariablePeriodo, "variables del mes registradas"],
+        [Liquidacion, "liquidaciones registradas"],
+        [Finiquito, "finiquitos registrados"]
     ]
     for (const [modelo, nombre] of movimientos) {
         if (await modelo.count({ where: { trabajador_id: trabajadorId } }) > 0) {
-            throw new ConflictError(`El trabajador ya tiene ${nombre} registrados; el contrato no se puede anular, corresponde terminarlo con finiquito`)
+            throw new ConflictError(`El trabajador ya tiene ${nombre}; el contrato no se puede anular, corresponde terminarlo con finiquito`)
         }
     }
 
     return await sequelize.transaction(async (transaction) => {
+        // Los anexos pendientes de un contrato anulado quedan rechazados.
+        await ContratoAnexo.update({ estado_firma: "rechazado" }, { where: { contrato_id: contrato.id, estado_firma: "pendiente" }, transaction })
         await contrato.update({
             estado: "anulado",
-            estado_firma: "rechazado",
+            // Un contrato firmado conserva la firma (queda constancia de que se firmó y luego se anuló).
+            estado_firma: firmado ? "firmado" : "rechazado",
             motivo_anulacion: motivo.trim(),
             fecha_anulacion: new Date()
         }, { transaction })

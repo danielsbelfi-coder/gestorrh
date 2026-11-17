@@ -31,7 +31,8 @@ const tabla = crearTabla({
                 <button type="button" class="chico secundario" data-pdf="${c.id}">PDF</button>
                 ${sinFirmar(c) ? `<button type="button" class="chico" data-firmar="${c.id}">Firmar</button>
                     <button type="button" class="chico secundario" data-corregir="${c.id}">Corregir</button>
-                    <button type="button" class="chico peligro" data-anular="${c.id}">Anular</button>` : ""}`
+                    <button type="button" class="chico peligro" data-anular="${c.id}">Anular</button>` : ""}
+                ${c.estado === "vigente" && c.estado_firma === "firmado" ? `<button type="button" class="chico peligro" data-anular="${c.id}" data-firmado="si">Anular (error)</button>` : ""}`
         }
     ],
     filtros: [
@@ -341,7 +342,8 @@ document.getElementById("tablaContratos").addEventListener("click", async functi
     const anular = evento.target.closest("[data-anular]")?.dataset.anular
     if (anular) {
         limpiarMensajes()
-        if (await anularContratoConMotivo(Number(anular))) {
+        const firmado = evento.target.closest("[data-anular]").dataset.firmado === "si"
+        if (await anularContratoConMotivo(Number(anular), { firmado })) {
             cargarContratos()
         }
         return
@@ -357,6 +359,11 @@ document.getElementById("tablaContratos").addEventListener("click", async functi
     }
     const id = evento.target.closest("[data-firmar]")?.dataset.firmar
     if (!id) {
+        return
+    }
+    // Un año mal digitado (2096 en vez de 2026) deja un contrato imposible de liquidar: se confirma un inicio lejano.
+    const contrato = contratosEmpresa.find((c) => String(c.id) === String(id))
+    if (contrato && !confirmarInicioLejano(contrato.fecha_inicio)) {
         return
     }
     const fecha = prompt("Fecha de firma del contrato (AAAA-MM-DD). Deja hoy si se firma ahora:", hoyIso())

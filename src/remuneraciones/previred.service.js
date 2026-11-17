@@ -99,8 +99,9 @@ async function generarPrevired(periodo_id, empresasPermitidas, usuarioId) {
             continue
         }
 
+        // Sin los anulados: un contrato anulado (por ejemplo, firmado con un año mal digitado) puede tener una fecha posterior.
         const contrato = await ContratoTrabajo.findOne({
-            where: { trabajador_id: trabajadorId },
+            where: { trabajador_id: trabajadorId, estado: { [Op.ne]: "anulado" } },
             order: [["fecha_inicio", "DESC"]]
         })
 

@@ -176,7 +176,8 @@ async function dibujarContratos() {
                     ${c.estado === "vigente" && c.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-contrato="${c.id}">Firmar contrato</button>
                         <a class="boton chico secundario" href="contratos.html?corregir=${c.id}">Corregir</a>
                         <button type="button" class="chico peligro" data-anular-contrato="${c.id}">Anular</button>` : ""}
-                    ${c.estado === "vigente" && c.estado_firma === "firmado" ? `<button type="button" class="chico secundario" data-nuevo-anexo="${c.id}">＋ Anexo</button>` : ""}
+                    ${c.estado === "vigente" && c.estado_firma === "firmado" ? `<button type="button" class="chico secundario" data-nuevo-anexo="${c.id}">＋ Anexo</button>
+                        <button type="button" class="chico peligro" data-anular-contrato="${c.id}" data-firmado="si">Anular (error)</button>` : ""}
                     <button type="button" class="chico secundario" data-pdf-contrato="${c.id}">PDF</button>
                 </div>
             </header>
@@ -334,7 +335,7 @@ document.getElementById("contratos").addEventListener("click", async function (e
     }
 
     if (boton.dataset.anularContrato) {
-        if (await anularContratoConMotivo(Number(boton.dataset.anularContrato))) {
+        if (await anularContratoConMotivo(Number(boton.dataset.anularContrato), { firmado: boton.dataset.firmado === "si" })) {
             await cargarFicha()
         }
         return
@@ -346,6 +347,10 @@ document.getElementById("contratos").addEventListener("click", async function (e
     }
 
     if (boton.dataset.firmarContrato) {
+        const aFirmar = contratos.find((c) => String(c.id) === boton.dataset.firmarContrato)
+        if (aFirmar && !confirmarInicioLejano(aFirmar.fecha_inicio)) {
+            return
+        }
         const fecha = prompt("Fecha de firma del contrato (AAAA-MM-DD). Deja hoy si se firma ahora:", hoyIso())
         if (fecha === null) {
             return
