@@ -7,7 +7,8 @@ const CONCEPTOS = [
   { codigo: "GRATIFICACION", nombre: "Gratificación legal", tipo: "haber", imponible: true, tributable: true, calculado_por_sistema: true },
   { codigo: "AJUSTE_PAGO_EXCESO", nombre: "Ajuste por pago en exceso", tipo: "haber", calculado_por_sistema: true },
   { codigo: "BONO_PRODUCCION", nombre: "Bono de producción", tipo: "haber", imponible: true, tributable: true, base_gratificacion: true },
-  { codigo: "COMISION", nombre: "Comisión", tipo: "haber", imponible: true, tributable: true, base_gratificacion: true },
+  // La comisión se gana día a día: entra a la semana corrida (art. 45).
+  { codigo: "COMISION", nombre: "Comisión", tipo: "haber", imponible: true, tributable: true, base_gratificacion: true, devengo_diario: true },
   { codigo: "AGUINALDO", nombre: "Aguinaldo", tipo: "haber", imponible: true, tributable: true },
   { codigo: "COLACION", nombre: "Colación", tipo: "haber" },
   { codigo: "MOVILIZACION", nombre: "Movilización", tipo: "haber" },
@@ -38,6 +39,7 @@ module.exports = {
       recargo_hora_extra: null,
       calculado_por_sistema: false,
       codigo_lre: null,
+      devengo_diario: false,
       activo: true,
       ...concepto,
       createdAt: ahora,
