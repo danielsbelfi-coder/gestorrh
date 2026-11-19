@@ -104,7 +104,8 @@ async function obtenerVariablesDelMes(periodoId, trabajadorId) {
             cantidad: variable.cantidad,
             monto: variable.monto,
             fuente: variable.fuente,
-            mes_origen: variable.mes_origen
+            mes_origen: variable.mes_origen,
+            proporcional: variable.proporcional === true
         }))
 
     return { aprobadas, pendientes: variables.length - aprobadas.length }
@@ -653,6 +654,9 @@ async function prepararCalculo(periodo, trabajador) {
         : 0
 
     const resumen = await obtenerResumenAprobado(periodo.id, trabajador.id)
+    // Variables permanentes y cuotas de préstamos del mes, al día antes de calcular.
+    const { materializarPeriodo } = require("./variable_recurrente.service.js")
+    await materializarPeriodo(periodo, { trabajadorId: trabajador.id })
     const { aprobadas, pendientes } = await obtenerVariablesDelMes(periodo.id, trabajador.id)
     // Horas extra de un solo origen: las del mes vienen del libro; una variable manual solo trae horas de un mes cerrado.
     const { problemasOrigenHorasExtra } = require("./horas_extra.js")
@@ -670,6 +674,14 @@ async function prepararCalculo(periodo, trabajador) {
         fechaTermino: trabajador.fecha_termino,
         resumen
     })
+
+    // Variable permanente proporcional (por ejemplo, colación): su monto del mes completo se ajusta a los días pagados.
+    const { montoProporcional } = require("./recurrentes.js")
+    for (const variable of aprobadas) {
+        if (variable.proporcional && variable.monto !== null) {
+            variable.monto = montoProporcional(variable.monto, diasPagados)
+        }
+    }
 
     const licenciasDelMes = await licenciasConRima(trabajador.id, periodo)
 
@@ -1027,6 +1039,11 @@ async function validarEmision(periodo, liquidacion) {
     if (liquidacion.estado !== "calculada") {
         throw new ConflictError("La liquidación ya fue emitida")
     }
+
+    // Si una variable permanente o un préstamo cambió después del cálculo, sus variables del mes cambian aquí y las
+    // revisiones de abajo piden recalcular.
+    const { materializarPeriodo } = require("./variable_recurrente.service.js")
+    await materializarPeriodo(periodo, { trabajadorId: liquidacion.trabajador_id })
 
     const filtro = { periodo_id: periodo.id, trabajador_id: liquidacion.trabajador_id }
 

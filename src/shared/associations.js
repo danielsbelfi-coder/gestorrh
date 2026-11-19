@@ -24,6 +24,7 @@ const { Plan } = require("../cuentas/plan.model.js");
 const { Eliminacion } = require("../eliminacion/eliminacion.model.js");
 const { ConceptoRemuneracion } = require("../remuneraciones/concepto_remuneracion.model.js");
 const { VariablePeriodo } = require("../remuneraciones/variable_periodo.model.js");
+const { VariableRecurrente } = require("../remuneraciones/variable_recurrente.model.js");
 const { ResumenAsistencia } = require("../asistencia/resumen_asistencia.model.js")
 const { LiquidacionLinea } = require("../remuneraciones/liquidacion_linea.model.js")
 const { Mutualidad } = require("../remuneraciones/mutualidad.model.js");
@@ -259,6 +260,12 @@ ConceptoRemuneracion.hasMany(VariablePeriodo, {
     foreignKey: "concepto_id"
 })
 
+VariableRecurrente.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
+Trabajador.hasMany(VariableRecurrente, { foreignKey: "trabajador_id" })
+VariableRecurrente.belongsTo(ConceptoRemuneracion, { foreignKey: "concepto_id" })
+VariablePeriodo.belongsTo(VariableRecurrente, { foreignKey: "recurrente_id" })
+VariableRecurrente.hasMany(VariablePeriodo, { foreignKey: "recurrente_id" })
+
 VariablePeriodo.belongsTo(Usuario, {
     foreignKey: "usuario_registro_id",
     as: "registrador"
@@ -398,6 +405,7 @@ module.exports = {
     Eliminacion,
     ConceptoRemuneracion,
     VariablePeriodo,
+    VariableRecurrente,
     ResumenAsistencia,
     LiquidacionLinea,
     LicenciaMedica,

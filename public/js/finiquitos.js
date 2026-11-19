@@ -5,7 +5,7 @@ const CODIGOS_DESCUENTO = [
     [3183, "3183 · Otros descuentos autorizados y solicitados por el trabajador"],
     [3185, "3185 · Seguro de cesantía"],
     [3186, "3186 · Retención judicial (pensión de alimentos)"],
-    [3188, "3188 · Anticipo o pago en exceso"]
+    [3188, "3188 · Anticipos, préstamos o pago en exceso"]
 ]
 
 let filas = []
@@ -185,10 +185,28 @@ function abrirCalculo(fila) {
     for (const descuento of (f?.descuentos ?? []).filter((d) => !d.automatico)) {
         agregarFilaDescuento(descuento)
     }
+    // Primer cálculo: el saldo de los préstamos en cuotas se propone como descuento (se puede quitar o cambiar).
+    if (!f) {
+        proponerSaldosDePrestamos(fila.trabajador.id)
+    }
 
     const panel = document.getElementById("panelCalculo")
     panel.hidden = false
     panel.scrollIntoView({ behavior: "smooth", block: "start" })
+}
+
+async function proponerSaldosDePrestamos(trabajadorId) {
+    const resultado = await llamarApi(`/api/variables-recurrentes/saldos/${trabajadorId}`)
+    if (resultado.status !== 200 || trabajadorEnCalculo?.id !== trabajadorId) {
+        return
+    }
+    for (const s of resultado.datos) {
+        const cuotas = s.pendientes === 1 ? `cuota ${s.cuotas}` : `cuotas ${s.pagadas + 1} a ${s.cuotas}`
+        agregarFilaDescuento({ glosa: `Saldo ${s.glosa} (${cuotas} de ${s.cuotas})`, monto: s.saldo, codigo_lre: 3188 })
+    }
+    if (resultado.datos.length > 0) {
+        mensaje("info", "Se propone descontar el saldo de los préstamos en cuotas (código 3188). Revísalo antes de calcular; si no corresponde, quítalo.")
+    }
 }
 
 document.getElementById("agregarDescuento").addEventListener("click", () => agregarFilaDescuento())

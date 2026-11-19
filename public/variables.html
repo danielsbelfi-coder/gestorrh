@@ -36,6 +36,31 @@
             </form>
         </details>
 
+        <details class="tarjeta plegable" id="panelRecurrentes">
+            <summary>Permanentes y préstamos en cuotas</summary>
+            <p class="texto-suave">Se definen una vez y entran solas, aprobadas, a cada mes abierto que les toca: una <strong>permanente</strong> (por ejemplo, colación o movilización) todos los meses desde un mes hasta otro, o hasta el término; un <strong>préstamo en cuotas</strong> descuenta una cuota cada mes y, si la relación termina antes, el finiquito propone descontar el saldo. Las crea y cambia quien aprueba variables. Lo ya aplicado en meses cerrados no cambia.</p>
+            <form id="formRecurrente">
+                <label class="campo-ancho">Trabajador<input type="search" id="recTrabajador" placeholder="Escribe nombre o RUT…" required></label>
+                <label>Tipo
+                    <select id="recTipo">
+                        <option value="permanente">Permanente (todos los meses)</option>
+                        <option value="cuotas">Préstamo en cuotas</option>
+                    </select>
+                </label>
+                <label class="campo-ancho">Concepto<select id="recConcepto" required></select></label>
+                <label id="etiquetaRecMonto">Monto mensual ($)<input type="number" id="recMonto" min="1" step="1" required></label>
+                <label id="etiquetaRecCuotas" hidden>Número de cuotas<input type="number" id="recCuotas" min="1" max="120" step="1"></label>
+                <label>Desde (mes)<input type="month" id="recDesde" required></label>
+                <label id="etiquetaRecHasta">Hasta (mes, opcional)<input type="month" id="recHasta"></label>
+                <label class="casilla campo-ancho" id="etiquetaRecProporcional"><input type="checkbox" id="recProporcional"> Proporcional a los días pagados del mes (ingreso, término, licencia o permiso sin goce)</label>
+                <label class="campo-ancho">Glosa (opcional)<input type="text" id="recGlosa" maxlength="255" placeholder="Ej.: Colación pactada en el contrato · Préstamo de marzo"></label>
+                <p class="texto-suave campo-ancho" id="ayudaRec"></p>
+                <button type="submit" id="botonRecurrente">Crear</button>
+                <button type="button" class="secundario" id="cancelarRecurrente" hidden>Cancelar edición</button>
+            </form>
+            <div id="tablaRecurrentes"></div>
+        </details>
+
         <div class="acciones-grupo acciones-derecha">
             <button type="button" id="btnAprobarTodas">Aprobar todas las pendientes</button>
         </div>

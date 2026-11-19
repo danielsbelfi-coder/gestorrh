@@ -130,6 +130,9 @@ async function crearVariable(datos, empresasPermitidas, usuarioId) {
 
 async function listarVariables(periodoId, empresasPermitidas) {
     const periodo = await obtenerPeriodoPorId(periodoId, empresasPermitidas)
+    // Variables permanentes y cuotas de préstamos del mes (si el periodo está abierto).
+    const { materializarPeriodo } = require("./variable_recurrente.service.js")
+    await materializarPeriodo(periodo)
 
     return await VariablePeriodo.findAll({
         where: { periodo_id: periodo.id },
@@ -149,6 +152,11 @@ async function obtenerVariable(id, empresasPermitidas, usuarioId, permiso) {
 
     if (variable.PeriodoRemuneracion.estado !== "abierto") {
         throw new ConflictError("El periodo de remuneraciones está cerrado")
+    }
+
+    // La que agrega una variable permanente o un préstamo en cuotas se cambia allí (Variables → Permanentes y préstamos).
+    if (variable.recurrente_id !== null && variable.recurrente_id !== undefined) {
+        throw new ConflictError("Esta variable viene de una variable permanente o de un préstamo en cuotas: se cambia, se termina o se borra en «Permanentes y préstamos en cuotas»")
     }
 
     return variable

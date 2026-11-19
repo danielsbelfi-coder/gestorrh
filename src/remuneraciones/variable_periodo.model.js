@@ -37,9 +37,24 @@ const VariablePeriodo = sequelize.define("VariablePeriodo", {
         defaultValue: "pendiente"
     },
     fuente: {
-        type: DataTypes.ENUM("manual", "asistencia", "importacion"),
+        type: DataTypes.ENUM("manual", "asistencia", "importacion", "recurrente"),
         allowNull: false,
         defaultValue: "manual"
+    },
+    // Agregada por una variable permanente o un préstamo en cuotas (ver variable_recurrente.service.js).
+    recurrente_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    numero_cuota: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    // El monto guardado es el del mes completo; la liquidación lo ajusta a los días pagados.
+    proporcional: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
     },
     usuario_registro_id: {
         type: DataTypes.INTEGER,

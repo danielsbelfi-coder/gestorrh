@@ -595,7 +595,7 @@ function textoTrabajador(trabajador, persona) {
 
 ESTADOS.resumen = { sin_resumen: ["Sin resumen", "peligro"], pendiente: ["Pendiente", "advertencia"], aprobado: ["Aprobado", "exito"] }
 ESTADOS.variable = { pendiente: ["Pendiente", "advertencia"], aprobada: ["Aprobada", "exito"] }
-TEXTOS.fuenteRegistro = { manual: "Manual", asistencia: "Desde asistencia", importacion: "Importación" }
+TEXTOS.fuenteRegistro = { manual: "Manual", asistencia: "Desde asistencia", importacion: "Importación", recurrente: "Permanente o cuota" }
 
 // Carga trabajadores y personas de la empresa de trabajo y arma los textos para mostrar y buscar.
 async function trabajadoresDeLaEmpresa() {
