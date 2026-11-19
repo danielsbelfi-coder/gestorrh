@@ -1,5 +1,5 @@
 const PDFDocument = require("pdfkit")
-const { crearAnexo, firmarAnexo, listarAnexos, documentoAnexo } = require("./contrato_anexo.service");
+const { crearAnexo, corregirAnexo, descartarAnexo, firmarAnexo, listarAnexos, documentoAnexo } = require("./contrato_anexo.service");
 const { dibujarContrato } = require("./dibujar_contrato.js")
 
 async function crear(req, res) {
@@ -12,6 +12,16 @@ async function crear(req, res) {
     );
 
     res.status(201).json(nuevoAnexo)
+}
+
+async function corregir(req, res) {
+    const anexo = await corregirAnexo(req.params.contratoId, req.params.id, req.body, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(anexo)
+}
+
+async function descartar(req, res) {
+    const anexo = await descartarAnexo(req.params.contratoId, req.params.id, req.empresasPermitidas, req.usuario.id)
+    res.status(200).json(anexo)
 }
 
 async function firmar(req, res) {
@@ -37,6 +47,8 @@ async function documento(req, res) {
 module.exports = {
     documento,
     crear,
+    corregir,
+    descartar,
     firmar,
     listar
 }

@@ -70,36 +70,39 @@ async function lugarNuevoDelAnexo(valorNuevo, contrato) {
     return valorLugar(lugar)
 }
 
-async function crearAnexo(datos, empresasPermitidas, usuarioId) {
-    const CAMPOS_MODIFICABLES = [
-        "sueldo_base",
-        "horas_semanales",
-        "tipo_jornada",
-        "dias_trabajados",
-        "funciones",
-        "lugar_prestacion_servicios",
-        "sistema_remuneracion",
-        "periodicidad_pago",
-        "fecha_termino",
-        "obra_faena_descripcion",
-        "comuna_prestacion",
-        "jornada_id",
-        "tipo_contrato",
-        CAMPO_SUCURSAL
-    ]
-    const contrato = await ContratoTrabajo.findByPk(datos.contrato_id, {
+const CAMPOS_MODIFICABLES = [
+    "sueldo_base",
+    "horas_semanales",
+    "tipo_jornada",
+    "dias_trabajados",
+    "funciones",
+    "lugar_prestacion_servicios",
+    "sistema_remuneracion",
+    "periodicidad_pago",
+    "fecha_termino",
+    "obra_faena_descripcion",
+    "comuna_prestacion",
+    "jornada_id",
+    "tipo_contrato",
+    CAMPO_SUCURSAL
+]
+
+// Contrato del anexo, con la relación, si es de una empresa permitida y el usuario puede crear anexos en ella.
+async function contratoParaAnexo(contratoId, empresasPermitidas, usuarioId) {
+    const contrato = await ContratoTrabajo.findByPk(contratoId, {
         include: [Trabajador]
     })
 
-    if (contrato === null) {
-        throw new NotFoundError("Contrato no encontrado")
-    }
-    if (!empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
+    if (contrato === null || !empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
         throw new NotFoundError("Contrato no encontrado")
     }
 
     await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.CREAR_ANEXO)
+    return contrato
+}
 
+// Valida un anexo (nuevo o corregido) contra su contrato. Deja en datos el valor nuevo ya normalizado.
+async function validarAnexo(datos, contrato) {
     if (contrato.estado !== "vigente") {
         throw new ConflictError("No se puede modificar un contrato que no está vigente")
     }
@@ -152,13 +155,19 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         }
     }
 
-    const esSucursal = datos.campo_modificado === CAMPO_SUCURSAL
-    if (esSucursal) {
+    if (datos.campo_modificado === CAMPO_SUCURSAL) {
         datos.valor_nuevo = await lugarNuevoDelAnexo(datos.valor_nuevo, contrato)
     }
+}
+
+const valorAnteriorDe = (campo, contrato) => campo === CAMPO_SUCURSAL ? valorLugar(contrato) : contrato[campo]
+
+async function crearAnexo(datos, empresasPermitidas, usuarioId) {
+    const contrato = await contratoParaAnexo(datos.contrato_id, empresasPermitidas, usuarioId)
+    await validarAnexo(datos, contrato)
 
     return await ContratoAnexo.create({
-        ...datos, valor_anterior: esSucursal ? valorLugar(contrato) : contrato[datos.campo_modificado]
+        ...datos, valor_anterior: valorAnteriorDe(datos.campo_modificado, contrato)
     }, {
         fields: [
             "contrato_id",
@@ -171,6 +180,46 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         ]
     }
     )
+}
+
+// Un anexo con la firma pendiente es un borrador: se puede corregir (vigencia, valor nuevo y motivo; el campo no
+// cambia: para otro campo se descarta y se crea otro) o descartar. Uno firmado no se toca: su cambio ya rige y se
+// modifica con otro anexo.
+async function anexoPendiente(contratoId, anexoId, empresasPermitidas, usuarioId) {
+    const contrato = await contratoParaAnexo(contratoId, empresasPermitidas, usuarioId)
+    const anexo = await ContratoAnexo.findOne({ where: { id: anexoId, contrato_id: contrato.id } })
+    if (anexo === null) {
+        throw new NotFoundError("Anexo no encontrado")
+    }
+    if (anexo.estado_firma !== "pendiente") {
+        throw new ConflictError(anexo.estado_firma === "firmado"
+            ? "El anexo ya está firmado y su cambio rige: para modificarlo, crea otro anexo"
+            : "El anexo fue descartado")
+    }
+    return { contrato, anexo }
+}
+
+async function corregirAnexo(contratoId, anexoId, datos, empresasPermitidas, usuarioId) {
+    const { contrato, anexo } = await anexoPendiente(contratoId, anexoId, empresasPermitidas, usuarioId)
+    const finales = {
+        campo_modificado: anexo.campo_modificado,
+        fecha_vigencia: datos.fecha_vigencia ?? anexo.fecha_vigencia,
+        valor_nuevo: datos.valor_nuevo ?? anexo.valor_nuevo,
+        motivo: typeof datos.motivo === "string" && datos.motivo.trim() !== "" ? datos.motivo.trim() : anexo.motivo
+    }
+    await validarAnexo(finales, contrato)
+    return await anexo.update({
+        fecha_vigencia: finales.fecha_vigencia,
+        valor_nuevo: finales.valor_nuevo,
+        motivo: finales.motivo,
+        valor_anterior: valorAnteriorDe(anexo.campo_modificado, contrato)
+    })
+}
+
+// Descartar: queda «rechazado» (como las renovaciones pendientes al pasar a indefinido), para que conste.
+async function descartarAnexo(contratoId, anexoId, empresasPermitidas, usuarioId) {
+    const { anexo } = await anexoPendiente(contratoId, anexoId, empresasPermitidas, usuarioId)
+    return await anexo.update({ estado_firma: "rechazado" })
 }
 
 async function firmarAnexo(id, empresasPermitidas, usuarioId) {
@@ -284,6 +333,8 @@ async function listarAnexos(contratoId, empresasPermitidas) {
 module.exports = {
     documentoAnexo,
     crearAnexo,
+    corregirAnexo,
+    descartarAnexo,
     firmarAnexo,
     listarAnexos
 }

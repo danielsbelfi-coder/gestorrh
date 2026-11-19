@@ -10,6 +10,8 @@ let sucursalesEmpresa = []
 let empresaDelTrabajador = null
 let contratos = []
 let contratoParaAnexo = null
+let anexoEnCorreccion = null
+let anexosPorContrato = new Map()
 let otrasRelaciones = []
 let primeraEmpresa = true
 
@@ -183,6 +185,7 @@ async function dibujarContratos() {
         const resultado = await llamarApi(`/api/contratos/${contrato.id}/anexos`)
         return resultado.status === 200 ? resultado.datos : []
     }))
+    anexosPorContrato = new Map(contratos.map((c, i) => [c.id, anexos[i]]))
 
     contenedor.innerHTML = contratos.map((c, i) => `
         <article class="contrato">
@@ -224,8 +227,10 @@ async function dibujarContratos() {
                             <td>${escaparHtml(valorContrato(a.campo_modificado, a.valor_anterior))}</td>
                             <td><strong>${escaparHtml(valorContrato(a.campo_modificado, a.valor_nuevo))}</strong></td>
                             <td>${escaparHtml(a.motivo ?? "")}</td>
-                            <td>${insignia("firma", a.estado_firma)}</td>
-                            <td>${a.estado_firma === "pendiente" ? `<button type="button" class="chico" data-firmar-anexo="${a.id}" data-contrato="${c.id}">Firmar</button> ` : ""}<button type="button" class="chico secundario" data-pdf-anexo="${a.id}" data-contrato="${c.id}">PDF</button></td>
+                            <td>${insignia("firma", a.estado_firma).replace(">Rechazado<", ">Descartado<")}</td>
+                            <td>${a.estado_firma === "pendiente" && c.estado === "vigente" ? `<button type="button" class="chico" data-firmar-anexo="${a.id}" data-contrato="${c.id}">Firmar</button>
+                                <button type="button" class="chico secundario" data-corregir-anexo="${a.id}" data-contrato="${c.id}">Corregir</button>
+                                <button type="button" class="chico peligro" data-descartar-anexo="${a.id}" data-contrato="${c.id}">Descartar</button> ` : ""}<button type="button" class="chico secundario" data-pdf-anexo="${a.id}" data-contrato="${c.id}">PDF</button></td>
                         </tr>`).join("")}
                     </tbody>
                 </table>`}
@@ -290,7 +295,10 @@ document.getElementById("campoAnexo").addEventListener("change", prepararCampoVa
 
 function abrirAnexo(contratoId) {
     contratoParaAnexo = contratos.find((c) => c.id === contratoId)
+    anexoEnCorreccion = null
     document.getElementById("tituloAnexo").textContent = `Nuevo anexo del contrato #${contratoId}`
+    document.getElementById("botonAnexo").textContent = "Crear anexo"
+    document.getElementById("campoAnexo").disabled = false
     document.getElementById("formAnexo").reset()
     // La fecha de término es solo del plazo fijo y la obra, faena o hito solo de la obra o faena; un indefinido no se vuelve a convertir.
     const tipo = contratoParaAnexo?.tipo_contrato
@@ -300,6 +308,42 @@ function abrirAnexo(contratoId) {
         .filter(([campo]) => !(campo === "tipo_contrato" && tipo === "indefinido"))
         .map(([campo, def]) => ({ id: campo, texto: def.texto })))
     prepararCampoValor()
+    const panel = document.getElementById("panelAnexo")
+    panel.hidden = false
+    panel.scrollIntoView({ behavior: "smooth", block: "start" })
+}
+
+// Corrección de un anexo pendiente: el mismo formulario, con el campo fijo y los valores del anexo.
+function abrirCorreccionAnexo(contratoId, anexoId) {
+    const anexo = (anexosPorContrato.get(contratoId) ?? []).find((a) => a.id === anexoId)
+    if (!anexo) {
+        return
+    }
+    contratoParaAnexo = contratos.find((c) => c.id === contratoId)
+    anexoEnCorreccion = anexo
+    document.getElementById("formAnexo").reset()
+    document.getElementById("tituloAnexo").textContent = `Corregir anexo #${anexo.id} del contrato #${contratoId}`
+    document.getElementById("botonAnexo").textContent = "Guardar corrección"
+    const campo = document.getElementById("campoAnexo")
+    llenarSelect(campo, [{ id: anexo.campo_modificado, texto: CAMPOS_ANEXO[anexo.campo_modificado]?.texto ?? anexo.campo_modificado }])
+    campo.disabled = true
+    prepararCampoValor()
+    const control = document.getElementById("valorAnexo")
+    const tipo = CAMPOS_ANEXO[anexo.campo_modificado]?.tipo
+    if (tipo === "comuna") {
+        control.value = COMUNAS[anexo.valor_nuevo] ? `${COMUNAS[anexo.valor_nuevo]} (${anexo.valor_nuevo})` : ""
+    } else if (tipo === "sucursal") {
+        try {
+            const lugar = JSON.parse(anexo.valor_nuevo)
+            control.value = lugar.sucursal_id ? String(lugar.sucursal_id) : "casa_matriz"
+        } catch {
+            // Si no se puede leer, queda la primera opción.
+        }
+    } else {
+        control.value = String(anexo.valor_nuevo ?? "").slice(0, tipo === "fecha" ? 10 : undefined)
+    }
+    document.getElementById("vigenciaAnexo").value = String(anexo.fecha_vigencia).slice(0, 10)
+    document.getElementById("motivoAnexo").value = anexo.motivo ?? ""
     const panel = document.getElementById("panelAnexo")
     panel.hidden = false
     panel.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -319,12 +363,27 @@ document.getElementById("formAnexo").addEventListener("submit", async function (
         return
     }
 
-    const creado = await crearRegistro(`/api/contratos/${contratoParaAnexo.id}/anexos`, {
+    const cuerpo = {
         campo_modificado: campo,
         valor_nuevo: String(valorNuevo),
         fecha_vigencia: document.getElementById("vigenciaAnexo").value,
         motivo: document.getElementById("motivoAnexo").value.trim()
-    }, "Anexo creado. Queda pendiente hasta que se firme.")
+    }
+
+    if (anexoEnCorreccion) {
+        const resultado = await llamarApi(`/api/contratos/${contratoParaAnexo.id}/anexos/${anexoEnCorreccion.id}`, { method: "PATCH", body: JSON.stringify(cuerpo) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo corregir el anexo")
+            return
+        }
+        mensaje("info", "Anexo corregido. Sigue pendiente hasta que se firme.")
+        anexoEnCorreccion = null
+        document.getElementById("panelAnexo").hidden = true
+        await cargarFicha()
+        return
+    }
+
+    const creado = await crearRegistro(`/api/contratos/${contratoParaAnexo.id}/anexos`, cuerpo, "Anexo creado. Queda pendiente hasta que se firme.")
 
     if (creado) {
         document.getElementById("panelAnexo").hidden = true
@@ -361,6 +420,25 @@ document.getElementById("contratos").addEventListener("click", async function (e
         if (await anularContratoConMotivo(Number(boton.dataset.anularContrato), { firmado: boton.dataset.firmado === "si" })) {
             await cargarFicha()
         }
+        return
+    }
+
+    if (boton.dataset.corregirAnexo) {
+        abrirCorreccionAnexo(Number(boton.dataset.contrato), Number(boton.dataset.corregirAnexo))
+        return
+    }
+
+    if (boton.dataset.descartarAnexo) {
+        if (!confirm("¿Descartar este anexo? No se firmó, así que no cambia el contrato; queda en la lista como descartado.")) {
+            return
+        }
+        const resultado = await llamarApi(`/api/contratos/${boton.dataset.contrato}/anexos/${boton.dataset.descartarAnexo}/descartar`, { method: "PATCH" })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo descartar el anexo")
+            return
+        }
+        mensaje("info", "Anexo descartado.")
+        await cargarFicha()
         return
     }
 
