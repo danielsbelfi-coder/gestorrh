@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Carga masiva de variables</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-menu="variables.html" data-titulo="Carga masiva de variables">
+        <a class="volver-lista" href="variables.html">← Volver a Variables del mes</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Carga masiva de variables</h1>
+                <p>Anticipos, viáticos, bonos o cualquier variable del mes, para muchos trabajadores de una vez. La planilla puede traer una sola columna de variable o varias: el sistema reconoce las columnas por su título. Si una fila tiene errores, no se carga nada. Lo cargado queda pendiente de aprobación.</p>
+            </div>
+            <label>Periodo<select id="periodo"></select></label>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <div class="rejilla rejilla-ancha">
+            <section class="tarjeta paso-carga">
+                <h2>1. Prepara la planilla</h2>
+                <p class="texto-suave">Una fila por trabajador. Columnas: <strong>RUT</strong> (obligatoria; con o sin puntos, con guion o con el DV en una columna «DV»), una columna por cada variable con el <strong>nombre del concepto</strong> como título (por ejemplo «Anticipo», «Viático»; también sirve su código o el plural) y, si quieres, <strong>Glosa</strong>. Las demás columnas (Nombre, Cargo…) se ignoran. Montos en pesos; una celda vacía o en 0 no carga nada.</p>
+                <label class="campo-ancho">Conceptos para la plantilla<select id="conceptosPlantilla" multiple size="6"></select></label>
+                <button type="button" class="secundario" id="btnPlantilla">Descargar plantilla con los trabajadores del mes (CSV)</button>
+            </section>
+            <section class="tarjeta paso-carga">
+                <h2>2. Sube la planilla</h2>
+                <p class="texto-suave">En Excel: Guardar como → CSV. El sistema revisa todas las filas y te muestra lo que va a cargar antes de cargar nada.</p>
+                <input type="file" id="archivo" accept=".csv,text/csv" class="oculto-accesible">
+                <div class="subir-archivo">
+                    <label for="archivo" class="boton secundario">Elegir planilla (CSV)</label>
+                    <span id="nombreArchivo" class="texto-suave">Ningún archivo elegido</span>
+                </div>
+                <button type="button" id="btnRevisar" disabled>Subir y revisar</button>
+            </section>
+        </div>
+
+        <details class="tarjeta">
+            <summary>Títulos de columna que se reconocen</summary>
+            <p class="texto-suave">El nombre o el código de cada concepto; no importan mayúsculas, tildes, espacios ni el plural. Las horas extra no se cargan por planilla (las del mes van en el libro de asistencia).</p>
+            <div id="tablaConceptos"></div>
+        </details>
+
+        <section class="tarjeta" id="panelRevision" hidden>
+            <div class="encabezado-seccion">
+                <h2>3. Revisión</h2>
+                <button type="button" id="btnConfirmar" hidden>Cargar variables</button>
+            </div>
+            <div id="resumenRevision"></div>
+            <div id="tablaRevision"></div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/importar-variables.js"></script>
+</body>
+
+</html>

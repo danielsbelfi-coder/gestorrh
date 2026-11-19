@@ -37,60 +37,7 @@ async function cargarGuia() {
 
 cargarGuia()
 
-// Lee un CSV con separador ; o , y comillas. Devuelve una matriz de textos.
-function leerCsv(contenido) {
-    const primeraLinea = contenido.split(/\r?\n/)[0]
-    const separador = (primeraLinea.match(/;/g) ?? []).length >= (primeraLinea.match(/,/g) ?? []).length ? ";" : ","
-    const resultado = []
-    let fila = []
-    let celda = ""
-    let entreComillas = false
-
-    for (let i = 0; i < contenido.length; i++) {
-        const c = contenido[i]
-        if (entreComillas) {
-            if (c === '"' && contenido[i + 1] === '"') {
-                celda += '"'
-                i++
-            } else if (c === '"') {
-                entreComillas = false
-            } else {
-                celda += c
-            }
-        } else if (c === '"') {
-            entreComillas = true
-        } else if (c === separador) {
-            fila.push(celda)
-            celda = ""
-        } else if (c === "\n" || c === "\r") {
-            if (c === "\r" && contenido[i + 1] === "\n") {
-                i++
-            }
-            fila.push(celda)
-            resultado.push(fila)
-            fila = []
-            celda = ""
-        } else {
-            celda += c
-        }
-    }
-    if (celda !== "" || fila.length > 0) {
-        fila.push(celda)
-        resultado.push(fila)
-    }
-    return resultado.filter((f) => f.some((valor) => valor.trim() !== ""))
-}
-
-// Excel en español suele guardar el CSV en Windows-1252: si no es UTF-8 válido, se lee así.
-async function leerArchivo(archivo) {
-    const bytes = await archivo.arrayBuffer()
-    try {
-        return new TextDecoder("utf-8", { fatal: true }).decode(bytes).replace(/^﻿/, "")
-    } catch {
-        return new TextDecoder("windows-1252").decode(bytes)
-    }
-}
-
+// leerCsv y leerArchivo están en componentes.js (los usa también la carga masiva de variables).
 const nombreColumna = (titulo) => normalizar(titulo).trim().replace(/\s+/g, "_")
 
 async function revisar(confirmar) {
