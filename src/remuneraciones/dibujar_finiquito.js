@@ -14,13 +14,23 @@ function parrafo(doc, texto) {
     doc.moveDown(0.8)
 }
 
-function celda(doc, x, y, texto, monto, negrita = false) {
+const ANCHO_TEXTO = ANCHO_COLUMNA - 90
+
+// Alto de una fila: el texto largo (por ejemplo, «Indemnización por término de obra o faena (art. 163 inc. 3°, 7,5 días)»)
+// se escribe completo en más de una línea, sin recortarlo.
+function altoDeFila(doc, textos) {
+    doc.font("Helvetica").fontSize(9)
+    const alto = Math.max(...textos.map((t) => (t ? doc.heightOfString(t, { width: ANCHO_TEXTO }) : 0)))
+    return Math.max(ALTO_FILA, Math.ceil(alto) + 5)
+}
+
+function celda(doc, x, y, texto, monto, negrita = false, alto = ALTO_FILA) {
     doc.font(negrita ? "Helvetica-Bold" : "Helvetica").fontSize(9)
-    doc.text(texto, x + 4, y + 3, { width: ANCHO_COLUMNA - 90, height: ALTO_FILA, ellipsis: true })
+    doc.text(texto, x + 4, y + 3, { width: ANCHO_TEXTO })
     if (monto !== null) {
         doc.text(miles(monto), x + ANCHO_COLUMNA - 86, y + 3, { width: 80, align: "right" })
     }
-    doc.rect(x, y, ANCHO_COLUMNA, ALTO_FILA).stroke()
+    doc.rect(x, y, ANCHO_COLUMNA, alto).stroke()
 }
 
 function tabla(doc, t) {
@@ -38,9 +48,10 @@ function tabla(doc, t) {
     for (let i = 0; i < filas; i++) {
         const haber = t.haberes[i]
         const descuento = t.descuentos[i]
-        celda(doc, MARGEN, y, haber ? haber.nombre : "", haber ? haber.monto : null)
-        celda(doc, xDerecha, y, descuento ? descuento.nombre : "", descuento ? descuento.monto : null)
-        y += ALTO_FILA
+        const alto = altoDeFila(doc, [haber?.nombre, descuento?.nombre])
+        celda(doc, MARGEN, y, haber ? haber.nombre : "", haber ? haber.monto : null, false, alto)
+        celda(doc, xDerecha, y, descuento ? descuento.nombre : "", descuento ? descuento.monto : null, false, alto)
+        y += alto
     }
 
     celda(doc, MARGEN, y, "TOTAL HABERES", t.totalHaberes, true)
