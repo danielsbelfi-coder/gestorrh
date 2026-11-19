@@ -46,3 +46,8 @@ test("anexo firmado hoy: fecha_firma como Date en memoria (recién guardado) tam
     // 01:30 UTC del 17 son las 22:30 del 16 en Chile (UTC-3 en verano): la fecha es la chilena.
     assert.match(d.lugarFecha, /a 16 de noviembre de 2026$/)
 })
+
+test("textoModificacion: cambio de la obra, faena o hito de un contrato por obra", () => {
+    const texto = textoModificacion({ campo_modificado: "obra_faena_descripcion", valor_nuevo: "el término de las terminaciones del piso 3", fecha_vigencia: "2027-02-15" })
+    assert.match(texto, /a contar del 15 de febrero de 2027, el contrato por obra o faena durará hasta: el término de las terminaciones del piso 3\./)
+})

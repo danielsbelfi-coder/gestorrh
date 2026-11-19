@@ -31,8 +31,8 @@ function textoDuracion(contrato) {
         return `El presente contrato es a plazo fijo y durará hasta ${hasta}, pudiendo cualquiera de las partes ponerle término en las condiciones y por las causales establecidas en la ley.`
     }
     if (contrato.tipo_contrato === "obra_faena") {
-        const obra = contrato.obra_faena_descripcion ? `: ${contrato.obra_faena_descripcion}` : " señalada en la cláusula primera"
-        return `El presente contrato durará hasta la conclusión del trabajo o servicio que le da origen, esto es, la obra o faena${obra}. Las partes reconocen que la faena termina en forma paulatina según el avance de los trabajos, pudiendo cualquiera de ellas ponerle término en las condiciones y por las causales establecidas en la ley.`
+        const hasta = contrato.obra_faena_descripcion ? `hasta: ${contrato.obra_faena_descripcion}` : "hasta la conclusión del trabajo o servicio que le da origen"
+        return `El presente contrato es por obra o faena y durará ${hasta}. Las partes reconocen que la faena termina en forma paulatina según el avance de los trabajos, pudiendo cualquiera de ellas ponerle término en las condiciones y por las causales establecidas en la ley.`
     }
     return "El presente contrato es de duración indefinida, pudiendo cualquiera de las partes ponerle término en las condiciones y por las causales establecidas en la ley."
 }
@@ -70,7 +70,7 @@ function armarContrato({ contrato, persona, empresa, cargo, trabajador, afp, isa
     const salud = persona.sistema_salud === "Isapre" ? `Isapre ${isapre?.nombre ?? ""}`.trim() : persona.sistema_salud ?? "No informado"
 
     const cuerpo = [
-        `El TRABAJADOR se compromete a desempeñar las funciones de ${cargo.toUpperCase()}${contrato.funciones ? ` (${contrato.funciones})` : ""} y labores complementarias${contrato.tipo_contrato === "obra_faena" && contrato.obra_faena_descripcion ? `, para la ejecución de la obra o faena: ${contrato.obra_faena_descripcion}` : ""}.`,
+        `El TRABAJADOR se compromete a desempeñar las funciones de ${cargo.toUpperCase()}${contrato.funciones ? ` (${contrato.funciones})` : ""} y labores complementarias.`,
         `El TRABAJADOR prestará sus servicios en ${contrato.lugar_prestacion_servicios}${comunaPrestacion ? `, comuna de ${comunaPrestacion}` : ""}. Declara conocer las funciones que desempeñará y poseer salud compatible con ellas, y se obliga a cumplir las normas, procedimientos y políticas de la empresa.`,
         textoJornada(contrato, jornada),
         [

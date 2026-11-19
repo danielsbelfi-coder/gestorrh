@@ -168,7 +168,7 @@ async function dibujarContratos() {
             <header class="contrato-cabecera">
                 <div>
                     <strong>Contrato #${c.id} · ${escaparHtml(TEXTOS.tipoContrato[conversionDe(anexos[i])?.valor_anterior ?? c.tipo_contrato] ?? c.tipo_contrato)}</strong>
-                    <span class="texto-suave"> desde ${escaparHtml(fechaCorta(c.fecha_inicio))}${c.fecha_termino && c.tipo_contrato !== "indefinido" ? ` hasta ${escaparHtml(fechaCorta(c.fecha_termino))}` : ""}${conversionDe(anexos[i]) ? ` · indefinido por anexo desde el ${escaparHtml(fechaCorta(conversionDe(anexos[i]).fecha_vigencia))}` : ""}</span>
+                    <span class="texto-suave"> desde ${escaparHtml(fechaCorta(c.fecha_inicio))}${terminoDelContrato(c) ? ` hasta ${escaparHtml(terminoDelContrato(c))}` : ""}${conversionDe(anexos[i]) ? ` · indefinido por anexo desde el ${escaparHtml(fechaCorta(conversionDe(anexos[i]).fecha_vigencia))}` : ""}</span>
                 </div>
                 <div class="contrato-estados">
                     ${insignia("contrato", c.estado)}
@@ -271,10 +271,12 @@ function abrirAnexo(contratoId) {
     contratoParaAnexo = contratos.find((c) => c.id === contratoId)
     document.getElementById("tituloAnexo").textContent = `Nuevo anexo del contrato #${contratoId}`
     document.getElementById("formAnexo").reset()
-    // Un contrato indefinido no tiene fecha de término ni se puede volver a convertir.
-    const indefinido = contratoParaAnexo?.tipo_contrato === "indefinido"
+    // La fecha de término es solo del plazo fijo y la obra, faena o hito solo de la obra o faena; un indefinido no se vuelve a convertir.
+    const tipo = contratoParaAnexo?.tipo_contrato
     llenarSelect(document.getElementById("campoAnexo"), Object.entries(CAMPOS_ANEXO)
-        .filter(([campo]) => !(indefinido && (campo === "fecha_termino" || campo === "tipo_contrato")))
+        .filter(([campo]) => !(campo === "fecha_termino" && tipo !== "plazo_fijo"))
+        .filter(([campo]) => !(campo === "obra_faena_descripcion" && tipo !== "obra_faena"))
+        .filter(([campo]) => !(campo === "tipo_contrato" && tipo === "indefinido"))
         .map(([campo, def]) => ({ id: campo, texto: def.texto })))
     prepararCampoValor()
     const panel = document.getElementById("panelAnexo")

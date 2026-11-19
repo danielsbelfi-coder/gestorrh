@@ -14,7 +14,7 @@ const { COMUNAS } = require("../shared/comunas_lre.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { exigirSinCruce } = require("../trabajadores/relaciones.js")
 const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
-const { erroresFechasContrato, limiteHaciaAdelante, hoyEnChile } = require("./fechas_contrato.js")
+const { erroresFechasContrato, erroresDuracion, limiteHaciaAdelante, hoyEnChile } = require("./fechas_contrato.js")
 
 // Los contratos por hora son honorarios, que el sistema todavía no contempla: no se crean nuevos (los que existan se
 // siguen liquidando). Ver «Sistema por hora» en el SPEC.
@@ -48,6 +48,15 @@ async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null, 
     const erroresFechas = erroresFechasContrato(datos, hoyEnChile())
     if (erroresFechas.length > 0) {
         throw new ValidationError(erroresFechas.join(". "))
+    }
+    // Plazo fijo con fecha de término; obra o faena con la obra, faena o hito que le pone término (y sin fecha).
+    const duracion = erroresDuracion(datos)
+    if (duracion.errores.length > 0) {
+        throw new ValidationError(duracion.errores.join(". "))
+    }
+    datos.obra_faena_descripcion = duracion.obra
+    if (datos.tipo_contrato === "indefinido") {
+        datos.fecha_termino = null
     }
 
     await resolverLugar(datos, empresaId, sucursalYaAsignada)

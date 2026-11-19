@@ -526,11 +526,23 @@ const CAMPOS_ANEXO = {
     lugar_prestacion_servicios: { texto: "Lugar de prestación de servicios (escrito a mano)", tipo: "texto" },
     sistema_remuneracion: { texto: "Sistema de remuneración", tipo: "lista", opciones: TEXTOS_CONTRATO.sistemaRemuneracion },
     periodicidad_pago: { texto: "Periodicidad de pago", tipo: "lista", opciones: TEXTOS_CONTRATO.periodicidadPago },
-    fecha_termino: { texto: "Fecha de término", tipo: "fecha" },
+    fecha_termino: { texto: "Fecha de término (plazo fijo)", tipo: "fecha" },
+    obra_faena_descripcion: { texto: "Obra, faena o hito de término (obra o faena)", tipo: "texto" },
     comuna_prestacion: { texto: "Comuna de prestación", tipo: "comuna" },
     jornada_id: { texto: "Jornada (horario)", tipo: "jornada" },
     // Código 8 en Previred: solo plazo fijo u obra o faena → indefinido.
     tipo_contrato: { texto: "Tipo de contrato (pasar a indefinido)", tipo: "lista", opciones: { indefinido: "Indefinido" }, textos: TEXTOS_CONTRATO.tipoContrato }
+}
+
+// Hasta cuándo dura un contrato, en palabras: la fecha del plazo fijo o la obra, faena o hito de la obra o faena.
+function terminoDelContrato(c) {
+    if (c.tipo_contrato === "plazo_fijo") {
+        return fechaCorta(c.fecha_termino)
+    }
+    if (c.tipo_contrato === "obra_faena") {
+        return c.obra_faena_descripcion ?? (c.fecha_termino ? fechaCorta(c.fecha_termino) : "")
+    }
+    return ""
 }
 
 // Plantillas de jornada conocidas por la pantalla (id → jornada), para mostrar su nombre en anexos.

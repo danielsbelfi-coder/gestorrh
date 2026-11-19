@@ -33,7 +33,10 @@
                     </select>
                 </label>
                 <label>Fecha de inicio<input type="date" id="fechaInicio" required></label>
-                <label>Fecha de término (plazo fijo u obra)<input type="date" id="fechaTermino"></label>
+                <label id="campoFechaTermino" hidden>Fecha de término<input type="date" id="fechaTermino"></label>
+                <label class="campo-ancho" id="campoObraFaena" hidden>Obra, faena o hito que pone término al contrato
+                    <input type="text" id="obraFaena" maxlength="255" placeholder="Ej.: el término de las excavaciones y fundaciones del Edificio Los Robles">
+                </label>
                 <label>Cargo<select id="cargoId" required></select></label>
                 <label class="campo-ancho">Funciones <span class="texto-suave">(opcional: si las dejas vacías, el contrato indica solo el cargo; se sugieren las del cargo y puedes editarlas)</span><input type="text" id="funciones"></label>
                 <label class="campo-ancho">Lugar de trabajo

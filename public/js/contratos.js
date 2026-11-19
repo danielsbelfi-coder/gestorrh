@@ -21,7 +21,7 @@ const tabla = crearTabla({
         { titulo: "Tipo", valor: (c) => TEXTOS.tipoContrato[c.tipo_contrato] ?? c.tipo_contrato },
         { titulo: "Cargo", valor: (c) => c.cargo ?? "" },
         { titulo: "Inicio", valor: (c) => c.fecha_inicio ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_inicio)) },
-        { titulo: "Término", valor: (c) => (c.tipo_contrato === "indefinido" ? "" : c.fecha_termino ?? ""), html: (c) => escaparHtml(c.tipo_contrato === "indefinido" ? "" : fechaCorta(c.fecha_termino)) },
+        { titulo: "Término", valor: (c) => terminoDelContrato(c), html: (c) => escaparHtml(terminoDelContrato(c)) },
         { titulo: "Sueldo base", valor: (c) => Number(c.sueldo_base), html: (c) => escaparHtml(pesos(c.sueldo_base)), numero: true },
         { titulo: "Firma", valor: (c) => textoEstado("firma", c.estado_firma), html: (c) => insignia("firma", c.estado_firma) },
         { titulo: "Estado", valor: (c) => textoEstado("contrato", c.estado), html: (c) => insignia("contrato", c.estado) },
@@ -135,6 +135,20 @@ function aplicarJornada() {
     }
 }
 
+// ---------- Duración: el plazo fijo lleva fecha de término; la obra o faena, la obra, faena o hito que le pone término ----------
+function aplicarTipoContrato() {
+    const tipo = document.getElementById("tipoContrato").value
+    const plazoFijo = tipo === "plazo_fijo"
+    const obra = tipo === "obra_faena"
+    document.getElementById("campoFechaTermino").hidden = !plazoFijo
+    document.getElementById("fechaTermino").required = plazoFijo
+    document.getElementById("campoObraFaena").hidden = !obra
+    document.getElementById("obraFaena").required = obra
+}
+
+document.getElementById("tipoContrato").addEventListener("change", aplicarTipoContrato)
+aplicarTipoContrato()
+
 document.getElementById("jornadaId").addEventListener("change", aplicarJornada)
 document.getElementById("tipoJornada").addEventListener("change", aplicarJornada)
 
@@ -224,7 +238,9 @@ formulario.addEventListener("submit", async function (evento) {
     const datos = {
         tipo_contrato: document.getElementById("tipoContrato").value,
         fecha_inicio: document.getElementById("fechaInicio").value,
-        fecha_termino: document.getElementById("fechaTermino").value || null,
+        // Solo el dato que corresponde al tipo: un campo escondido no se envía aunque tenga algo escrito.
+        fecha_termino: document.getElementById("tipoContrato").value === "plazo_fijo" ? document.getElementById("fechaTermino").value || null : null,
+        obra_faena_descripcion: document.getElementById("tipoContrato").value === "obra_faena" ? document.getElementById("obraFaena").value.trim() : null,
         comuna_prestacion: comuna,
         cargo_id: Number(document.getElementById("cargoId").value),
         funciones: document.getElementById("funciones").value.trim(),
@@ -281,6 +297,8 @@ function abrirCorreccion(id) {
     document.getElementById("tipoContrato").value = c.tipo_contrato
     document.getElementById("fechaInicio").value = c.fecha_inicio ?? ""
     document.getElementById("fechaTermino").value = c.fecha_termino ?? ""
+    document.getElementById("obraFaena").value = c.obra_faena_descripcion ?? ""
+    aplicarTipoContrato()
     document.getElementById("cargoId").value = String(c.cargo_id)
     document.getElementById("funciones").value = c.funciones ?? ""
     document.getElementById("lugarPrestacionServicios").value = c.lugar_prestacion_servicios ?? ""
@@ -319,6 +337,7 @@ function abrirCorreccion(id) {
 function salirDeCorreccion() {
     contratoEnCorreccion = null
     formulario.reset()
+    aplicarTipoContrato()
     document.getElementById("trabajador").disabled = false
     document.getElementById("tituloPanel").textContent = "＋ Nuevo contrato"
     document.getElementById("botonGuardar").textContent = "Crear contrato"

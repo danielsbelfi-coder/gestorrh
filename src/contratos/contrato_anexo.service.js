@@ -1,7 +1,7 @@
 const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo, Sucursal } = require("../shared/associations.js")
 const { CAMPO_SUCURSAL, valorLugar, leerValorLugar, mismoLugar } = require("./anexo_sucursal.js")
 const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
-const { errorVigenciaAnexo, errorTerminoAnexo, hoyEnChile } = require("./fechas_contrato.js")
+const { errorVigenciaAnexo, errorTerminoAnexo, hoyEnChile, LARGO_OBRA } = require("./fechas_contrato.js")
 const { armarAnexo } = require("./armar_anexo.js")
 const { contratoOriginal } = require("./contrato_original.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
@@ -81,6 +81,7 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
         "sistema_remuneracion",
         "periodicidad_pago",
         "fecha_termino",
+        "obra_faena_descripcion",
         "comuna_prestacion",
         "jornada_id",
         "tipo_contrato",
@@ -137,6 +138,19 @@ async function crearAnexo(datos, empresasPermitidas, usuarioId) {
     if (datos.campo_modificado === "fecha_termino" && contrato.tipo_contrato === "indefinido") {
         throw new ConflictError("Un contrato indefinido no tiene fecha de término; el fin de la relación se registra como término en la ficha del trabajador")
     }
+    if (datos.campo_modificado === "fecha_termino" && contrato.tipo_contrato === "obra_faena") {
+        throw new ConflictError("Un contrato por obra o faena no tiene fecha de término: el anexo cambia la obra, faena o hito que le pone término")
+    }
+    // Obra, faena o hito: solo en un contrato por obra o faena (por ejemplo, se amplía a la faena siguiente).
+    if (datos.campo_modificado === "obra_faena_descripcion") {
+        if (contrato.tipo_contrato !== "obra_faena") {
+            throw new ConflictError("Solo un contrato por obra o faena tiene una obra, faena o hito de término")
+        }
+        datos.valor_nuevo = typeof datos.valor_nuevo === "string" ? datos.valor_nuevo.trim() : ""
+        if (datos.valor_nuevo === "" || datos.valor_nuevo.length > LARGO_OBRA) {
+            throw new ValidationError(`Indica la nueva obra, faena o hito (hasta ${LARGO_OBRA} caracteres)`)
+        }
+    }
 
     const esSucursal = datos.campo_modificado === CAMPO_SUCURSAL
     if (esSucursal) {
@@ -182,8 +196,8 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     if (anexo.campo_modificado === "tipo_contrato" && contrato.tipo_contrato === "indefinido") {
         throw new ConflictError("El contrato ya es indefinido")
     }
-    if (anexo.campo_modificado === "fecha_termino" && contrato.tipo_contrato === "indefinido") {
-        throw new ConflictError("El contrato ya es indefinido: este anexo de fecha de término no se puede firmar")
+    if (["fecha_termino", "obra_faena_descripcion"].includes(anexo.campo_modificado) && contrato.tipo_contrato === "indefinido") {
+        throw new ConflictError("El contrato ya es indefinido: este anexo de duración no se puede firmar")
     }
 
     await sequelize.transaction(async (t) => {
@@ -214,10 +228,10 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
                 transaction: t
             },
         )
-        // Una renovación (fecha de término) que quedó pendiente ya no corresponde en un contrato indefinido.
+        // Una renovación (fecha de término) o un cambio de obra que quedó pendiente ya no corresponde en un contrato indefinido.
         if (anexo.campo_modificado === "tipo_contrato") {
             await ContratoAnexo.update({ estado_firma: "rechazado" }, {
-                where: { contrato_id: contrato.id, campo_modificado: "fecha_termino", estado_firma: "pendiente" },
+                where: { contrato_id: contrato.id, campo_modificado: ["fecha_termino", "obra_faena_descripcion"], estado_firma: "pendiente" },
                 transaction: t
             })
         }

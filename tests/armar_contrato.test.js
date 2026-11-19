@@ -2,10 +2,10 @@ const { test } = require("node:test")
 const assert = require("node:assert")
 const { armarContrato } = require("../src/contratos/armar_contrato.js")
 
-function contratoDe(funciones) {
+function contratoDe(funciones, extra = {}) {
     return armarContrato({
         contrato: {
-            tipo_contrato: "indefinido", funciones, lugar_prestacion_servicios: "Av. Los Aromos 3300", tipo_jornada: "completa",
+            tipo_contrato: "indefinido", funciones, ...extra, lugar_prestacion_servicios: "Av. Los Aromos 3300", tipo_jornada: "completa",
             horas_semanales: 42, dias_trabajados: 5, sistema_remuneracion: "mensual", sueldo_base: 560000, periodicidad_pago: "mensual"
         },
         persona: { nombres: "Constanza", apellido_paterno: "Vidal", rut: "30127775", dv: "K", direccion: "Calle 1", sexo_genero: "femenino", sistema_salud: "Fonasa" },
@@ -32,4 +32,10 @@ test("sin funciones (vacías, nulas o en blanco), el contrato indica solo el car
         assert.match(texto, /funciones de VENDEDOR\(A\) Y CAJERO\(A\) y labores complementarias/)
         assert.doesNotMatch(texto, /\(null\)|\(undefined\)|\(\)/)
     }
+})
+
+test("por obra o faena: el contrato dura hasta la obra, faena o hito escrito, sin fecha de término", () => {
+    const texto = textoCompleto(contratoDe(null, { tipo_contrato: "obra_faena", obra_faena_descripcion: "el término de las excavaciones y fundaciones del Edificio Los Robles", fecha_termino: null }))
+    assert.match(texto, /es por obra o faena y durará hasta: el término de las excavaciones y fundaciones del Edificio Los Robles\./)
+    assert.doesNotMatch(texto, /para la ejecución de la obra o faena/)
 })

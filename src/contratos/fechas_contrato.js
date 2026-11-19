@@ -75,9 +75,36 @@ function errorTerminoAnexo(fechaTermino, fechaVigencia, contrato) {
     return null
 }
 
+// Duración según el tipo de contrato (función pura). El plazo fijo termina en una fecha; el contrato por obra o faena,
+// en la obra, faena o hito que se escribe en el contrato (por ejemplo «el término de las excavaciones y fundaciones
+// del Edificio Los Robles»), que no siempre es el fin de la obra completa. La fecha real se registra al terminar
+// la relación (ficha del trabajador y finiquito). Devuelve { errores, obra } con la descripción ya recortada.
+const LARGO_OBRA = 255
+
+function erroresDuracion(datos) {
+    const errores = []
+    const termino = datos.fecha_termino
+    const conTermino = termino !== undefined && termino !== null && termino !== ""
+    const obra = typeof datos.obra_faena_descripcion === "string" ? datos.obra_faena_descripcion.trim() : ""
+    if (datos.tipo_contrato === "plazo_fijo" && !conTermino) {
+        errores.push("Un contrato a plazo fijo necesita su fecha de término")
+    }
+    if (datos.tipo_contrato === "obra_faena") {
+        if (conTermino) {
+            errores.push("Un contrato por obra o faena no lleva fecha de término: se indica la obra, faena o hito que le pone término")
+        }
+        if (obra === "") {
+            errores.push("Indica la obra, faena o hito que pone término al contrato")
+        } else if (obra.length > LARGO_OBRA) {
+            errores.push(`La obra, faena o hito puede tener hasta ${LARGO_OBRA} caracteres`)
+        }
+    }
+    return { errores, obra: datos.tipo_contrato === "obra_faena" && obra !== "" ? obra : null }
+}
+
 // Hoy en Chile (AAAA-MM-DD).
 function hoyEnChile(ahora = new Date()) {
     return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(ahora)
 }
 
-module.exports = { erroresFechasContrato, errorVigenciaAnexo, errorTerminoAnexo, limiteHaciaAdelante, hoyEnChile }
+module.exports = { erroresDuracion, LARGO_OBRA, erroresFechasContrato, errorVigenciaAnexo, errorTerminoAnexo, limiteHaciaAdelante, hoyEnChile }
