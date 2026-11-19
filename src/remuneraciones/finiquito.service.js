@@ -11,6 +11,7 @@ const { camposMontosLre } = require("./archivo_lre.js")
 const { tiempoServido, basesFiniquito, montosFiniquito } = require("./calculo_finiquito.js")
 const { esFechaValida } = require("../shared/fechas.js")
 const { armarFiniquito } = require("./armar_finiquito.js")
+const { contratoDeLaRelacion } = require("../contratos/contrato_relacion.js")
 
 const TOPE_UF_INDEMNIZACION = 90
 
@@ -69,10 +70,10 @@ async function montosMesesAnteriores(trabajador, anio, mes) {
 }
 
 async function sueldoDelMesDeTermino(trabajador, anio, mes) {
-    const vigente = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajador.id, estado: "vigente" } })
+    const vigente = await contratoDeLaRelacion(ContratoTrabajo, trabajador.id)
 
     if (vigente === null) {
-        throw new ConflictError("El trabajador no tiene un contrato vigente")
+        throw new ConflictError("El trabajador no tiene contrato")
     }
 
     const anexos = await ContratoAnexo.findAll({ where: { contrato_id: vigente.id } })
@@ -205,10 +206,7 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     const diasInhabiles = feriado.inhabiles
 
     // Contrato de la relación (no anulado): si es por obra o faena, la causal 159 N° 5 da la indemnización de la Ley 21.122.
-    const contratoRelacion = await ContratoTrabajo.findOne({
-        where: { trabajador_id: trabajador.id, estado: { [Op.ne]: "anulado" } },
-        order: [["fecha_inicio", "DESC"]]
-    })
+    const contratoRelacion = await contratoDeLaRelacion(ContratoTrabajo, trabajador.id)
     const obraFaena = contratoRelacion?.tipo_contrato === "obra_faena"
 
     const calcularMontos = (lista) => montosFiniquito({
@@ -486,10 +484,7 @@ async function documentoFiniquito(id, empresasPermitidas) {
     }
 
     const empresa = await Empresa.findByPk(finiquito.Trabajador.empresa_id)
-    const contrato = await ContratoTrabajo.findOne({
-        where: { trabajador_id: finiquito.trabajador_id, estado: "vigente" },
-        include: [Cargo]
-    })
+    const contrato = await contratoDeLaRelacion(ContratoTrabajo, finiquito.trabajador_id, { include: [Cargo] })
 
     const documento = armarFiniquito({
         finiquito: finiquito.toJSON(),

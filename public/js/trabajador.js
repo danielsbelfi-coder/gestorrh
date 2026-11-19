@@ -10,6 +10,7 @@ let sucursalesEmpresa = []
 let empresaDelTrabajador = null
 let contratos = []
 let contratoParaAnexo = null
+let otrasRelaciones = []
 let primeraEmpresa = true
 
 function dato(titulo, valor) {
@@ -24,7 +25,7 @@ async function cargarFicha() {
     }
     trabajador = resultado.datos
 
-    const listas = await cargarListas([`/api/personas/${trabajador.persona_id}`, "/api/cargos", "/api/contratos"])
+    const listas = await cargarListas([`/api/personas/${trabajador.persona_id}`, "/api/cargos", "/api/contratos", "/api/trabajadores"])
     if (!listas) {
         return false
     }
@@ -39,6 +40,7 @@ async function cargarFicha() {
     ])
     sucursalesEmpresa = sucursales.status === 200 ? sucursales.datos : []
     empresaDelTrabajador = empresa.status === 200 ? empresa.datos : null
+    otrasRelaciones = listas[3].filter((t) => t.persona_id === trabajador.persona_id && t.empresa_id === trabajador.empresa_id && t.id !== trabajador.id)
     contratos = listas[2]
         .filter((c) => c.trabajador_id === trabajador.id)
         .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))
@@ -58,12 +60,14 @@ async function cargarFicha() {
         ${trabajador.fecha_termino ? `<a class="boton secundario chico" href="finiquitos.html?buscar=${rut}">Finiquito</a>` : ""}`
 
     const vigente = contratos.find((c) => c.estado === "vigente")
+    const ultimo = vigente ?? contratos.find((c) => c.estado === "terminado")
+    dibujarRelacionCerrada()
     document.getElementById("relacion").innerHTML = [
         dato("Ingreso", escaparHtml(fechaCorta(trabajador.fecha_ingreso) || "—")),
         dato("Término", escaparHtml(fechaCorta(trabajador.fecha_termino) || "—")),
         dato("Causal de término", escaparHtml(CAUSALES[trabajador.causal_termino] ?? "—")),
-        dato("Cargo actual", escaparHtml(vigente ? cargoPorId.get(vigente.cargo_id)?.nombre ?? "—" : "Sin contrato vigente")),
-        dato("Sueldo base actual", escaparHtml(vigente ? pesos(vigente.sueldo_base) : "—"))
+        dato(vigente ? "Cargo actual" : "Cargo", escaparHtml(ultimo ? cargoPorId.get(ultimo.cargo_id)?.nombre ?? "—" : "Sin contrato vigente")),
+        dato(vigente ? "Sueldo base actual" : "Sueldo base", escaparHtml(ultimo ? pesos(ultimo.sueldo_base) : "—"))
     ].join("")
 
     // La fecha de ingreso de la relación debe ser el inicio de su primer contrato. Si no coinciden (por ejemplo, un
@@ -86,6 +90,23 @@ async function cargarFicha() {
     await dibujarContratos()
     await dibujarVacaciones()
     return true
+}
+
+// ---------- Relación terminada: quedó cerrada; volver a contratar es una relación nueva desde la persona ----------
+
+function dibujarRelacionCerrada() {
+    const caja = document.getElementById("relacionCerrada")
+    if (!trabajador.fecha_termino) {
+        caja.hidden = true
+        return
+    }
+    const nueva = otrasRelaciones
+        .filter((t) => t.fecha_ingreso > trabajador.fecha_termino)
+        .sort((a, b) => String(a.fecha_ingreso).localeCompare(String(b.fecha_ingreso)))[0]
+    caja.hidden = false
+    caja.innerHTML = `Esta relación laboral terminó el ${escaparHtml(fechaCorta(trabajador.fecha_termino))} y quedó cerrada con su contrato. ` + (nueva
+        ? `La persona tiene una relación nueva desde el ${escaparHtml(fechaCorta(nueva.fecha_ingreso))}: <a href="trabajador.html?id=${nueva.id}">ver la relación #${nueva.id}</a>.`
+        : `Para volver a contratar a la persona, crea una relación nueva desde <a href="persona.html?id=${trabajador.persona_id}">sus datos personales</a> («Nueva relación laboral»).`)
 }
 
 // ---------- Vacaciones ----------

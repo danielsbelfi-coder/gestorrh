@@ -6,6 +6,7 @@ const { mesesQueSuma, conLimiteTrabajadores } = require("../cuentas/consumo.serv
 const { esFechaValida } = require("../shared/fechas.js")
 const { CAUSALES_TERMINO } = require("../shared/causales_termino.js")
 const { exigirSinCruce } = require("./relaciones.js")
+const { sequelize } = require("../shared/database.js")
 
 
 async function crearTrabajador(datos, empresasPermitidas, usuarioId) {
@@ -97,16 +98,49 @@ async function actualizarTrabajador(id, datos, empresasPermitidas, usuarioId) {
         await exigirSinLiquidacionesDespuesDe(trabajador, despues.fecha_termino)
     }
 
+    // Con el término la relación queda desvinculada (y vuelve a activa si el término se quita).
+    if (datos.estado === undefined && despues.fecha_termino !== antes.fecha_termino) {
+        if (despues.fecha_termino !== null && antes.fecha_termino === null && trabajador.estado !== "postulante") {
+            datos.estado = "desvinculado"
+        } else if (despues.fecha_termino === null && trabajador.estado === "desvinculado") {
+            datos.estado = "activo"
+        }
+        despues.estado = datos.estado ?? antes.estado
+    }
+
+    const guardar = async (transaction) => {
+        const actualizado = await trabajador.update(datos, { fields: campos, transaction })
+        await ajustarContratoAlTermino(trabajador.id, antes.fecha_termino, despues.fecha_termino, transaction)
+        return actualizado
+    }
+
     const meses = mesesQueSuma(antes, despues)
 
     if (meses.length === 0) {
-        return await trabajador.update(datos, { fields: campos })
+        return await sequelize.transaction(guardar)
     }
 
     const empresa = await Empresa.findByPk(trabajador.empresa_id)
 
-    return await conLimiteTrabajadores(empresa.cuenta_id, meses, (transaction) =>
-        trabajador.update(datos, { fields: campos, transaction }))
+    return await conLimiteTrabajadores(empresa.cuenta_id, meses, guardar)
+}
+
+// Al registrar el término de la relación, su contrato queda terminado: la relación se cierra y una recontratación es
+// una relación nueva (otro Trabajador de la misma persona). Si el término se quita (finiquito eliminado con el mes
+// abierto), el contrato vuelve a estar vigente. Los anulados no se tocan.
+async function ajustarContratoAlTermino(trabajadorId, terminoAntes, terminoDespues, transaction) {
+    const { ContratoTrabajo } = require("../shared/associations.js")
+    if (terminoAntes === null && terminoDespues !== null) {
+        await ContratoTrabajo.update({ estado: "terminado" }, { where: { trabajador_id: trabajadorId, estado: "vigente" }, transaction })
+    }
+    if (terminoAntes !== null && terminoDespues === null) {
+        const ultimo = await ContratoTrabajo.findOne({
+            where: { trabajador_id: trabajadorId, estado: "terminado" },
+            order: [["fecha_inicio", "DESC"], ["id", "DESC"]],
+            transaction
+        })
+        await ultimo?.update({ estado: "vigente" }, { transaction })
+    }
 }
 
 // La fecha de ingreso solo se corrige si no hay liquidaciones de meses cerrados (esos días ya se pagaron y declararon).

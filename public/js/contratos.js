@@ -58,7 +58,8 @@ async function cargarContratos() {
     }))
     tabla.mostrar(contratosEmpresa)
 
-    llenarBuscador(document.getElementById("trabajador"), trabajadoresEmpresa.map((trabajador) => {
+    // Una relación terminada quedó cerrada y no recibe contratos (la recontratación es una relación nueva).
+    llenarBuscador(document.getElementById("trabajador"), trabajadoresEmpresa.filter((t) => !t.fecha_termino).map((trabajador) => {
         const persona = personaPorId.get(trabajador.persona_id)
         return { id: trabajador.id, texto: `${persona ? textoPersona(persona) : "Persona " + trabajador.persona_id} · ${textoEstado("trabajador", trabajador.estado)} · #${trabajador.id}` }
     }))

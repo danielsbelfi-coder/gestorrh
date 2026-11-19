@@ -105,6 +105,12 @@ async function crearContrato(datos, empresasPermitidas, usuarioId) {
 
     await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
 
+    // Una relación terminada se cerró: no recibe contratos. Volver a contratar a la persona es una relación nueva
+    // (otro Trabajador de la misma persona), con su propio ingreso, contrato, vacaciones y finiquito.
+    if (trabajador.fecha_termino) {
+        throw new ConflictError(`Esta relación laboral terminó el ${String(trabajador.fecha_termino).split("-").reverse().join("-")} y quedó cerrada. Para volver a contratar a la persona, crea una relación nueva desde sus datos personales («Nueva relación laboral») y haz el contrato en ella`)
+    }
+
     const contratoVigente = await ContratoTrabajo.findOne({
         where: {
             trabajador_id: datos.trabajador_id,

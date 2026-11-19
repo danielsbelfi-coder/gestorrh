@@ -182,19 +182,48 @@ async function cargarRelaciones() {
     const situacion = situacionPersona(propias)
     document.getElementById("situacionActual").innerHTML = insignia("situacionPersona", situacion)
 
-    document.getElementById("relaciones").innerHTML = propias.length === 0
-        ? `<p class="texto-suave">No tiene relaciones laborales con la empresa. <a href="trabajadores.html">Crear como postulante</a></p>`
+    const tabla = propias.length === 0
+        ? `<p class="texto-suave">No tiene relaciones laborales con la empresa.</p>`
         : `<table>
             <thead><tr><th>ID trabajador</th><th>Ingreso</th><th>Término</th><th>Estado</th></tr></thead>
-            <tbody>${propias.map((t) => `
+            <tbody>${[...propias].sort((a, b) => String(b.fecha_ingreso).localeCompare(String(a.fecha_ingreso))).map((t) => `
                 <tr>
-                    <td class="numero">${escaparHtml(t.id)}</td>
+                    <td class="numero"><a href="trabajador.html?id=${escaparHtml(t.id)}">${escaparHtml(t.id)}</a></td>
                     <td>${escaparHtml(fechaCorta(t.fecha_ingreso))}</td>
                     <td>${escaparHtml(fechaCorta(t.fecha_termino))}</td>
                     <td>${insignia("trabajador", t.estado)}</td>
                 </tr>`).join("")}
             </tbody>
         </table>`
+
+    // Sin una relación abierta (todas terminadas, o ninguna), la persona se puede contratar en una relación nueva:
+    // la anterior quedó cerrada con su contrato, vacaciones y finiquito. El contrato se hace en la relación nueva.
+    const abierta = propias.some((t) => !t.fecha_termino)
+    const ultimoTermino = propias.map((t) => t.fecha_termino).filter(Boolean).sort().at(-1) ?? null
+    const minimo = ultimoTermino ? diaSiguiente(ultimoTermino) : ""
+    document.getElementById("relaciones").innerHTML = tabla + (abierta ? "" : `
+        <form id="formNuevaRelacion" class="nueva-relacion">
+            <label>Fecha de ingreso${ultimoTermino ? ` <span class="texto-suave">(después del término del ${escaparHtml(fechaCorta(ultimoTermino))})</span>` : ""}
+                <input type="date" id="ingresoNuevaRelacion" required value="${escaparHtml(minimo)}" ${minimo ? `min="${escaparHtml(minimo)}"` : ""}></label>
+            <button type="submit">${propias.length === 0 ? "Contratar" : "Nueva relación laboral"}</button>
+        </form>`)
+    document.getElementById("formNuevaRelacion")?.addEventListener("submit", async (evento) => {
+        evento.preventDefault()
+        const creada = await crearRegistro("/api/trabajadores", {
+            persona_id: persona.id,
+            empresa_id: persona.empresa_id,
+            fecha_ingreso: document.getElementById("ingresoNuevaRelacion").value
+        }, "Relación nueva creada.")
+        if (creada) {
+            location.href = `contratos.html?trabajador=${creada.id}`
+        }
+    })
+}
+
+function diaSiguiente(iso) {
+    const d = new Date(`${iso}T12:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + 1)
+    return d.toISOString().slice(0, 10)
 }
 
 async function cargarSituaciones() {

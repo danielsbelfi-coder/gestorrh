@@ -30,7 +30,7 @@ async function cargarTrabajadores() {
 
     tabla.mostrar(deEmpresaActual(trabajadores).map((trabajador) => {
         const vigente = contratos
-            .filter((c) => c.trabajador_id === trabajador.id && c.estado === "vigente")
+            .filter((c) => c.trabajador_id === trabajador.id && ["vigente", "terminado"].includes(c.estado))
             .sort((a, b) => String(b.fecha_inicio).localeCompare(String(a.fecha_inicio)))[0]
         return {
             ...trabajador,

@@ -189,6 +189,9 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
     if (anexo.estado_firma !== "pendiente") {
         throw new ConflictError("El anexo ya fue procesado")
     }
+    if (contrato.estado !== "vigente") {
+        throw new ConflictError("El contrato ya no está vigente (terminado o anulado): el anexo no se puede firmar")
+    }
 
     if (anexo.campo_modificado === "jornada_id") {
         await validarJornadaDelAnexo(anexo.valor_nuevo, contrato)

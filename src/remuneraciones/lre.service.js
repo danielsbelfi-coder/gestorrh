@@ -12,15 +12,16 @@ const { asignacionFamiliarPrevired } = require("./datos_previred.js")
 const { CODIGO_LRE } = require("./ccaf.js")
 const { columnasLre, encabezadoLre, lineaLre, camposIdentificacionLre, camposMontosLre, lineasFiniquitoLre } = require("./archivo_lre.js")
 const { mutualidadParaArchivos } = require("./mutualidad_empresa.js")
+const { contratoDeLaRelacion } = require("../contratos/contrato_relacion.js")
 
 // LRE 1141: «No está en AFP» (técnico extranjero, Ley 18.156).
 const AFP_LRE_SIN_AFP = 100
 
 async function contratoDelTrabajador(trabajadorId, periodo, primerDia) {
-    const vigente = await ContratoTrabajo.findOne({ where: { trabajador_id: trabajadorId, estado: "vigente" } })
+    const vigente = await contratoDeLaRelacion(ContratoTrabajo, trabajadorId)
 
     if (vigente === null) {
-        return { problema: "No tiene un contrato vigente" }
+        return { problema: "No tiene contrato" }
     }
 
     const terminadoEnElMes = await ContratoTrabajo.count({

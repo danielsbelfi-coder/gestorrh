@@ -19,6 +19,7 @@ const { sumarDias, edadAl } = require("../shared/fechas.js")
 const { situacionDelMes, tipoCotizante, reglasCotizante } = require("./tipo_cotizante.js")
 const { saludParaCcaf, codigoTasaSaludCcaf } = require("./ccaf.js")
 const { revisarArt58 } = require("./art58.js")
+const { contratoDeLaRelacion } = require("../contratos/contrato_relacion.js")
 
 const FECHA_VIGENCIA_SEGURO_CESANTIA = "2002-10-01"
 const ANIOS_MAXIMO_COTIZACION_CESANTIA = 11
@@ -561,12 +562,11 @@ async function valoresHoraDelMes({ periodo, trabajador, contratoVigente, anexos,
 }
 
 async function prepararCalculo(periodo, trabajador) {
-    const contratoVigente = await ContratoTrabajo.findOne({
-        where: { trabajador_id: trabajador.id, estado: "vigente" }
-    })
+    // El de la relación: en el mes del término el contrato ya está terminado y se sigue liquidando con él.
+    const contratoVigente = await contratoDeLaRelacion(ContratoTrabajo, trabajador.id)
 
     if (contratoVigente === null) {
-        throw new ConflictError("No existe un contrato vigente para este trabajador")
+        throw new ConflictError("No existe un contrato para este trabajador")
     }
 
     const anexos = await ContratoAnexo.findAll({ where: { contrato_id: contratoVigente.id } })
