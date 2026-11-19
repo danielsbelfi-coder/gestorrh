@@ -71,7 +71,10 @@ function armarAnexo({ anexo, contrato, tipoOriginal, persona, empresa, cargo, jo
     const tratamiento = persona.sexo_genero === "femenino" ? "doña" : persona.sexo_genero === "masculino" ? "don" : "don(ña)"
     const comunaEmpresa = nombreComuna(empresa.comuna)
     // Sin firma, la fecha es la de creación (un Date): String(Date) daba "Mon Nov 16" y la fecha salía con «undefined».
-    const fechaSuscripcion = fechaISO(anexo.fecha_firma ?? anexo.createdAt ?? anexo.fecha_vigencia)
+    // El anexo se fecha con su vigencia (la fecha desde la que rige el cambio), firmado o pendiente: es la fecha
+    // de implementación que el trabajador puede invocar, por ejemplo para reclamar un retroactivo (criterio de Daniel).
+    // La fecha en que se firmó en el sistema queda como registro (fecha_firma), no en el documento.
+    const fechaSuscripcion = fechaISO(anexo.fecha_vigencia)
 
     const clausulas = [
         `Las partes celebraron con fecha ${fechaEnTexto(contrato.fecha_inicio)} un contrato de trabajo ${TIPOS[tipoOriginal] ?? ""}, en virtud del cual el TRABAJADOR se desempeña como ${cargo.toUpperCase()}.`.replace("  ", " "),

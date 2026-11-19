@@ -13,7 +13,7 @@ test("anexo de paso a indefinido: el contrato original y la modificación desde 
         persona, empresa, cargo: "Bodeguero"
     })
     assert.equal(d.titulo, "ANEXO DE CONTRATO DE TRABAJO")
-    assert.match(d.lugarFecha, /20 de octubre de 2026/)
+    assert.match(d.lugarFecha, /16 de octubre de 2026/)
     assert.match(d.clausulas[0].texto, /1 de agosto de 2026 un contrato de trabajo a plazo fijo/)
     assert.match(d.clausulas[1].texto, /a contar del 16 de octubre de 2026, el contrato de trabajo individual pasa a ser de duración indefinida/)
     assert.match(d.clausulas[2].texto, /no modificado por el presente anexo/)
@@ -25,26 +25,22 @@ test("textoModificacion: renovación y sueldo", () => {
     assert.match(textoModificacion({ campo_modificado: "sueldo_base", valor_nuevo: "950000", fecha_vigencia: "2026-11-01" }), /\$950\.000/)
 })
 
-test("anexo sin firmar: la fecha de suscripción sale de la creación (un Date) y no queda «undefined»", () => {
-    const d = armarAnexo({
+test("el anexo se fecha con su vigencia, pendiente o firmado, y no queda «undefined»", () => {
+    const pendiente = armarAnexo({
         anexo: { id: 5, campo_modificado: "sueldo_base", valor_anterior: "800000", valor_nuevo: "850000", fecha_vigencia: "2026-12-01", fecha_firma: null, createdAt: new Date("2026-11-16T15:00:00Z"), estado_firma: "pendiente" },
         contrato: { fecha_inicio: "2026-08-01" },
         tipoOriginal: "indefinido",
         persona, empresa, cargo: "Bodeguero"
     })
-    assert.match(d.lugarFecha, /a 16 de noviembre de 2026$/)
-    assert.doesNotMatch(JSON.stringify(d), /undefined|NaN/)
-})
-
-test("anexo firmado hoy: fecha_firma como Date en memoria (recién guardado) también sale bien", () => {
-    const d = armarAnexo({
+    assert.match(pendiente.lugarFecha, /a 1 de diciembre de 2026$/)
+    assert.doesNotMatch(JSON.stringify(pendiente), /undefined|NaN/)
+    const firmado = armarAnexo({
         anexo: { id: 6, campo_modificado: "sueldo_base", valor_nuevo: "850000", fecha_vigencia: "2026-12-01", fecha_firma: new Date("2026-11-17T01:30:00Z"), estado_firma: "firmado" },
         contrato: { fecha_inicio: "2026-08-01" },
         tipoOriginal: "indefinido",
         persona, empresa, cargo: "Bodeguero"
     })
-    // 01:30 UTC del 17 son las 22:30 del 16 en Chile (UTC-3 en verano): la fecha es la chilena.
-    assert.match(d.lugarFecha, /a 16 de noviembre de 2026$/)
+    assert.match(firmado.lugarFecha, /a 1 de diciembre de 2026$/)
 })
 
 test("textoModificacion: cambio de la obra, faena o hito de un contrato por obra", () => {
@@ -59,10 +55,10 @@ test("renovación: nombra el término que se prorroga y rige desde él", () => {
     assert.match(otra, /a contar del 20 de enero de 2027, continuará vigente/)
 })
 
-test("anexo firmado: la fecha del documento es la fecha de firma", () => {
+test("renovación de Sofía: el documento sale fechado el 31 de enero de 2027, aunque se firmó en el sistema en 2026", () => {
     const d = armarAnexo({
-        anexo: { id: 7, campo_modificado: "fecha_termino", valor_anterior: "2027-01-31", valor_nuevo: "2027-04-30", fecha_vigencia: "2027-01-31", fecha_firma: "2027-01-29", createdAt: new Date("2026-11-19T15:00:00Z"), estado_firma: "firmado" },
+        anexo: { id: 7, campo_modificado: "fecha_termino", valor_anterior: "2027-01-31", valor_nuevo: "2027-04-30", fecha_vigencia: "2027-01-31", fecha_firma: "2026-11-19", createdAt: new Date("2026-11-19T15:00:00Z"), estado_firma: "firmado" },
         contrato: { fecha_inicio: "2026-11-02" }, tipoOriginal: "plazo_fijo", persona, empresa, cargo: "Bodeguera"
     })
-    assert.match(d.lugarFecha, /29 de enero de 2027/)
+    assert.match(d.lugarFecha, /a 31 de enero de 2027$/)
 })
