@@ -1,7 +1,8 @@
 const { ContratoAnexo, ContratoTrabajo, Trabajador, Jornada, Persona, Empresa, Cargo, Sucursal } = require("../shared/associations.js")
 const { CAMPO_SUCURSAL, valorLugar, leerValorLugar, mismoLugar } = require("./anexo_sucursal.js")
 const { lugarDeSucursal, lugarDeCasaMatriz } = require("../empresas/sucursales.js")
-const { errorVigenciaAnexo, errorTerminoAnexo, hoyEnChile, LARGO_OBRA } = require("./fechas_contrato.js")
+const { errorVigenciaAnexo, errorTerminoAnexo, hoyEnChile, limiteHaciaAdelante, LARGO_OBRA } = require("./fechas_contrato.js")
+const { esFechaValida } = require("../shared/fechas.js")
 const { armarAnexo } = require("./armar_anexo.js")
 const { contratoOriginal } = require("./contrato_original.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
@@ -222,7 +223,43 @@ async function descartarAnexo(contratoId, anexoId, empresasPermitidas, usuarioId
     return await anexo.update({ estado_firma: "rechazado" })
 }
 
-async function firmarAnexo(id, empresasPermitidas, usuarioId) {
+// Fecha en que las partes firmaron el anexo (la del documento). Sin fecha, hoy. No antes del inicio del contrato ni
+// más de un año después de hoy (mismo tope de digitación que las vigencias).
+function fechaFirmaAnexo(fechaFirma, contrato) {
+    if (fechaFirma === undefined || fechaFirma === null || fechaFirma === "") {
+        return hoyEnChile()
+    }
+    if (!esFechaValida(fechaFirma) || fechaFirma < contrato.fecha_inicio) {
+        throw new ValidationError("La fecha de firma del anexo debe ser válida (AAAA-MM-DD) y no anterior al inicio del contrato")
+    }
+    if (fechaFirma > limiteHaciaAdelante(hoyEnChile())) {
+        throw new ValidationError("La fecha de firma del anexo es más de un año posterior a hoy: revisa el año")
+    }
+    return fechaFirma
+}
+
+// Corrige la fecha de firma de un anexo ya firmado (un error de digitación): solo cambia la fecha del documento,
+// no lo que el anexo modificó ni desde cuándo rige.
+async function corregirFechaFirmaAnexo(contratoId, anexoId, fechaFirma, empresasPermitidas, usuarioId) {
+    const contrato = await ContratoTrabajo.findByPk(contratoId, { include: [Trabajador] })
+    if (contrato === null || !empresasPermitidas.includes(contrato.Trabajador.empresa_id)) {
+        throw new NotFoundError("Contrato no encontrado")
+    }
+    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.FIRMAR_ANEXO)
+    const anexo = await ContratoAnexo.findOne({ where: { id: anexoId, contrato_id: contrato.id } })
+    if (anexo === null) {
+        throw new NotFoundError("Anexo no encontrado")
+    }
+    if (anexo.estado_firma !== "firmado") {
+        throw new ConflictError("Solo un anexo firmado tiene fecha de firma; uno pendiente la recibe al firmarse")
+    }
+    if (fechaFirma === undefined || fechaFirma === null || fechaFirma === "") {
+        throw new ValidationError("Indica la fecha de firma (AAAA-MM-DD)")
+    }
+    return await anexo.update({ fecha_firma: fechaFirmaAnexo(fechaFirma, contrato) })
+}
+
+async function firmarAnexo(id, empresasPermitidas, usuarioId, fechaFirma) {
     const anexo = await ContratoAnexo.findByPk(id)
     if (anexo === null) {
         throw new NotFoundError("Anexo no encontrado")
@@ -234,6 +271,7 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
         throw new NotFoundError("Anexo no encontrado")
     }
     await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.FIRMAR_ANEXO)
+    fechaFirma = fechaFirmaAnexo(fechaFirma, contrato)
 
     if (anexo.estado_firma !== "pendiente") {
         throw new ConflictError("El anexo ya fue procesado")
@@ -257,7 +295,7 @@ async function firmarAnexo(id, empresasPermitidas, usuarioId) {
         await anexo.update({
             valor_anterior: esSucursal ? valorLugar(contrato) : contrato[anexo.campo_modificado],
             estado_firma: "firmado",
-            fecha_firma: new Date(),
+            fecha_firma: fechaFirma,
             usuario_firmo_id: usuarioId
         },
             {
@@ -335,6 +373,7 @@ module.exports = {
     crearAnexo,
     corregirAnexo,
     descartarAnexo,
+    corregirFechaFirmaAnexo,
     firmarAnexo,
     listarAnexos
 }

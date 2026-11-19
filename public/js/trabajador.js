@@ -227,10 +227,10 @@ async function dibujarContratos() {
                             <td>${escaparHtml(valorContrato(a.campo_modificado, a.valor_anterior))}</td>
                             <td><strong>${escaparHtml(valorContrato(a.campo_modificado, a.valor_nuevo))}</strong></td>
                             <td>${escaparHtml(a.motivo ?? "")}</td>
-                            <td>${insignia("firma", a.estado_firma).replace(">Rechazado<", ">Descartado<")}</td>
+                            <td>${insignia("firma", a.estado_firma).replace(">Rechazado<", ">Descartado<")}${a.estado_firma === "firmado" && a.fecha_firma ? ` <span class="texto-suave">${escaparHtml(fechaCorta(a.fecha_firma))}</span>` : ""}</td>
                             <td>${a.estado_firma === "pendiente" && c.estado === "vigente" ? `<button type="button" class="chico" data-firmar-anexo="${a.id}" data-contrato="${c.id}">Firmar</button>
                                 <button type="button" class="chico secundario" data-corregir-anexo="${a.id}" data-contrato="${c.id}">Corregir</button>
-                                <button type="button" class="chico peligro" data-descartar-anexo="${a.id}" data-contrato="${c.id}">Descartar</button> ` : ""}<button type="button" class="chico secundario" data-pdf-anexo="${a.id}" data-contrato="${c.id}">PDF</button></td>
+                                <button type="button" class="chico peligro" data-descartar-anexo="${a.id}" data-contrato="${c.id}">Descartar</button> ` : ""}${a.estado_firma === "firmado" ? `<button type="button" class="chico secundario" data-fecha-firma-anexo="${a.id}" data-contrato="${c.id}" data-fecha="${escaparHtml(String(a.fecha_firma ?? "").slice(0, 10))}">Fecha de firma</button> ` : ""}<button type="button" class="chico secundario" data-pdf-anexo="${a.id}" data-contrato="${c.id}">PDF</button></td>
                         </tr>`).join("")}
                     </tbody>
                 </table>`}
@@ -468,11 +468,29 @@ document.getElementById("contratos").addEventListener("click", async function (e
         await cargarFicha()
     }
 
-    if (boton.dataset.firmarAnexo) {
-        if (!confirm("¿Firmar este anexo? El cambio se aplica al contrato desde su fecha de vigencia.")) {
+    if (boton.dataset.fechaFirmaAnexo) {
+        const fecha = prompt("Fecha en que se firmó el anexo (AAAA-MM-DD). Solo cambia la fecha del documento, no desde cuándo rige:", boton.dataset.fecha || hoyIso())
+        if (fecha === null) {
             return
         }
-        const resultado = await llamarApi(`/api/contratos/${boton.dataset.contrato}/anexos/${boton.dataset.firmarAnexo}/firmar`, { method: "PATCH" })
+        const resultado = await llamarApi(`/api/contratos/${boton.dataset.contrato}/anexos/${boton.dataset.fechaFirmaAnexo}/fecha-firma`, { method: "PATCH", body: JSON.stringify({ fecha_firma: fecha.trim() }) })
+        if (resultado.status !== 200) {
+            mensaje("error", resultado.datos?.error ?? "No se pudo cambiar la fecha de firma")
+            return
+        }
+        mensaje("info", "Fecha de firma del anexo corregida.")
+        await cargarFicha()
+        return
+    }
+
+    if (boton.dataset.firmarAnexo) {
+        const anexo = (anexosPorContrato.get(Number(boton.dataset.contrato)) ?? []).find((a) => String(a.id) === boton.dataset.firmarAnexo)
+        const rige = anexo ? ` Rige desde el ${fechaCorta(anexo.fecha_vigencia)}.` : ""
+        const fecha = prompt(`Fecha de firma del anexo (AAAA-MM-DD), la que lleva el documento.${rige} Deja hoy si se firma ahora:`, hoyIso())
+        if (fecha === null) {
+            return
+        }
+        const resultado = await llamarApi(`/api/contratos/${boton.dataset.contrato}/anexos/${boton.dataset.firmarAnexo}/firmar`, { method: "PATCH", body: JSON.stringify({ fecha_firma: fecha.trim() }) })
         if (resultado.status !== 200) {
             mensaje("error", resultado.datos?.error ?? "No se pudo firmar el anexo")
             return

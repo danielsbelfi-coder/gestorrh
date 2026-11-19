@@ -22,7 +22,14 @@ function textoModificacion(anexo, jornadaNueva) {
         case "tipo_contrato":
             return `Por el presente instrumento, las partes acuerdan que, ${desde}, el contrato de trabajo individual pasa a ser de duración indefinida, pudiendo cualquiera de ellas ponerle término en las condiciones y por las causales establecidas en la ley. Se mantiene la antigüedad del TRABAJADOR desde su fecha de ingreso.`
         case "fecha_termino":
-            return `Las partes acuerdan prorrogar el contrato de trabajo, el que durará hasta el ${fechaEnTexto(nuevo)}, pudiendo cualquiera de ellas ponerle término en las condiciones y por las causales establecidas en la ley.`
+            // Renovación: el término que se prorroga (el que tenía el contrato antes del anexo) y desde cuándo rige.
+            {
+                const anterior = anexo.valor_anterior ? fechaISO(anexo.valor_anterior) : null
+                const vigencia = fechaISO(anexo.fecha_vigencia)
+                const pactado = anterior ? `, cuyo término estaba pactado para el ${fechaEnTexto(anterior)}` : ""
+                const rige = anterior === vigencia ? "a contar de esa fecha" : `a contar del ${fechaEnTexto(vigencia)}`
+                return `Las partes acuerdan prorrogar el contrato de trabajo${pactado}, de modo que, ${rige}, continuará vigente hasta el ${fechaEnTexto(nuevo)}, pudiendo cualquiera de ellas ponerle término en las condiciones y por las causales establecidas en la ley.`
+            }
         case "obra_faena_descripcion":
             return `Las partes acuerdan que, ${desde}, el contrato por obra o faena durará hasta: ${nuevo}. Se mantienen la antigüedad del TRABAJADOR y las demás condiciones del contrato.`
         case "sueldo_base":

@@ -21,7 +21,7 @@ test("anexo de paso a indefinido: el contrato original y la modificación desde 
 })
 
 test("textoModificacion: renovación y sueldo", () => {
-    assert.match(textoModificacion({ campo_modificado: "fecha_termino", valor_nuevo: "2026-12-31", fecha_vigencia: "2026-10-16" }), /durará hasta el 31 de diciembre de 2026/)
+    assert.match(textoModificacion({ campo_modificado: "fecha_termino", valor_nuevo: "2026-12-31", fecha_vigencia: "2026-10-16" }), /a contar del 16 de octubre de 2026, continuará vigente hasta el 31 de diciembre de 2026/)
     assert.match(textoModificacion({ campo_modificado: "sueldo_base", valor_nuevo: "950000", fecha_vigencia: "2026-11-01" }), /\$950\.000/)
 })
 
@@ -50,4 +50,19 @@ test("anexo firmado hoy: fecha_firma como Date en memoria (recién guardado) tam
 test("textoModificacion: cambio de la obra, faena o hito de un contrato por obra", () => {
     const texto = textoModificacion({ campo_modificado: "obra_faena_descripcion", valor_nuevo: "el término de las terminaciones del piso 3", fecha_vigencia: "2027-02-15" })
     assert.match(texto, /a contar del 15 de febrero de 2027, el contrato por obra o faena durará hasta: el término de las terminaciones del piso 3\./)
+})
+
+test("renovación: nombra el término que se prorroga y rige desde él", () => {
+    const texto = textoModificacion({ campo_modificado: "fecha_termino", valor_anterior: "2027-01-31", valor_nuevo: "2027-04-30", fecha_vigencia: "2027-01-31" })
+    assert.match(texto, /cuyo término estaba pactado para el 31 de enero de 2027, de modo que, a contar de esa fecha, continuará vigente hasta el 30 de abril de 2027/)
+    const otra = textoModificacion({ campo_modificado: "fecha_termino", valor_anterior: "2027-01-31", valor_nuevo: "2027-04-30", fecha_vigencia: "2027-01-20" })
+    assert.match(otra, /a contar del 20 de enero de 2027, continuará vigente/)
+})
+
+test("anexo firmado: la fecha del documento es la fecha de firma", () => {
+    const d = armarAnexo({
+        anexo: { id: 7, campo_modificado: "fecha_termino", valor_anterior: "2027-01-31", valor_nuevo: "2027-04-30", fecha_vigencia: "2027-01-31", fecha_firma: "2027-01-29", createdAt: new Date("2026-11-19T15:00:00Z"), estado_firma: "firmado" },
+        contrato: { fecha_inicio: "2026-11-02" }, tipoOriginal: "plazo_fijo", persona, empresa, cargo: "Bodeguera"
+    })
+    assert.match(d.lugarFecha, /29 de enero de 2027/)
 })
