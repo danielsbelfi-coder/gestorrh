@@ -59,7 +59,10 @@ function indemnizacionObraFaena(tiempo) {
 // meses: montos de los últimos 3 meses calendario (indemnización, art. 172). mesesFeriado: los de los últimos 3 meses
 // trabajados completos (feriado, art. 71); por defecto, los mismos.
 // sinSemanaCorrida: contrato por día, cuyo sueldo mensual (× 30) ya incluye los domingos y festivos.
-function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses, sinSemanaCorrida = false }) {
+// gratificacionSinHistorial: sin meses anteriores con liquidación (el trabajador termina en su primer mes, o la empresa
+// empezó a usar el sistema), la gratificación mensual que corresponde a un mes completo (25 % del sueldo mensual con el
+// tope mensual de 4,75 IMM / 12), si la liquidación del mes del término paga gratificación. Ver «Paquete S» en el SPEC.
+function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses, sinSemanaCorrida = false, gratificacionSinHistorial = 0 }) {
     const sumaCodigos = (montos, codigos) => codigos.reduce((suma, codigo) => suma + (montos[codigo] ?? 0), 0)
     const promedio = (lista, codigos) => lista.length === 0
         ? 0
@@ -69,7 +72,7 @@ function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses, sinSemanaC
     const fijos = meses.length > 0 ? sumaCodigos(meses[0], CODIGOS_FIJOS) : 0
     const variables = promedio(mesesFeriado, codigosVariables)
     const variablesIndemnizacion = promedio(meses, codigosVariables)
-    const gratificacion = promedio(meses, [CODIGO_GRATIFICACION])
+    const gratificacion = meses.length > 0 ? promedio(meses, [CODIGO_GRATIFICACION]) : gratificacionSinHistorial
     const baseFeriado = sueldoMensual + fijos + variables
 
     return { fijos, variables, variablesIndemnizacion, gratificacion, baseFeriado, baseIndemnizacion: sueldoMensual + fijos + variablesIndemnizacion + gratificacion }

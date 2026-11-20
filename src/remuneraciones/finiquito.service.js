@@ -185,9 +185,19 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     // Indemnización (art. 172): últimos 3 meses calendario. Feriado (art. 73 → art. 71): últimos 3 meses trabajados completos.
     const { mesesTrabajadosArt71 } = require("../asistencia/vacaciones.js")
     const mesesFeriado = mesesTrabajadosArt71(meses)
+    // Sin meses anteriores con liquidación: la gratificación mensual de un mes completo, si el mes del término la paga.
+    let gratificacionSinHistorial = 0
+    if (meses.length === 0) {
+        const lineaGratificacion = await LiquidacionLinea.findOne({ where: { liquidacion_id: liquidacionDelMes.id, codigo: "GRATIFICACION" } })
+        const imm = await obtenerParametroVigente("INGRESO_MINIMO_MENSUAL", `${trabajador.fecha_termino.slice(0, 7)}-01`)
+        if (lineaGratificacion && Number(lineaGratificacion.monto) > 0 && imm !== null) {
+            gratificacionSinHistorial = Math.min(Math.round(sueldoMensual * 0.25), Math.round(4.75 * Number(imm.valor) / 12))
+        }
+    }
     const bases = {
         // Por día: la semana corrida ya está en el × 30, no se promedia otra vez.
-        ...basesFiniquito({ sueldoMensual, meses: meses.slice(0, 3).map((m) => m.montos), mesesFeriado: mesesFeriado.map((m) => m.montos), sinSemanaCorrida: porDia }),
+        ...basesFiniquito({ sueldoMensual, meses: meses.slice(0, 3).map((m) => m.montos), mesesFeriado: mesesFeriado.map((m) => m.montos), sinSemanaCorrida: porDia, gratificacionSinHistorial }),
+        gratificacionProyectada: gratificacionSinHistorial > 0,
         mesesIndemnizacion: meses.slice(0, 3).map((m) => m.periodo),
         mesesFeriado: mesesFeriado.map((m) => m.periodo)
     }

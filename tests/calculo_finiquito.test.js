@@ -128,3 +128,14 @@ test("contrato por día: sin semana corrida en el promedio (ya está en el sueld
     assert.strictEqual(sinSC.variables, 60000)
     assert.strictEqual(sinSC.baseFeriado, 1020000)
 })
+
+test("sin meses anteriores con liquidación: la base de indemnización lleva la gratificación de un mes completo", () => {
+    const { basesFiniquito } = require("../src/remuneraciones/calculo_finiquito.js")
+    const sin = basesFiniquito({ sueldoMensual: 600000, meses: [], gratificacionSinHistorial: 150000 })
+    assert.equal(sin.gratificacion, 150000)
+    assert.equal(sin.baseIndemnizacion, 750000)
+    assert.equal(sin.baseFeriado, 600000)
+    // Con meses anteriores manda el promedio de esos meses (la proyección no se usa).
+    const con = basesFiniquito({ sueldoMensual: 600000, meses: [{ 2106: 100000 }], gratificacionSinHistorial: 150000 })
+    assert.equal(con.gratificacion, 100000)
+})

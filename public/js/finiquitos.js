@@ -296,6 +296,7 @@ function mostrarDetalle(fila) {
                     <tr><td>Sueldo mensual del mes de término</td><td class="numero">${escaparHtml(pesos(d.sueldoMensual))}</td></tr>
                     <tr><td>Meses promediados</td><td>${escaparHtml((d.mesesPromedio ?? []).join(", ") || "—")}</td></tr>
                     <tr><td>Base indemnizaciones</td><td class="numero">${escaparHtml(pesos(d.bases?.baseIndemnizacion))}</td></tr>
+                    ${d.bases?.gratificacionProyectada ? `<tr><td colspan="2">Sin meses anteriores con liquidación: la base incluye la gratificación mensual de un mes completo (${escaparHtml(pesos(d.bases.gratificacion))}: 25 % del sueldo mensual con el tope de 4,75 IMM / 12). Las variables (comisiones, tratos, bonos) de meses anteriores al sistema no se conocen: revisa la base.</td></tr>` : ""}
                     <tr><td>Base feriado</td><td class="numero">${escaparHtml(pesos(d.bases?.baseFeriado))}</td></tr>
                     <tr><td>Base con tope de ${escaparHtml(d.topeUF ?? 90)} UF (UF ${escaparHtml(pesos(d.valorUF))})</td><td class="numero">${escaparHtml(pesos(d.baseTopada))}</td></tr>
                     ${feriado.proporcional === undefined
