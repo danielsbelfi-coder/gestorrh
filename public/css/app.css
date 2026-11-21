@@ -1868,3 +1868,34 @@ button.enlace {
 /* Datos de la persona: contratar en una relación nueva (sin relación abierta). */
 .nueva-relacion { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 12px; }
 .nueva-relacion label { display: flex; flex-direction: column; gap: 4px; }
+
+/* Turnos de conducción (paquetes V y Y): el formulario de turno ocupa el ancho y apila sus bloques. */
+#formTurno {
+    display: block;
+}
+
+#formTurno > * + * {
+    margin-top: 12px;
+}
+
+.dias-repetir {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 8px 12px;
+}
+
+.dias-repetir legend {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0 4px;
+}
+
+.dias-repetir label {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}

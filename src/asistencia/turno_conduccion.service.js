@@ -238,6 +238,57 @@ async function crearTurno(entrada, empresasPermitidas, usuarioId) {
     return { turno, alertas: calculo.alertas }
 }
 
+const MAXIMO_DIAS_LOTE = 31
+
+// Registra el mismo turno (horario, servicio y pausas) en cada fecha de un rango, filtrando por días de la semana
+// (1 = lunes … 7 = domingo). Cada fecha se valida como un turno suelto: las que no se pueden registrar (inasistencia,
+// licencia, superposición, fuera del contrato, periodo cerrado) se omiten con su motivo y las demás se crean.
+async function crearTurnosEnLote(entrada, empresasPermitidas, usuarioId) {
+    const trabajador = await trabajadorPermitido(Number(entrada?.trabajador_id), empresasPermitidas)
+    await exigirRol(usuarioId, trabajador.empresa_id, PERMISOS.REGISTRAR_ASISTENCIA)
+    const desde = String(entrada?.desde ?? "").slice(0, 10)
+    const hasta = String(entrada?.hasta ?? "").slice(0, 10)
+    if (!esFechaValida(desde) || !esFechaValida(hasta) || hasta < desde) {
+        throw new ValidationError("Indica las fechas desde y hasta (hasta igual o posterior a desde)")
+    }
+    const largo = Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86400000) + 1
+    if (largo > MAXIMO_DIAS_LOTE) {
+        throw new ValidationError(`El rango puede tener hasta ${MAXIMO_DIAS_LOTE} días`)
+    }
+    const dias = (Array.isArray(entrada?.dias_semana) ? entrada.dias_semana : [1, 2, 3, 4, 5, 6, 7]).map(Number)
+    if (dias.length === 0 || dias.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
+        throw new ValidationError("Elige al menos un día de la semana")
+    }
+    // Revisa el horario y las pausas una vez, con la primera fecha, antes de recorrer el rango: un error del turno
+    // (pausa fuera del horario, tipo inexistente) se informa una sola vez y no se registra nada.
+    const plantilla = calcularTurno(datosDelTurno({ ...entrada, fecha: desde }), await mapaDeTipos(trabajador.empresa_id))
+    if (plantilla.errores.length > 0) {
+        throw new ValidationError(plantilla.errores.join(". "))
+    }
+
+    const creados = []
+    const omitidos = []
+    for (let i = 0; i < largo; i++) {
+        const fecha = sumarDias(desde, i)
+        const diaSemana = ((new Date(`${fecha}T00:00:00Z`).getUTCDay() + 6) % 7) + 1
+        if (!dias.includes(diaSemana)) {
+            continue
+        }
+        try {
+            const datos = datosDelTurno({ ...entrada, fecha })
+            const calculo = await validarTurno(trabajador, datos)
+            const turno = await TurnoConduccion.create({ ...datos, trabajador_id: trabajador.id, fuente: "manual", estado_aprobacion: "pendiente", usuario_registro_id: usuarioId })
+            creados.push({ id: turno.id, fecha, alertas: calculo.alertas })
+        } catch (error) {
+            if (!(error instanceof ValidationError || error instanceof ConflictError)) {
+                throw error
+            }
+            omitidos.push({ fecha, motivo: error.message })
+        }
+    }
+    return { creados, omitidos }
+}
+
 async function turnoPermitido(id, empresasPermitidas) {
     const turno = await TurnoConduccion.findByPk(id, { include: [Trabajador] })
     if (turno === null || !empresasPermitidas.includes(turno.Trabajador.empresa_id)) {
@@ -371,6 +422,7 @@ module.exports = {
     crearTipoEspera,
     actualizarTipoEspera,
     crearTurno,
+    crearTurnosEnLote,
     actualizarTurno,
     eliminarTurno,
     aprobarTurno,

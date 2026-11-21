@@ -25,6 +25,10 @@ async function crear(req, res) {
     res.status(201).json({ ...turno.toJSON(), alertas })
 }
 
+async function crearLote(req, res) {
+    res.status(201).json(await servicio.crearTurnosEnLote(req.body ?? {}, req.empresasPermitidas, req.usuario.id))
+}
+
 async function actualizar(req, res) {
     const { turno, alertas } = await servicio.actualizarTurno(req.params.id, req.body ?? {}, req.empresasPermitidas, req.usuario.id)
     res.status(200).json({ ...turno.toJSON(), alertas })
@@ -43,4 +47,4 @@ async function aprobarMes(req, res) {
     res.status(200).json(await servicio.aprobarMes(req.body ?? {}, req.empresasPermitidas, req.usuario.id))
 }
 
-module.exports = { listarTipos, crearTipo, actualizarTipo, listar, trabajadores, crear, actualizar, eliminar, aprobar, aprobarMes }
+module.exports = { listarTipos, crearTipo, actualizarTipo, listar, trabajadores, crear, crearLote, actualizar, eliminar, aprobar, aprobarMes }

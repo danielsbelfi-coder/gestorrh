@@ -258,6 +258,38 @@ document.getElementById("filasPausas").addEventListener("click", function (event
     }
 })
 
+// «Repetir hasta»: el mismo turno en cada día marcado del rango (solo al registrar, no al editar).
+function diasMarcados() {
+    return [...document.querySelectorAll("#diasRepetir input:checked")].map((c) => Number(c.value))
+}
+
+function fechasDelRango() {
+    const desde = document.getElementById("turnoFecha").value
+    const hasta = document.getElementById("turnoHasta").value
+    if (!desde || !hasta || hasta < desde) {
+        return []
+    }
+    const marcados = diasMarcados()
+    const fechas = []
+    for (let d = new Date(`${desde}T00:00:00Z`); d.toISOString().slice(0, 10) <= hasta && fechas.length < 400; d.setUTCDate(d.getUTCDate() + 1)) {
+        if (marcados.includes(((d.getUTCDay() + 6) % 7) + 1)) {
+            fechas.push(d.toISOString().slice(0, 10))
+        }
+    }
+    return fechas
+}
+
+function actualizarRepetir() {
+    const conRango = !turnoEnEdicion && Boolean(document.getElementById("turnoHasta").value)
+    document.getElementById("diasRepetir").hidden = !conRango
+    const fechas = fechasDelRango()
+    document.getElementById("resumenRepetir").textContent = conRango ? `${fechas.length} turno(s) a registrar` : ""
+    document.getElementById("guardarTurno").textContent = turnoEnEdicion ? "Guardar cambios" : conRango ? "Registrar turnos" : "Registrar turno"
+}
+document.getElementById("turnoFecha").addEventListener("change", actualizarRepetir)
+document.getElementById("turnoHasta").addEventListener("change", actualizarRepetir)
+document.getElementById("diasRepetir").addEventListener("change", actualizarRepetir)
+
 function salirDeTurno() {
     turnoEnEdicion = null
     document.getElementById("formTurno").reset()
@@ -266,6 +298,9 @@ function salirDeTurno() {
     document.getElementById("tituloTurno").textContent = "＋ Registrar turno"
     document.getElementById("guardarTurno").textContent = "Registrar turno"
     document.getElementById("cancelarTurno").hidden = true
+    document.querySelectorAll("[data-solo-alta]").forEach((el) => { el.hidden = false })
+    document.querySelectorAll("#diasRepetir input").forEach((c) => { c.checked = true })
+    actualizarRepetir()
 }
 document.getElementById("cancelarTurno").addEventListener("click", () => { salirDeTurno(); document.getElementById("panelTurno").removeAttribute("open") })
 
@@ -280,6 +315,29 @@ document.getElementById("formTurno").addEventListener("submit", async function (
         servicio: document.getElementById("turnoServicio").value,
         observaciones: document.getElementById("turnoObs").value,
         pausas: leerPausas()
+    }
+    const hasta = document.getElementById("turnoHasta").value
+    if (!turnoEnEdicion && hasta) {
+        const fechas = fechasDelRango()
+        if (fechas.length === 0) {
+            document.getElementById("problemasTurno").innerHTML = `<li class="error">El rango no tiene días marcados (revisa las fechas y los días de la semana)</li>`
+            return
+        }
+        const { fecha, ...resto } = cuerpo
+        const r = await llamarApi("/api/turnos-conduccion/lote", { method: "POST", body: JSON.stringify({ ...resto, desde: fecha, hasta, dias_semana: diasMarcados() }) })
+        if (r.status !== 201) {
+            document.getElementById("problemasTurno").innerHTML = `<li class="error">${escaparHtml(r.datos?.error ?? "No se pudieron registrar los turnos")}</li>`
+            return
+        }
+        const { creados, omitidos } = r.datos
+        const alertas = creados.filter((c) => c.alertas.length > 0).length
+        mensaje(omitidos.length ? "error" : "info", [
+            `${creados.length} turno(s) registrado(s) (pendientes de aprobación)${alertas ? `, ${alertas} con alertas del art. 25` : ""}.`,
+            ...omitidos.map((o) => `${fechaCorta(o.fecha)}: no se registró — ${o.motivo}.`)
+        ].join(" "))
+        salirDeTurno()
+        cargarMes()
+        return
     }
     const r = turnoEnEdicion
         ? await llamarApi(`/api/turnos-conduccion/${turnoEnEdicion.id}`, { method: "PATCH", body: JSON.stringify(cuerpo) })
@@ -307,6 +365,9 @@ document.getElementById("filasTurnos").addEventListener("click", async function 
         document.getElementById("tituloTurno").textContent = `Editar turno del ${fechaCorta(turnoEnEdicion.fecha)}`
         document.getElementById("guardarTurno").textContent = "Guardar cambios"
         document.getElementById("cancelarTurno").hidden = false
+        document.getElementById("turnoHasta").value = ""
+        document.querySelectorAll("[data-solo-alta]").forEach((el) => { el.hidden = true })
+        actualizarRepetir()
         document.getElementById("panelTurno").open = true
         document.getElementById("panelTurno").scrollIntoView({ behavior: "smooth", block: "start" })
         return
