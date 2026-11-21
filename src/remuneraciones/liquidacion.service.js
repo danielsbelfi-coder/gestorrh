@@ -172,6 +172,13 @@ async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueld
     const sc = require("./semana_corrida.js")
     const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
     const laborales = libro.dias.filter((f) => f.esperado.tipo === "laboral")
+    // Art. 25 (paquete V): el cálculo con los turnos de conducción llega en el paquete W.
+    if (libro.dias.some((f) => f.esperado.tipo === "turnos")) {
+        if (porDias) {
+            throw new ConflictError("El contrato tiene jornada del art. 25 y sueldo por día: ese cálculo todavía no está disponible")
+        }
+        return { sueldoPorDias: null, semanaCorrida: null, valorHoraContrato: undefined, avisos: ["Jornada del art. 25: la semana corrida de los haberes de devengo diario todavía no se calcula con los turnos de conducción"] }
+    }
     if (libro.dias.some((f) => f.esperado.tipo === "sin_horario")) {
         if (porDias) {
             throw new ConflictError(`El contrato es ${sistema === "hora" ? "por hora" : "por día"} y no tiene plantilla de jornada: asígnele una (Jornadas y anexo de contrato) para calcular los días trabajados y la semana corrida`)

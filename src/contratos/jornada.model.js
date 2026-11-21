@@ -6,7 +6,9 @@ const { sequelize } = require("../shared/database.js")
 const Jornada = sequelize.define("Jornada", {
     empresa_id: { type: DataTypes.INTEGER, allowNull: false },
     nombre: { type: DataTypes.STRING(80), allowNull: false },
-    tipo: { type: DataTypes.ENUM("semanal", "promedio", "bisemanal", "excepcional"), allowNull: false, defaultValue: "semanal" },
+    tipo: { type: DataTypes.ENUM("semanal", "promedio", "bisemanal", "excepcional", "art25"), allowNull: false, defaultValue: "semanal" },
+    // Art. 25 (paquete V): tope de horas mensuales; la jornada no tiene calendario (dias vacío).
+    horas_mensuales: { type: DataTypes.DECIMAL(6, 2), allowNull: true },
     dias: { type: DataTypes.JSONB, allowNull: false },
     ciclo_dias: { type: DataTypes.SMALLINT, allowNull: false, defaultValue: 7 },
     // Día 1 del ciclo (null en la semanal: el día 1 es el lunes).

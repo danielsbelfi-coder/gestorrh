@@ -15,7 +15,7 @@ function validarNombre(nombre) {
     return texto
 }
 
-const CAMPOS_CICLO = ["tipo", "ciclo_dias", "inicio_ciclo", "resolucion_numero", "resolucion_fecha", "resolucion_vigencia_hasta"]
+const CAMPOS_CICLO = ["tipo", "ciclo_dias", "inicio_ciclo", "resolucion_numero", "resolucion_fecha", "resolucion_vigencia_hasta", "horas_mensuales", "dias_trabajados"]
 
 // Valida la distribución (días, tipo legal y ciclo) contra el máximo legal de hoy; devuelve los campos calculados
 // y las advertencias. La jornada semanal no guarda inicio de ciclo ni resolución.
@@ -27,12 +27,14 @@ function camposDeDias(datos) {
         throw new ValidationError(resultado.errores.join(". "))
     }
     const excepcional = tipo === "excepcional"
+    const sinCiclo = tipo === "semanal" || tipo === "art25"
     return {
         campos: {
             tipo,
             dias: resultado.dias,
             ciclo_dias: resultado.cicloDias,
-            inicio_ciclo: tipo === "semanal" ? null : String(datos.inicio_ciclo).slice(0, 10),
+            inicio_ciclo: sinCiclo ? null : String(datos.inicio_ciclo).slice(0, 10),
+            horas_mensuales: tipo === "art25" ? resultado.horasMensuales : null,
             resolucion_numero: excepcional ? String(datos.resolucion_numero).trim() : null,
             resolucion_fecha: excepcional ? String(datos.resolucion_fecha).slice(0, 10) : null,
             resolucion_vigencia_hasta: excepcional ? String(datos.resolucion_vigencia_hasta).slice(0, 10) : null,

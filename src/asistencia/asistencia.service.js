@@ -81,6 +81,9 @@ async function validarMarca(trabajador, entrada) {
         throw new ConflictError("Ese día el trabajador tiene licencia médica")
     }
 
+    if (esperado.tipo === "turnos" && TIPOS_CON_HORA.includes(datos.tipo)) {
+        throw new ConflictError("El trabajador tiene jornada del art. 25: registra sus horas en Turnos de conducción")
+    }
     const diaNoLaboral = esperado.tipo === "libre" || esperado.tipo === "feriado"
     if (diaNoLaboral && !TIPOS_CON_HORA.includes(datos.tipo)) {
         throw new ConflictError(`Ese día es ${esperado.tipo === "feriado" ? `feriado (${esperado.nombre})` : "libre según su jornada"}: no corresponde registrar ${datos.tipo.replaceAll("_", " ")}`)

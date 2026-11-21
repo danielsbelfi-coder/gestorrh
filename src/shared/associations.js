@@ -42,6 +42,13 @@ const { Jornada } = require("../contratos/jornada.model");
 const { ParametroHistorial } = require("../remuneraciones/parametro_historial.model.js");
 const { AccesoSoporte } = require("../soporte/acceso_soporte.model.js");
 const { RegistroSoporte } = require("../soporte/registro_soporte.model.js");
+const { TipoEspera } = require("../asistencia/tipo_espera.model.js")
+const { TurnoConduccion } = require("../asistencia/turno_conduccion.model.js")
+
+// Paquete V: turnos de conducción (art. 25) y tipos de espera de la empresa.
+TipoEspera.belongsTo(Empresa, { foreignKey: "empresa_id" })
+TurnoConduccion.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
+Trabajador.hasMany(TurnoConduccion, { foreignKey: "trabajador_id" })
 
 
 Trabajador.belongsTo(Persona, {
@@ -421,5 +428,7 @@ module.exports = {
     Vacacion,
     VacacionSaldoInicial,
     Jornada,
-    ParametroHistorial
+    ParametroHistorial,
+    TipoEspera,
+    TurnoConduccion
 }

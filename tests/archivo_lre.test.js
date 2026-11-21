@@ -165,6 +165,7 @@ test("identificación: código de jornada según el tipo de distribución (paque
     assert.strictEqual(codigo({ tipoDistribucion: "bisemanal" }), 501)
     assert.strictEqual(codigo({ tipoDistribucion: "excepcional" }), 601)
     assert.strictEqual(codigo({ tipoDistribucion: "promedio" }), 101)
+    assert.strictEqual(codigo({ tipoDistribucion: "art25" }), 406)
     assert.strictEqual(codigo({ tipoDistribucion: "semanal" }), 101)
     assert.strictEqual(codigo({ tipoJornada: "parcial", tipoDistribucion: "excepcional" }), 201)
 })

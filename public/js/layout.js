@@ -2,6 +2,7 @@
 // Cada pantalla solo necesita <main class="contenido" data-titulo="..."> y cargar este archivo después de api.js.
 
 const ICONOS = {
+    bus: '<rect x="4" y="3" width="16" height="15" rx="2"/><path d="M4 11h16M8 18v3M16 18v3"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/>',
     inicio: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/>',
     personas: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2A5 5 0 0 1 21.5 19"/>',
     trabajadores: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
@@ -88,6 +89,7 @@ function gruposDeEmpresa(usuario, conInicio, empresa = [["empresas.html", "Empre
                 ["periodos.html", "Periodos", "periodos"],
                 ["libro.html", "Libro de asistencia", "libro"],
                 ["asistencias.html", "Marcas de asistencia", "asistencias"],
+                ["turnos.html", "Turnos de conducción", "bus"],
                 ["licencias.html", "Licencias médicas", "licencias"],
                 ["vacaciones.html", "Vacaciones", "vacaciones"],
                 ["resumenes.html", "Resumen de asistencia", "resumenes"]

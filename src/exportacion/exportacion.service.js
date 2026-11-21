@@ -5,7 +5,7 @@ const {
     Asistencia, AsistenciaCorreccion, PeriodoRemuneracion, Liquidacion,
     ConceptoRemuneracion, VariablePeriodo,
     ResumenAsistencia, LiquidacionLinea, LicenciaMedica, SituacionPrevisional, PrevisionPersona, CargaFamiliar, TramoAsignacionPersona, AhorroVoluntario,
-    Finiquito, FiniquitoEliminado, LiquidacionEliminada, Jornada, PeriodoReapertura, AccesoSoporte, RegistroSoporte
+    Finiquito, FiniquitoEliminado, LiquidacionEliminada, Jornada, PeriodoReapertura, AccesoSoporte, RegistroSoporte, TipoEspera, TurnoConduccion
 } = require("../shared/associations.js")
 const { generarCsv } = require("./csv.js")
 
@@ -16,6 +16,7 @@ const TABLAS = [
     { archivo: "cargos.csv", modelo: Cargo, filtro: "empresa_id = :empresaId" },
     { archivo: "sucursales.csv", modelo: Sucursal, filtro: "empresa_id = :empresaId" },
     { archivo: "jornadas.csv", modelo: Jornada, filtro: "empresa_id = :empresaId" },
+    { archivo: "tipos_espera.csv", modelo: TipoEspera, filtro: "empresa_id = :empresaId" },
     { archivo: "conceptos_propios.csv", modelo: ConceptoRemuneracion, filtro: "empresa_id = :empresaId" },
     { archivo: "personas.csv", modelo: Persona, filtro: "empresa_id = :empresaId" },
     { archivo: "situaciones_previsionales.csv", modelo: SituacionPrevisional, filtro: "persona_id IN (SELECT id FROM personas WHERE empresa_id = :empresaId)" },
@@ -28,6 +29,7 @@ const TABLAS = [
     { archivo: "anexos.csv", modelo: ContratoAnexo, filtro: `contrato_id IN (SELECT id FROM contratos_trabajo WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { archivo: "asistencias.csv", modelo: Asistencia, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "correcciones_asistencia.csv", modelo: AsistenciaCorreccion, filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
+    { archivo: "turnos_conduccion.csv", modelo: TurnoConduccion, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "licencias_medicas.csv", modelo: LicenciaMedica, filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { archivo: "periodos_remuneracion.csv", modelo: PeriodoRemuneracion, filtro: "empresa_id = :empresaId" },
     { archivo: "reaperturas_periodo.csv", modelo: PeriodoReapertura, filtro: "periodo_id IN (SELECT id FROM periodos_remuneracion WHERE empresa_id = :empresaId)" },

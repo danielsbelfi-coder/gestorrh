@@ -73,14 +73,18 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
         // enJornada: si ese día se trabaja según la jornada (semana corrida: un festivo en un día de descanso
         // convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
         // En una jornada por ciclo, el día se busca por su posición en el ciclo (paquete T).
-        const delDia = jornada === null ? null : diaDelCiclo(jornada, fecha)
+        const delDia = jornada === null || jornada.tipo === "art25" ? null : diaDelCiclo(jornada, fecha)
         // Colación: la de ese día si la jornada lo trabaja (un viernes corto sin colación no descuenta nada);
         // si no, la más frecuente de la plantilla, como en un día libre.
         const colacion = delDia?.trabaja ? Number(delDia.colacion ?? 0) : colacionHabitual(dias)
-        return { tipo: "feriado", nombre: feriado.nombre, colacion, enJornada: dias === null ? null : Boolean(delDia?.trabaja) }
+        return { tipo: "feriado", nombre: feriado.nombre, colacion, enJornada: dias === null || jornada?.tipo === "art25" ? null : Boolean(delDia?.trabaja) }
     }
     if (dias === null) {
         return { tipo: "sin_horario" }
+    }
+    // Art. 25 (paquete V): sin calendario fijo; el trabajo de cada día se registra en los turnos de conducción.
+    if (jornada.tipo === "art25") {
+        return { tipo: "turnos" }
     }
     const dia = diaDelCiclo(jornada, fecha)
     if (!dia || !dia.trabaja) {
@@ -181,7 +185,7 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
         }
 
         if (TIPOS_DIA_COMPLETO.includes(marca.tipo)) {
-            if (esperado.tipo !== "laboral" && esperado.tipo !== "sin_horario") {
+            if (esperado.tipo !== "laboral" && esperado.tipo !== "sin_horario" && esperado.tipo !== "turnos") {
                 fila.advertencias.push(`${marca.tipo.replaceAll("_", " ")} en un día ${esperado.tipo === "feriado" ? "feriado" : "libre"}: no se considera`)
                 fila.cuenta = false
                 return fila
@@ -198,6 +202,11 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
             return fila
         }
 
+        if (esperado.tipo === "turnos") {
+            fila.advertencias.push("Jornada del art. 25: las horas se registran en Turnos de conducción, no como marca")
+            fila.cuenta = false
+            return fila
+        }
         if (esperado.tipo === "sin_horario") {
             fila.advertencias.push("El contrato no tiene plantilla de jornada: no se calculan atrasos ni horas extra")
             fila.cuenta = false

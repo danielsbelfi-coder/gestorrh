@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Turnos de conducción</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-titulo="Turnos de conducción">
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Turnos de conducción</h1>
+                <p>Choferes y auxiliares de la locomoción colectiva interurbana (art. 25). Cada turno se registra con sus marcaciones de inicio y fin y sus esperas o descansos. La jornada es el tiempo entre inicio y fin menos las esperas y descansos que no se imputan; el turno entero se imputa al día en que empieza, aunque cruce la medianoche. Solo lo aprobado suma al resumen.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <details class="tarjeta plegable" id="panelTipos">
+            <summary>Tipos de espera de la empresa</summary>
+            <p class="texto-suave">Definen si cada espera o descanso es jornada (imputable) y, si no lo es, cómo se paga o compensa según el acuerdo con los trabajadores. Por defecto, las esperas entre turnos sin labor y los descansos no se imputan ni se pagan; lo que ocurre dentro del servicio o por instrucción de la empresa queda como tiempo a disposición. Los cambios rigen para los turnos de los meses abiertos.</p>
+            <div id="tablaTipos"></div>
+            <form id="formTipo" class="rejilla">
+                <label>Nombre<input type="text" id="tipoNombre" maxlength="80" required></label>
+                <label>Clase
+                    <select id="tipoClase">
+                        <option value="terminal">Espera en terminal</option>
+                        <option value="cruce">Cruce</option>
+                        <option value="aduana">Aduana</option>
+                        <option value="mantencion">Mantención</option>
+                        <option value="retraso_operativo">Retraso operativo</option>
+                        <option value="descanso_bordo">Descanso a bordo</option>
+                        <option value="descanso_tierra">Descanso en tierra</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </label>
+                <label>¿Es jornada (imputable)?
+                    <select id="tipoImputable"><option value="false">No: no se imputa a la jornada</option><option value="true">Sí: tiempo a disposición o con labor</option></select>
+                </label>
+                <label data-no-imputable>Pago
+                    <select id="tipoPago"><option value="no">No se paga (solo se registra)</option><option value="por_hora">Por hora</option><option value="monto_fijo">Monto fijo por espera</option></select>
+                </label>
+                <label data-no-imputable>Valor ($)<input type="number" id="tipoValor" min="0" step="1" value="0"></label>
+                <label data-no-imputable>Minutos sin pago (por espera)<input type="number" id="tipoSinPago" min="0" step="1" value="0"></label>
+                <label data-no-imputable>Redondeo (fracción iniciada se paga)
+                    <select id="tipoRedondeo"><option value="1">1 minuto</option><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">60 minutos</option></select>
+                </label>
+                <label data-no-imputable>Compensación
+                    <select id="tipoCompensacion"><option value="dinero">En dinero</option><option value="descanso">En descanso (no se paga)</option></select>
+                </label>
+                <div class="acciones-grupo">
+                    <button type="submit" id="guardarTipo">Agregar tipo</button>
+                    <button type="button" class="secundario" id="cancelarTipo" hidden>Cancelar edición</button>
+                </div>
+            </form>
+        </details>
+
+        <section class="tarjeta libro-controles">
+            <label class="campo-ancho">Trabajador<select id="trabajador"></select></label>
+            <div class="selector-mes">
+                <button type="button" class="secundario chico" id="mesAnterior" aria-label="Mes anterior">‹</button>
+                <label>Mes<input type="month" id="mes"></label>
+                <button type="button" class="secundario chico" id="mesSiguiente" aria-label="Mes siguiente">›</button>
+            </div>
+            <button type="button" id="aprobarMes" hidden>Aprobar los turnos del mes</button>
+        </section>
+
+        <section id="resumenTurnos" hidden>
+            <div class="libro-totales" id="totales"></div>
+            <p class="texto-suave" id="infoJornada"></p>
+            <div id="tablaEsperas"></div>
+        </section>
+
+        <details class="tarjeta plegable" id="panelTurno" hidden>
+            <summary id="tituloTurno">＋ Registrar turno</summary>
+            <form id="formTurno">
+                <div class="rejilla">
+                    <label>Fecha en que empieza<input type="date" id="turnoFecha" required></label>
+                    <label>Inicio<input type="time" id="turnoInicio" required></label>
+                    <label>Fin<input type="time" id="turnoFin" required></label>
+                    <label>Servicio o recorrido<input type="text" id="turnoServicio" maxlength="120" placeholder="Ej.: Chillán–Santiago–Chillán"></label>
+                    <label class="campo-ancho">Observaciones<input type="text" id="turnoObs" maxlength="300"></label>
+                </div>
+                <p class="texto-suave">Si el fin es anterior al inicio, el turno termina al día siguiente. Las pausas se anotan con su hora; una hora anterior al inicio del turno se entiende del día siguiente.</p>
+                <table class="tabla-jornada">
+                    <thead><tr><th>Espera o descanso</th><th>Inicio</th><th>Fin</th><th>Lugar</th><th>Causa</th><th></th></tr></thead>
+                    <tbody id="filasPausas"></tbody>
+                    <tfoot><tr><td colspan="6"><button type="button" class="chico secundario" id="agregarPausa">＋ Agregar espera o descanso</button></td></tr></tfoot>
+                </table>
+                <ul id="problemasTurno" class="problemas-jornada" aria-live="polite"></ul>
+                <div class="acciones-grupo">
+                    <button type="submit" id="guardarTurno">Registrar turno</button>
+                    <button type="button" class="secundario" id="cancelarTurno" hidden>Cancelar edición</button>
+                </div>
+            </form>
+        </details>
+
+        <div class="tabla-marco" id="contenedorTurnos" hidden>
+            <table>
+                <thead><tr><th>Fecha</th><th>Servicio</th><th>Horario</th><th class="numero">Jornada</th><th>Esperas y descansos</th><th class="numero">Pago esperas</th><th>Estado</th><th>Alertas</th><th></th></tr></thead>
+                <tbody id="filasTurnos"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/turnos.js"></script>
+</body>
+
+</html>

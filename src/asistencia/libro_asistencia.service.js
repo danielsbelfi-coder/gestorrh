@@ -53,6 +53,7 @@ async function tramosDeJornada(contrato, transaction) {
             ciclo_dias: jornada?.ciclo_dias ?? 7,
             inicio_ciclo: jornada?.inicio_ciclo ?? null,
             dias_trabajados: jornada ? Number(jornada.dias_trabajados) : null,
+            horas_mensuales: jornada?.horas_mensuales ? Number(jornada.horas_mensuales) : null,
             jornada_id: jornada?.id ?? null,
             nombre: jornada?.nombre ?? null
         }
@@ -96,7 +97,7 @@ async function libroDelTrabajador(trabajador, anio, mes, transaction) {
     return {
         ...libro,
         contrato: { id: contrato.id, comuna_prestacion: contrato.comuna_prestacion, tipo_jornada: contrato.tipo_jornada },
-        tramos: tramos.map(({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados }) => ({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados }))
+        tramos: tramos.map(({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales }) => ({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales }))
     }
 }
 

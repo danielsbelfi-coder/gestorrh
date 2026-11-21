@@ -14,7 +14,7 @@
 
 const RECARGOS = [50, 100]
 const DIAS = ["", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-const TIPOS_DIA = { laboral: "Laboral", libre: "Día libre", feriado: "Feriado", licencia: "Licencia", fuera_contrato: "Fuera de contrato", sin_horario: "Sin horario" }
+const TIPOS_DIA = { laboral: "Laboral", libre: "Día libre", feriado: "Feriado", licencia: "Licencia", fuera_contrato: "Fuera de contrato", sin_horario: "Sin horario", turnos: "Turnos (art. 25)" }
 const TOLERANCIA_HORAS = 0.01
 
 const redondear2 = (numero) => Math.round(numero * 100) / 100

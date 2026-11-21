@@ -165,3 +165,12 @@ test("turno de noche que cruza la medianoche (paquete U): horas, validación y t
     // Colación igual o mayor que el turno.
     assert.match(validarJornada(semana({ entrada: "23:00", salida: "01:00", colacion: 120 }, OCHO_A_CINCO), "2026-11-21").errores.join(), /colación/)
 })
+
+test("jornada del art. 25 (paquete V): tope mensual, referencia semanal y cláusula", () => {
+    const r = validarJornada([], "2026-11-21", { tipo: "art25", horas_mensuales: 180, dias_trabajados: 6 })
+    assert.deepStrictEqual(r.errores, [])
+    assert.deepStrictEqual([r.horasMensuales, r.horasSemanales, r.diasTrabajados, r.dias], [180, 42, 6, []])
+    assert.match(validarJornada([], "2026-11-21", { tipo: "art25", horas_mensuales: 190 }).errores.join(), /180 horas mensuales/)
+    assert.match(validarJornada([], "2028-05-01", { tipo: "art25", horas_mensuales: 180 }).advertencias.join(), /40 horas semanales promedio/)
+    assert.match(clausulaDistribucion({ tipo: "art25", horas_mensuales: "180.00", dias: [] }, 42), /^La jornada ordinaria de trabajo será de 180 horas mensuales, conforme al artículo 25/)
+})

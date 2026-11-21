@@ -13,12 +13,13 @@ function maximoSemanal(fecha) {
 const MAXIMO = maximoSemanal(hoyIso())
 document.getElementById("maximoLegal").textContent = MAXIMO
 
-const TIPOS_JORNADA = { semanal: "Semanal", promedio: "En promedio (22 bis)", bisemanal: "Bisemanal (art. 39)", excepcional: "Excepcional (art. 38)" }
+const TIPOS_JORNADA = { semanal: "Semanal", promedio: "En promedio (22 bis)", bisemanal: "Bisemanal (art. 39)", excepcional: "Excepcional (art. 38)", art25: "Choferes interurbanos (art. 25)" }
 const AYUDA_TIPO = {
     semanal: "La misma semana se repite siempre: 4 a 6 días y hasta el máximo legal semanal.",
     promedio: "Ciclos de 2, 3 o 4 semanas (14, 21 o 28 días) que empiezan un lunes: ninguna semana pasa de 45 horas, no más de dos semanas seguidas sobre el máximo y el promedio del ciclo no pasa del máximo legal. Requiere pacto escrito (con el sindicato si el trabajador está sindicalizado).",
     bisemanal: "Para faenas alejadas de centros urbanos: hasta 14 días seguidos de trabajo y luego el descanso compensatorio de los domingos y festivos del período, más uno. El promedio del ciclo no pasa del máximo legal.",
-    excepcional: "Los sistemas 7x7, 4x4, 10x10, 14x14 u otros autorizados por resolución de la Dirección del Trabajo (hasta tres años de vigencia). Hasta 12 horas diarias; la resolución regula el sistema."
+    excepcional: "Los sistemas 7x7, 4x4, 10x10, 14x14 u otros autorizados por resolución de la Dirección del Trabajo (hasta tres años de vigencia). Hasta 12 horas diarias; la resolución regula el sistema.",
+    art25: "Para choferes y auxiliares de la locomoción colectiva interurbana: hasta 180 horas mensuales (desde el 26-04-2028, 40 horas semanales promedio en cómputo mensual). No tiene calendario fijo: cada turno se registra en Turnos de conducción, con sus esperas y descansos, que no se imputan a la jornada."
 }
 
 ESTADOS.jornada = { true: ["Activa", "exito"], false: ["Inactiva", ""] }
@@ -30,7 +31,7 @@ const tabla = crearTabla({
     columnas: [
         { titulo: "Nombre", valor: (j) => j.nombre },
         { titulo: "Tipo", valor: (j) => TIPOS_JORNADA[j.tipo ?? "semanal"] },
-        { titulo: "Distribución", valor: (j) => textoDistribucion(j.dias, j.tipo) + (j.tipo && j.tipo !== "semanal" && j.inicio_ciclo ? ` · ciclo de ${j.ciclo_dias} días desde el ${fechaCorta(j.inicio_ciclo)}` : "") },
+        { titulo: "Distribución", valor: (j) => j.tipo === "art25" ? `${Number(j.horas_mensuales)} horas mensuales · según la programación de servicios` : textoDistribucion(j.dias, j.tipo) + (j.tipo && j.tipo !== "semanal" && j.inicio_ciclo ? ` · ciclo de ${j.ciclo_dias} días desde el ${fechaCorta(j.inicio_ciclo)}` : "") },
         { titulo: "Horas semanales", valor: (j) => Number(j.horas_semanales), numero: true },
         { titulo: "Días por semana", valor: (j) => Number(j.dias_trabajados), numero: true },
         { titulo: "Estado", valor: (j) => textoEstado("jornada", String(j.activo)), html: (j) => insignia("jornada", String(j.activo)) },
@@ -48,7 +49,8 @@ const tabla = crearTabla({
 // ---------- Editor de los días del ciclo ----------
 
 const tipoActual = () => document.getElementById("tipo").value
-const porCiclo = () => tipoActual() !== "semanal"
+const porCiclo = () => !["semanal", "art25"].includes(tipoActual())
+const esArt25 = () => tipoActual() === "art25"
 const largoCiclo = () => (porCiclo() ? Math.max(2, Math.min(56, Number(document.getElementById("cicloDias").value) || 7)) : 7)
 
 function nombreDia(numero) {
@@ -107,7 +109,9 @@ function leerDias() {
 // Muestra u oculta los campos del ciclo y de la resolución según el tipo.
 function aplicarTipo() {
     const tipo = tipoActual()
-    document.querySelectorAll("[data-ciclo]").forEach((el) => { el.hidden = tipo === "semanal" })
+    document.querySelectorAll("[data-ciclo]").forEach((el) => { el.hidden = tipo === "semanal" || tipo === "art25" })
+    document.querySelectorAll("[data-art25]").forEach((el) => { el.hidden = tipo !== "art25" })
+    document.getElementById("tablaDias").hidden = tipo === "art25"
     document.querySelectorAll("[data-excepcional]").forEach((el) => { el.hidden = tipo !== "excepcional" })
     const ciclo = document.getElementById("cicloDias")
     if (tipo === "promedio") {
@@ -124,6 +128,18 @@ function aplicarTipo() {
 
 function recalcular() {
     const tipo = tipoActual()
+    if (tipo === "art25") {
+        const horas = Number(document.getElementById("horasMensuales").value)
+        const problemas = []
+        if (!(horas > 0) || horas > 180) {
+            problemas.push("La jornada del art. 25 tiene un tope de 180 horas mensuales.")
+        }
+        document.getElementById("problemasJornada").innerHTML = problemas.map((t) => `<li class="error">${escaparHtml(t)}</li>`).join("")
+        const boton = document.getElementById("botonGuardar")
+        boton.disabled = problemas.length > 0
+        boton.title = ""
+        return
+    }
     const maximoDiario = tipo === "excepcional" ? 12 : 10
     const largo = largoCiclo()
     let total = 0
@@ -196,6 +212,7 @@ function recalcular() {
 }
 
 document.getElementById("filasDias").addEventListener("input", recalcular)
+document.getElementById("horasMensuales").addEventListener("input", recalcular)
 
 document.getElementById("tipo").addEventListener("change", function () {
     aplicarTipo()
@@ -273,8 +290,12 @@ formulario.addEventListener("submit", async function (evento) {
     }
 
     const tipo = tipoActual()
-    const cuerpo = { nombre: document.getElementById("nombre").value.trim(), tipo, dias: leerDias() }
-    if (tipo !== "semanal") {
+    const cuerpo = { nombre: document.getElementById("nombre").value.trim(), tipo, dias: tipo === "art25" ? [] : leerDias() }
+    if (tipo === "art25") {
+        cuerpo.horas_mensuales = Number(document.getElementById("horasMensuales").value)
+        cuerpo.dias_trabajados = Number(document.getElementById("diasReferencia").value)
+    }
+    if (porCiclo()) {
         cuerpo.ciclo_dias = largoCiclo()
         cuerpo.inicio_ciclo = document.getElementById("inicioCiclo").value
     }
@@ -312,6 +333,8 @@ document.getElementById("tablaJornadas").addEventListener("click", async functio
         document.getElementById("resolucionNumero").value = jornadaEnEdicion.resolucion_numero ?? ""
         document.getElementById("resolucionFecha").value = jornadaEnEdicion.resolucion_fecha ?? ""
         document.getElementById("resolucionVigencia").value = jornadaEnEdicion.resolucion_vigencia_hasta ?? ""
+        document.getElementById("horasMensuales").value = Number(jornadaEnEdicion.horas_mensuales ?? 180)
+        document.getElementById("diasReferencia").value = Number(jornadaEnEdicion.dias_trabajados ?? 6)
         aplicarTipo()
         dibujarFilas(jornadaEnEdicion.dias)
         document.getElementById("tituloPanel").textContent = `Editar: ${jornadaEnEdicion.nombre}`

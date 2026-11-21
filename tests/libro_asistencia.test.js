@@ -222,3 +222,15 @@ test("turno de noche (paquete U): atrasos, horas extra y salidas anticipadas al 
     assert.strictEqual(dia(r, "2027-10-09").minutosExtra, 420)
     assert.deepStrictEqual([r.totales.minutos_atraso, r.totales.minutos_extra], [315, 440])
 })
+
+test("jornada del art. 25 (paquete V): días «turnos», sin marcas con hora, con inasistencias", () => {
+    const tramo = { desde: "2027-01-01", dias: [], tipo: "art25", ciclo_dias: 7 }
+    const r = calcularLibro({ anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [tramo], feriados: FERIADOS, marcas: [marca("2027-10-04", "08:00", "18:00"), marca("2027-10-05", null, null, { tipo: "inasistencia" })] })
+    assert.deepStrictEqual(dia(r, "2027-10-09").esperado, { tipo: "turnos" })
+    assert.strictEqual(dia(r, "2027-10-11").esperado.tipo, "feriado")
+    assert.strictEqual(dia(r, "2027-10-11").esperado.enJornada, null)
+    assert.strictEqual(dia(r, "2027-10-04").cuenta, false)
+    assert.match(dia(r, "2027-10-04").advertencias.join(), /Turnos de conducción/)
+    assert.strictEqual(r.totales.dias_inasistencia, 1)
+    assert.strictEqual(r.totales.minutos_extra, 0)
+})

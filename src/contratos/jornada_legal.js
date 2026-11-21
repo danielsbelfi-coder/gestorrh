@@ -52,7 +52,11 @@ function horasDelDia(dia) {
     return redondear((minutosDelTurno(dia) - Number(dia.colacion ?? 0)) / 60)
 }
 
-const TIPOS = ["semanal", "promedio", "bisemanal", "excepcional"]
+const TIPOS = ["semanal", "promedio", "bisemanal", "excepcional", "art25"]
+// Art. 25 (choferes y auxiliares de la locomoción colectiva interurbana): 180 horas mensuales hasta el 25-04-2028;
+// desde el 26-04-2028, 40 horas semanales promedio en cómputo mensual (Ley 21.561, se puede pactar antes).
+const HORAS_MENSUALES_ART25 = 180
+const INICIO_40_HORAS_ART25 = "2028-04-26"
 const CICLOS_PROMEDIO = [14, 21, 28]
 const MAXIMO_SEMANA_PROMEDIO = 45
 const MAXIMO_DIARIO_EXCEPCIONAL = 12
@@ -108,6 +112,34 @@ function diasSeguidosDeTrabajo(dias) {
     return maximo
 }
 
+// Jornada del art. 25 (paquete V): sin calendario fijo (los turnos siguen la programación de los servicios), con un
+// tope de horas mensuales. horasSemanales es la referencia para el contrato (horas mensuales × 7 / 30) y
+// diasTrabajados los días por semana de referencia que indica la empresa (6 si no indica).
+function validarArt25(fecha, opciones) {
+    const errores = []
+    const advertencias = []
+    const horas = Number(opciones.horas_mensuales ?? HORAS_MENSUALES_ART25)
+    const dias = Number(opciones.dias_trabajados ?? 6)
+    if (!(horas > 0) || horas > HORAS_MENSUALES_ART25) {
+        errores.push(`La jornada del art. 25 tiene un tope de ${HORAS_MENSUALES_ART25} horas mensuales`)
+    }
+    if (!Number.isFinite(dias) || dias < 1 || dias > 7) {
+        errores.push("Indica los días de trabajo por semana de referencia (1 a 7)")
+    }
+    if (fecha >= INICIO_40_HORAS_ART25) {
+        advertencias.push("Desde el 26-04-2028 la jornada del art. 25 es de 40 horas semanales promedio en cómputo mensual (Ley 21.561)")
+    }
+    return {
+        dias: [],
+        horasMensuales: redondear(horas),
+        horasSemanales: redondear(horas * 7 / 30),
+        diasTrabajados: redondear(dias),
+        cicloDias: 7,
+        errores,
+        advertencias
+    }
+}
+
 // Revisa una jornada. fecha: desde cuándo rige (para el máximo legal), en AAAA-MM-DD.
 // opciones: { tipo, ciclo_dias, inicio_ciclo, resolucion_numero, resolucion_fecha, resolucion_vigencia_hasta }; sin
 // opciones es una jornada semanal de lunes a domingo, como antes del paquete T.
@@ -119,7 +151,10 @@ function validarJornada(entrada, fecha, opciones = {}) {
     const vacio = (mensaje) => ({ dias: [], horasSemanales: 0, diasTrabajados: 0, cicloDias: 0, errores: [mensaje], advertencias })
 
     if (!TIPOS.includes(tipo)) {
-        return vacio("El tipo de jornada debe ser semanal, promedio (art. 22 bis), bisemanal (art. 39) o excepcional (art. 38)")
+        return vacio("El tipo de jornada debe ser semanal, promedio (art. 22 bis), bisemanal (art. 39), excepcional (art. 38) o de choferes interurbanos (art. 25)")
+    }
+    if (tipo === "art25") {
+        return validarArt25(fecha, opciones)
     }
     const ciclo = tipo === "semanal" ? 7 : Number(opciones.ciclo_dias)
 
@@ -332,6 +367,9 @@ function numeroTexto(valor) {
 // Termina en punto. La semanal mantiene el texto de siempre.
 function clausulaDistribucion(jornada, horas) {
     const tipo = jornada.tipo ?? "semanal"
+    if (tipo === "art25") {
+        return `La jornada ordinaria de trabajo será de ${numeroTexto(jornada.horas_mensuales ?? HORAS_MENSUALES_ART25)} horas mensuales, conforme al artículo 25 del Código del Trabajo, y se distribuirá según la programación de los servicios. El tiempo de los descansos a bordo o en tierra y de las esperas que corresponda cumplir entre turnos sin realizar labor no se imputará a la jornada, y su retribución o compensación se ajustará al acuerdo de las partes. El TRABAJADOR tendrá un descanso mínimo ininterrumpido de ocho horas dentro de cada veinticuatro horas y no manejará más de cinco horas continuas, después de las cuales tendrá un descanso de al menos dos horas.`
+    }
     const distribucion = textoDistribucion(jornada.dias, tipo)
     const ciclo = Number(jornada.ciclo_dias)
     const inicio = jornada.inicio_ciclo ? fechaEnTextoSimple(jornada.inicio_ciclo) : ""
@@ -350,6 +388,7 @@ function clausulaDistribucion(jornada, horas) {
 module.exports = {
     NOMBRES_DIA,
     TIPOS,
+    HORAS_MENSUALES_ART25,
     maximoSemanal,
     horasDelDia,
     cruzaMedianoche,

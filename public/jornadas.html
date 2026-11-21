@@ -31,12 +31,17 @@
                             <option value="promedio">En promedio, ciclos de 2 a 4 semanas (art. 22 bis)</option>
                             <option value="bisemanal">Bisemanal, faenas alejadas (art. 39)</option>
                             <option value="excepcional">Sistema excepcional autorizado por la DT (art. 38)</option>
+                            <option value="art25">Choferes y auxiliares interurbanos, horas mensuales (art. 25)</option>
                         </select>
                     </label>
                     <label data-ciclo>Días del ciclo<input type="number" id="cicloDias" min="2" max="56" step="1" value="14"></label>
                     <label data-ciclo>Día 1 del ciclo<input type="date" id="inicioCiclo"></label>
                 </div>
                 <p class="texto-suave" id="ayudaTipo"></p>
+                <div class="rejilla" data-art25>
+                    <label>Horas mensuales<input type="number" id="horasMensuales" min="1" max="180" step="0.5" value="180"></label>
+                    <label>Días de trabajo por semana (referencia para el contrato)<input type="number" id="diasReferencia" min="1" max="7" step="1" value="6"></label>
+                </div>
                 <div class="rejilla" data-excepcional>
                     <label>N° de resolución de la DT<input type="text" id="resolucionNumero" maxlength="60" placeholder="Ej.: 1234"></label>
                     <label>Fecha de la resolución<input type="date" id="resolucionFecha"></label>
@@ -50,7 +55,7 @@
                     <label>Colación (min)<input type="number" id="patronColacion" min="0" step="5" value="60"></label>
                     <div class="acciones-grupo"><button type="button" class="chico secundario" id="generarPatron">Armar el ciclo</button></div>
                 </div>
-                <table class="tabla-jornada">
+                <table class="tabla-jornada" id="tablaDias">
                     <thead><tr><th>Día</th><th id="cabeceraFecha" hidden>Primer ciclo</th><th>Trabaja</th><th>Entrada</th><th>Salida</th><th>Colación (min)</th><th class="numero">Horas</th></tr></thead>
                     <tbody id="filasDias"></tbody>
                     <tfoot><tr><td colspan="5" id="pieAcciones"><button type="button" class="chico secundario" id="copiarLunes">Copiar el horario del lunes a los días marcados</button></td><td class="numero"><strong id="totalSemana">0</strong> h<br><span class="texto-suave" id="detalleCiclo"></span></td></tr></tfoot>

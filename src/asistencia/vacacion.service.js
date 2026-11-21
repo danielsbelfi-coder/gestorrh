@@ -174,7 +174,8 @@ async function diasParaMarcar(trabajador, desde, hasta, transaction) {
             if (fila.fecha < desde || fila.fecha > hasta) {
                 continue
             }
-            const sinHorarioHabil = fila.esperado.tipo === "sin_horario" && fila.diaSemana >= 1 && fila.diaSemana <= 5
+            // Sin plantilla o con jornada del art. 25 (sin calendario fijo): lunes a viernes sin feriados.
+            const sinHorarioHabil = ["sin_horario", "turnos"].includes(fila.esperado.tipo) && fila.diaSemana >= 1 && fila.diaSemana <= 5
             if (fila.esperado.tipo !== "laboral" && !sinHorarioHabil) {
                 continue
             }
