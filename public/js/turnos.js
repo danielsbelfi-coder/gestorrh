@@ -193,7 +193,7 @@ function dibujarMes() {
     document.getElementById("totales").innerHTML = tarjetas.map(([titulo, valor, clase]) => `
         <div class="libro-total ${clase}"><span>${escaparHtml(titulo)}</span><strong>${escaparHtml(valor)}</strong></div>`).join("")
     document.getElementById("infoJornada").textContent = jornada
-        ? `Jornada: ${jornada.nombre} (${Number(jornada.horas_mensuales)} horas mensuales). El tope del mes es proporcional si el contrato entra o termina en el mes. Las horas sobre el tope y el pago de esperas pasarán a la liquidación en el próximo paquete.`
+        ? `Jornada: ${jornada.nombre} (${Number(jornada.horas_mensuales)} horas mensuales). El tope del mes es proporcional si el contrato entra o termina en el mes. Para la liquidación: en Resumen de asistencia, «Generar desde la asistencia» propone las horas sobre el tope como horas extra al 50 % y el pago de esperas como «Tiempo de espera»; apruébalos y calcula.`
         : "El trabajador no tiene jornada del art. 25 en este mes."
     document.getElementById("tablaEsperas").innerHTML = resumen.esperas.length
         ? `<div class="tabla-marco"><table><thead><tr><th>Espera o descanso</th><th>¿Jornada?</th><th class="numero">Veces</th><th class="numero">Tiempo</th><th class="numero">Pagable</th><th class="numero">Monto</th><th class="numero">Compensatorio</th></tr></thead><tbody>

@@ -107,7 +107,8 @@ function diasDeDescanso(dias, trabajaDomingo, porCiclo = false) {
 
     if (porCiclo) {
         return dias.filter((fila) => {
-            const cuenta = fila.esperado.tipo === "feriado"
+            // esperado.festivo: un festivo con turno de conducción, que se trabaja y sigue siendo festivo (art. 25).
+            const cuenta = fila.esperado.tipo === "feriado" || fila.esperado.festivo === true
                 || (fila.diaSemana === DOMINGO && ["laboral", "libre"].includes(fila.esperado.tipo))
             if (!cuenta) {
                 return false

@@ -333,7 +333,33 @@ async function trabajadoresConTurnos({ empresa_id, anio, mes }, empresasPermitid
     return [...vistos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre))
 }
 
+// Lo que los turnos aportan a las remuneraciones del mes (paquete W): solo turnos aprobados y sin errores.
+// Devuelve null si el trabajador no tiene jornada del art. 25 en el mes.
+// { horasSobreTope, minutosJornada, topeHoras, montoEsperas, minutosPagables, fechasTrabajadas (Set de AAAA-MM-DD),
+//   pendientes, conErrores, horasMensuales, huella }
+async function datosParaRemuneraciones(trabajador, anio, mes) {
+    const { filas, resumen, jornada, topeHoras } = await calcularMes(trabajador, anio, mes)
+    if (jornada === null) {
+        return null
+    }
+    const validas = filas.filter((f) => f.turno.estado_aprobacion === "aprobado" && f.calculo.errores.length === 0)
+    const huella = filas.map((f) => [f.turno.id, f.turno.fecha, f.turno.hora_inicio, f.turno.hora_fin, f.turno.estado_aprobacion, JSON.stringify(f.turno.pausas ?? [])].join("|")).join(";")
+    return {
+        horasSobreTope: Math.round(resumen.minutosSobreTope / 60 * 100) / 100,
+        minutosJornada: resumen.minutosJornada,
+        topeHoras,
+        montoEsperas: resumen.montoEsperas,
+        minutosPagables: resumen.esperas.reduce((s, e) => s + e.pagables, 0),
+        fechasTrabajadas: new Set(validas.map((f) => String(f.turno.fecha).slice(0, 10))),
+        pendientes: resumen.pendientes,
+        conErrores: resumen.conErrores,
+        horasMensuales: Number(jornada.horas_mensuales ?? 180),
+        huella
+    }
+}
+
 module.exports = {
+    datosParaRemuneraciones,
     listarTiposEspera,
     crearTipoEspera,
     actualizarTipoEspera,

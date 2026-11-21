@@ -220,7 +220,18 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
     }
 
     // Las horas extra del mes salen solo del libro: una variable por recargo (50 % y 100 %) con fuente "asistencia".
-    const horas = horasPorRecargo(totales)
+    // Jornada del art. 25 (paquete W): salen de los turnos de conducción aprobados (las horas sobre el tope mensual, al
+    // 50 %), y el pago de esperas se propone como «Tiempo de espera».
+    let horas = horasPorRecargo(totales)
+    let glosaHoras = "Propuesta desde el libro de asistencia"
+    if (libro.dias.some((d) => d.esperado.tipo === "turnos")) {
+        const { datosParaRemuneraciones } = require("./turno_conduccion.service.js")
+        const turnos = await datosParaRemuneraciones(trabajador, periodo.anio, periodo.mes)
+        horas = { 50: turnos.horasSobreTope, 100: 0 }
+        glosaHoras = `Propuesta desde los turnos de conducción: horas sobre el tope de ${String(turnos.topeHoras).replace(".", ",")} h`
+        resultado.turnos = { jornada_horas: Math.round(turnos.minutosJornada / 60 * 100) / 100, tope_horas: turnos.topeHoras, pendientes: turnos.pendientes, con_errores: turnos.conErrores }
+        resultado.tiempo_espera = await sincronizarTiempoEspera(trabajador, periodo, turnos, usuarioId, transaction)
+    }
     const filtroHoras = {
         periodo_id: periodo.id,
         trabajador_id: trabajador.id,
@@ -258,7 +269,7 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
                 cantidad: horas[recargo],
                 monto: null,
                 mes_origen: null,
-                glosa: "Propuesta desde el libro de asistencia",
+                glosa: glosaHoras,
                 estado: "pendiente",
                 usuario_registro_id: usuarioId
             }, { transaction })
@@ -269,6 +280,34 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
     resultado.horas_extra_50 = horas[50]
     resultado.horas_extra_100 = horas[100]
     return resultado
+}
+
+// Variable «Tiempo de espera» propuesta desde los turnos (fuente "turnos"). Si la aprobada coincide, no se toca; si
+// cambió, se reemplaza y queda pendiente, como las horas extra del libro.
+async function sincronizarTiempoEspera(trabajador, periodo, turnos, usuarioId, transaction) {
+    const concepto = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "TIEMPO_ESPERA" }, transaction })
+    if (concepto === null) {
+        return "omitido: falta el concepto común TIEMPO_ESPERA"
+    }
+    const filtro = { periodo_id: periodo.id, trabajador_id: trabajador.id, concepto_id: concepto.id, fuente: "turnos" }
+    const aprobada = await VariablePeriodo.findOne({ where: { ...filtro, estado: "aprobada" }, transaction })
+    if (aprobada && Number(aprobada.monto) === turnos.montoEsperas) {
+        return "sin cambios: el monto aprobado coincide con los turnos"
+    }
+    await VariablePeriodo.destroy({ where: filtro, transaction })
+    if (turnos.montoEsperas > 0) {
+        const horasTexto = String(Math.round(turnos.minutosPagables / 60 * 100) / 100).replace(".", ",")
+        await VariablePeriodo.create({
+            ...filtro,
+            monto: turnos.montoEsperas,
+            cantidad: null,
+            mes_origen: null,
+            glosa: `Desde los turnos de conducción: ${horasTexto} h de espera pagable`,
+            estado: "pendiente",
+            usuario_registro_id: usuarioId
+        }, { transaction })
+    }
+    return turnos.montoEsperas
 }
 
 async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) {

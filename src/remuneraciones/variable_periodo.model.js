@@ -37,7 +37,7 @@ const VariablePeriodo = sequelize.define("VariablePeriodo", {
         defaultValue: "pendiente"
     },
     fuente: {
-        type: DataTypes.ENUM("manual", "asistencia", "importacion", "recurrente"),
+        type: DataTypes.ENUM("manual", "asistencia", "importacion", "recurrente", "turnos"),
         allowNull: false,
         defaultValue: "manual"
     },

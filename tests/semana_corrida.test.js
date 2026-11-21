@@ -115,3 +115,17 @@ test("horas de un día con turno que cruza la medianoche (paquete U)", () => {
     assert.equal(sc.horasDelDia({ entrada: "20:00", salida: "08:00", colacion: 60 }), 11)
     assert.equal(sc.horasDelDia({ entrada: "08:00", salida: "17:00", colacion: 60 }), 8)
 })
+
+test("art. 25 (paquete W): un festivo con turno de conducción se trabaja y sigue contando como festivo", () => {
+    const fila = (fecha, diaSemana, esperado) => ({ fecha, diaSemana, esperado, marca: null })
+    // Lunes 01 laboral (turno), martes 02 festivo con turno, miércoles 03 libre, domingo 07 libre.
+    const dias = [
+        fila("2027-02-01", 1, { tipo: "laboral" }),
+        fila("2027-02-02", 2, { tipo: "laboral", festivo: true }),
+        fila("2027-02-03", 3, { tipo: "libre" }),
+        fila("2027-02-07", 7, { tipo: "libre" })
+    ]
+    const s = sc.calcularSemanaCorrida({ sistema: "diario", dias, tramos: [{ desdeDia: 1, sueldo: 35000 }], resumen: SIN_AUSENCIAS, trabajaDomingo: true, porCiclo: true })
+    // 2 días trabajados = 70.000 / 2 × (festivo 02 + domingo 07) = 70.000.
+    assert.deepEqual([s.base, s.divisor, s.fechas, s.monto], [70000, 2, ["2027-02-02", "2027-02-07"], 70000])
+})

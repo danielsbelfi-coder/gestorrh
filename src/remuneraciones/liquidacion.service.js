@@ -172,12 +172,9 @@ async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueld
     const sc = require("./semana_corrida.js")
     const libro = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
     const laborales = libro.dias.filter((f) => f.esperado.tipo === "laboral")
-    // Art. 25 (paquete V): el cálculo con los turnos de conducción llega en el paquete W.
+    // Art. 25 (paquete W): los días trabajados son los días con turno de conducción aprobado.
     if (libro.dias.some((f) => f.esperado.tipo === "turnos")) {
-        if (porDias) {
-            throw new ConflictError("El contrato tiene jornada del art. 25 y sueldo por día: ese cálculo todavía no está disponible")
-        }
-        return { sueldoPorDias: null, semanaCorrida: null, valorHoraContrato: undefined, avisos: ["Jornada del art. 25: la semana corrida de los haberes de devengo diario todavía no se calcula con los turnos de conducción"] }
+        return await sueldoYSemanaCorridaArt25({ periodo, trabajador, contrato, tramosSueldo, resumen, variablesDiarias, libro, ingresoMinimoMensual })
     }
     if (libro.dias.some((f) => f.esperado.tipo === "sin_horario")) {
         if (porDias) {
@@ -215,6 +212,52 @@ async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueld
     }
 }
 
+// Jornada del art. 25 (paquete W). El libro se adapta para usar las mismas reglas del sueldo por día y de la semana
+// corrida de las jornadas por ciclo:
+// - día con turno aprobado → laboral trabajado (un festivo con turno es laboral y sigue contando como festivo);
+// - día sin turno con inasistencia, permiso o vacaciones aprobados → laboral (esos días deciden el pago y el divisor);
+// - el resto de los días del contrato → libre.
+// Así el divisor son los días con turno más los de inasistencia (el criterio de siempre, DT 110/001) y la semana
+// corrida paga los domingos y festivos del mes dentro del contrato. Valor hora del contrato diario: valor del día × 30 /
+// horas mensuales (con 180 h, el día / 6), nunca menor que con el ingreso mínimo.
+async function sueldoYSemanaCorridaArt25({ periodo, trabajador, contrato, tramosSueldo, resumen, variablesDiarias, libro, ingresoMinimoMensual }) {
+    const sistema = contrato.sistema_remuneracion
+    if (sistema === "hora") {
+        throw new ConflictError("La jornada del art. 25 no admite sueldo por hora: usa sueldo mensual o por día")
+    }
+    const sc = require("./semana_corrida.js")
+    const { datosParaRemuneraciones } = require("../asistencia/turno_conduccion.service.js")
+    const turnos = await datosParaRemuneraciones(trabajador, periodo.anio, periodo.mes)
+    const AUSENCIAS = ["inasistencia", "permiso_sin_goce", "permiso_con_goce", "vacaciones"]
+    const dias = libro.dias.map((f) => {
+        if (["fuera_contrato", "licencia"].includes(f.esperado.tipo)) {
+            return f
+        }
+        if (turnos.fechasTrabajadas.has(f.fecha)) {
+            return { ...f, esperado: { tipo: "laboral", festivo: f.esperado.tipo === "feriado" }, marca: null }
+        }
+        if (f.esperado.tipo === "turnos") {
+            const ausencia = f.marca && AUSENCIAS.includes(f.marca.tipo) && f.marca.estado_aprobacion === "aprobada"
+            return { ...f, esperado: { tipo: ausencia ? "laboral" : "libre" } }
+        }
+        return f
+    })
+    const semanaCorrida = sc.calcularSemanaCorrida({ sistema, dias, tramos: tramosSueldo, resumen, variablesDiarias, trabajaDomingo: true, porCiclo: true })
+    // El aviso de turnos pendientes lo agrega la revisión contra los turnos (avisosLibro), para cualquier sistema.
+    const avisos = []
+    if (sistema !== "diario") {
+        return { sueldoPorDias: null, semanaCorrida, valorHoraContrato: undefined, avisos }
+    }
+    const valorDia = Number(tramosSueldo[tramosSueldo.length - 1].sueldo)
+    const horasSemanales = Number(contrato.horas_semanales)
+    return {
+        sueldoPorDias: sc.sueldoPorDias({ sistema, dias, tramos: tramosSueldo, resumen }),
+        semanaCorrida,
+        valorHoraContrato: Math.max(valorDia * 30 / turnos.horasMensuales, valorHoraOrdinaria(ingresoMinimoMensual, horasSemanales)),
+        avisos
+    }
+}
+
 // Huella de las marcas del libro de asistencia del mes. El sueldo diario y la semana corrida se calculan con esas marcas
 // (no solo con el resumen): si cambian después del cálculo, la liquidación hay que recalcularla antes de emitirla.
 async function huellaAsistencia(trabajadorId, periodo) {
@@ -226,8 +269,19 @@ async function huellaAsistencia(trabajadorId, periodo) {
         order: [["fecha", "ASC"], ["id", "ASC"]]
     })
     // El recargo entra a la huella solo si no es el 50 % por defecto: las huellas guardadas antes siguen coincidiendo.
-    const texto = marcas.map((m) => [m.fecha, m.tipo, m.estado_aprobacion, m.hora_entrada ?? "", m.hora_salida ?? "",
+    let texto = marcas.map((m) => [m.fecha, m.tipo, m.estado_aprobacion, m.hora_entrada ?? "", m.hora_salida ?? "",
         ...(Number(m.recargo_hora_extra) === 100 ? ["100"] : [])].join("|")).join(";")
+    // Turnos de conducción (art. 25, paquete W): entran a la huella solo si hay, así las huellas guardadas antes siguen
+    // coincidiendo.
+    const { TurnoConduccion } = require("../shared/associations.js")
+    const turnos = await TurnoConduccion.findAll({
+        where: { trabajador_id: trabajadorId, fecha: { [Op.between]: [primerDia, ultimoDia] } },
+        attributes: ["id", "fecha", "hora_inicio", "hora_fin", "estado_aprobacion", "pausas"],
+        order: [["fecha", "ASC"], ["id", "ASC"]]
+    })
+    if (turnos.length > 0) {
+        texto += "#" + turnos.map((t) => [t.id, t.fecha, t.hora_inicio, t.hora_fin, t.estado_aprobacion, JSON.stringify(t.pausas ?? [])].join("|")).join(";")
+    }
     return require("crypto").createHash("sha256").update(texto).digest("hex")
 }
 
@@ -827,6 +881,21 @@ async function prepararCalculo(periodo, trabajador) {
         if (libro.contrato === null) {
             return []
         }
+        // Art. 25 (paquete W): las horas extra y el tiempo de espera se comparan con los turnos de conducción.
+        if (libro.dias.some((d) => d.esperado.tipo === "turnos")) {
+            const { datosParaRemuneraciones } = require("../asistencia/turno_conduccion.service.js")
+            const turnos = await datosParaRemuneraciones(trabajador, periodo.anio, periodo.mes)
+            const avisos = avisosLibroDesincronizado({ horasLibro: { 50: turnos.horasSobreTope, 100: 0 }, aprobadas, resumen, totales: libro.totales })
+                .map((aviso) => aviso.replace("el libro de asistencia tiene", "los turnos de conducción tienen"))
+            if (turnos.pendientes > 0) {
+                avisos.push(`Hay ${turnos.pendientes} turno(s) de conducción sin aprobar o con errores en el mes: no se consideran. Apruébalos en Turnos de conducción, genera el resumen de nuevo y vuelve a calcular`)
+            }
+            const espera = aprobadas.filter((v) => v.fuente === "turnos" && v.concepto.codigo === "TIEMPO_ESPERA").reduce((suma, v) => suma + Number(v.monto ?? 0), 0)
+            if (espera !== turnos.montoEsperas) {
+                avisos.push(`Tiempo de espera: los turnos de conducción suman $${turnos.montoEsperas.toLocaleString("es-CL")} y lo aprobado es $${espera.toLocaleString("es-CL")}. En Resumen de asistencia, «Generar desde la asistencia» reemplaza la propuesta; apruébala y vuelve a calcular`)
+            }
+            return avisos
+        }
         return avisosLibroDesincronizado({ horasLibro: horasPorRecargo(libro.totales), aprobadas, resumen, totales: libro.totales })
     })()
     const avisos = [...porDias.avisos, ...avisosLibro, ...(resultado.nuevoSaldoPendiente > 0
@@ -1085,7 +1154,7 @@ async function validarEmision(periodo, liquidacion) {
     }
     const huella = liquidacion.detalle_calculo?.huellaAsistencia
     if (huella && huella !== await huellaAsistencia(liquidacion.trabajador_id, periodo)) {
-        throw new ConflictError("Cambiaron las marcas del libro de asistencia del mes después del cálculo. Si cambian horas extra o atrasos, en Resumen de asistencia «Generar desde la asistencia» y aprueba lo propuesto; luego recalcule antes de emitir")
+        throw new ConflictError("Cambiaron las marcas del libro de asistencia (o los turnos de conducción) del mes después del cálculo. Si cambian horas extra o atrasos, en Resumen de asistencia «Generar desde la asistencia» y aprueba lo propuesto; luego recalcule antes de emitir")
     }
 
     const saldo = await saldoDesactualizado(liquidacion, periodo)
