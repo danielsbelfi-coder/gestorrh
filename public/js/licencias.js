@@ -3,7 +3,9 @@ requiereLogin()
 // Entidades pagadoras de subsidio (copia de src/asistencia/pagadores_subsidio.js).
 const PAGADORES = [
     ["96572800-7", "Banmédica"], ["96856780-2", "Consalud"], ["96502530-8", "Vida Tres"], ["76296619-0", "Colmena"],
-    ["96501450-0", "Cruz Blanca"], ["96936100-0", "Esencial"], ["61603000-0", "Fonasa"], ["96504160-5", "Nueva Masvida"],
+    ["96501450-0", "Cruz Blanca"], ["96936100-0", "Esencial"], ["61603000-0", "Fonasa"],
+    ["81826800-9", "Caja Los Andes"], ["70016160-9", "Caja La Araucana"], ["70016330-K", "Caja Los Héroes"], ["82606800-0", "Caja 18 de Septiembre"],
+    ["96504160-5", "Nueva Masvida"],
     ["76334370-7", "Isalud"], ["71235700-2", "Fundación"], ["79906120-1", "Cruz del Norte"],
     ["70360100-6", "Asociación Chilena de Seguridad (ACHS)"], ["70285100-9", "Mutual de Seguridad CChC"],
     ["70015580-3", "Instituto de Seguridad del Trabajo (IST)"], ["61533000-0", "Instituto de Seguridad Laboral (ISL)"]

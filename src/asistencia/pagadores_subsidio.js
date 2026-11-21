@@ -6,6 +6,12 @@ const PAGADORES_SUBSIDIO = [
     { rut: "96501450", dv: "0", nombre: "Cruz Blanca" },
     { rut: "96936100", dv: "0", nombre: "Esencial" },
     { rut: "61603000", dv: "0", nombre: "Fonasa" },
+    // Cajas de compensación: pagan la licencia común (y la maternal) de los trabajadores Fonasa
+    // cuyo empleador está afiliado a la caja (Ley 18.833). RUT según SUSESO.
+    { rut: "81826800", dv: "9", nombre: "Caja Los Andes" },
+    { rut: "70016160", dv: "9", nombre: "Caja La Araucana" },
+    { rut: "70016330", dv: "K", nombre: "Caja Los Héroes" },
+    { rut: "82606800", dv: "0", nombre: "Caja 18 de Septiembre" },
     { rut: "96504160", dv: "5", nombre: "Nueva Masvida" },
     { rut: "76334370", dv: "7", nombre: "Isalud" },
     { rut: "71235700", dv: "2", nombre: "Fundación" },
