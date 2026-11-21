@@ -30,11 +30,26 @@ function redondear(horas) {
 }
 
 // Horas ordinarias de un día (salida − entrada − colación). Supone entrada y salida en el mismo día.
+// Paquete U: un turno cuya salida es anterior a su entrada termina al día siguiente (20:00 a 8:00). El turno pertenece
+// al día en que empieza.
+function cruzaMedianoche(dia) {
+    const desde = minutosDe(dia?.entrada)
+    const hasta = minutosDe(dia?.salida)
+    return desde !== null && hasta !== null && hasta < desde
+}
+
+// Minutos entre la entrada y la salida del turno (sumando 24 h si cruza la medianoche).
+function minutosDelTurno(dia) {
+    const desde = minutosDe(dia.entrada)
+    const hasta = minutosDe(dia.salida)
+    return hasta - desde + (hasta < desde ? 1440 : 0)
+}
+
 function horasDelDia(dia) {
     if (!dia?.trabaja) {
         return 0
     }
-    return redondear((minutosDe(dia.salida) - minutosDe(dia.entrada) - Number(dia.colacion ?? 0)) / 60)
+    return redondear((minutosDelTurno(dia) - Number(dia.colacion ?? 0)) / 60)
 }
 
 const TIPOS = ["semanal", "promedio", "bisemanal", "excepcional"]
@@ -158,11 +173,11 @@ function validarJornada(entrada, fecha, opciones = {}) {
             errores.push(`${nombre} debe tener hora de entrada y de salida (HH:MM)`)
             continue
         }
-        if (hasta <= desde) {
-            errores.push(`${nombre}: la salida debe ser posterior a la entrada (los turnos que cruzan la medianoche todavía no están soportados)`)
+        if (hasta === desde) {
+            errores.push(`${nombre}: la entrada y la salida no pueden ser a la misma hora`)
             continue
         }
-        if (!Number.isInteger(d.colacion) || d.colacion < 0 || d.colacion >= hasta - desde) {
+        if (!Number.isInteger(d.colacion) || d.colacion < 0 || d.colacion >= minutosDelTurno(d)) {
             errores.push(`${nombre}: la colación debe ser un número de minutos menor que el tiempo entre entrada y salida`)
             continue
         }
@@ -291,7 +306,7 @@ function textoDistribucion(dias, tipo = "semanal") {
         return g.desde === g.hasta ? `día ${g.desde}` : `días ${g.desde} a ${g.hasta}`
     }
     const tramos = grupos.map((g) => g.trabaja
-        ? `${nombre(g)} de ${horaCorta(g.entrada)} a ${horaCorta(g.salida)} horas`
+        ? `${nombre(g)} de ${horaCorta(g.entrada)} a ${horaCorta(g.salida)} horas${cruzaMedianoche(g) ? " del día siguiente" : ""}`
         : `${nombre(g)} de descanso`)
     const trabajo = grupos.filter((g) => g.trabaja)
     const colaciones = [...new Set(trabajo.map((g) => g.colacion))]
@@ -337,6 +352,8 @@ module.exports = {
     TIPOS,
     maximoSemanal,
     horasDelDia,
+    cruzaMedianoche,
+    minutosDelTurno,
     validarJornada,
     textoDistribucion,
     clausulaDistribucion,

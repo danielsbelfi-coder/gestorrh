@@ -110,3 +110,8 @@ test("jornada por ciclo (7x7, paquete T): se pagan los domingos y festivos del m
     // Sin la regla del ciclo se pagarían los 14 días de descanso del contrato (13 libres + el festivo).
     assert.equal(sc.calcularSemanaCorrida({ sistema: "diario", dias, tramos, resumen: SIN_AUSENCIAS, trabajaDomingo: true }).dias, 14)
 })
+
+test("horas de un día con turno que cruza la medianoche (paquete U)", () => {
+    assert.equal(sc.horasDelDia({ entrada: "20:00", salida: "08:00", colacion: 60 }), 11)
+    assert.equal(sc.horasDelDia({ entrada: "08:00", salida: "17:00", colacion: 60 }), 8)
+})

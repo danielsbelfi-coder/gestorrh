@@ -137,10 +137,14 @@ test("cambio de jornada a mitad de mes (anexo): cada día usa la plantilla vigen
     assert.strictEqual(r.totales.minutos_atraso, 20)
 })
 
-test("salida anterior a la entrada: advertencia y no suma", () => {
-    const r = libro([marca("2027-10-04", "18:00", "09:00")])
-    assert.strictEqual(dia(r, "2027-10-04").cuenta, false)
-    assert.strictEqual(r.totales.minutos_atraso, 0)
+test("salida anterior a la entrada en un turno de día: es del día siguiente, con advertencia (paquete U)", () => {
+    // Lunes 04 de 8:00 a 17:30; sale a la 01:00 del martes: 7,5 horas después de la salida.
+    const r = libro([marca("2027-10-04", "08:00", "01:00")])
+    assert.strictEqual(dia(r, "2027-10-04").minutosExtra, 450)
+    assert.match(dia(r, "2027-10-04").advertencias.join(), /día siguiente/)
+    // Misma hora de entrada y salida: error, no suma.
+    const igual = libro([marca("2027-10-05", "09:00", "09:00")])
+    assert.strictEqual(dia(igual, "2027-10-05").cuenta, false)
 })
 
 test("recargo por marca: los totales separan horas al 50 % y al 100 % (sin recargo indicado = 50 %)", () => {
@@ -196,4 +200,25 @@ test("jornada por ciclo (7x7): el horario esperado sigue el ciclo desde su inici
     assert.strictEqual(dia(r, "2027-10-18").esperado.tipo, "laboral")
     // 1 y 2 de octubre (antes del inicio): días 13 y 14 del ciclo anterior, descanso.
     assert.strictEqual(dia(r, "2027-10-01").esperado.tipo, "libre")
+})
+
+test("turno de noche (paquete U): atrasos, horas extra y salidas anticipadas al día siguiente", () => {
+    // Lunes a viernes de 20:00 a 08:00 del día siguiente, 60 min de colación.
+    const noche = [1, 2, 3, 4, 5, 6, 7].map((d) => d <= 5 ? { dia: d, trabaja: true, entrada: "20:00", salida: "08:00", colacion: 60 } : { dia: d, trabaja: false })
+    const r = calcularLibro({
+        anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [{ desde: "2027-01-01", dias: noche }], feriados: [],
+        marcas: [
+            marca("2027-10-04", "20:10", "08:30"), // atraso 10, compensado con 30 después: 20 extra
+            marca("2027-10-05", "00:15", null), // entra a las 00:15 del miércoles: 255 de atraso
+            marca("2027-10-06", null, "07:00"), // sale una hora antes
+            marca("2027-10-09", "22:00", "06:00") // sábado libre: 8 h menos la colación habitual = 7 h extra
+        ]
+    })
+    assert.deepStrictEqual(dia(r, "2027-10-04").esperado, { tipo: "laboral", entrada: "20:00", salida: "08:00", colacion: 60, cruza: true })
+    assert.deepStrictEqual([dia(r, "2027-10-04").minutosDescuento, dia(r, "2027-10-04").minutosExtra], [0, 20])
+    assert.deepStrictEqual(dia(r, "2027-10-04").advertencias, [])
+    assert.strictEqual(dia(r, "2027-10-05").minutosDescuento, 255)
+    assert.strictEqual(dia(r, "2027-10-06").minutosDescuento, 60)
+    assert.strictEqual(dia(r, "2027-10-09").minutosExtra, 420)
+    assert.deepStrictEqual([r.totales.minutos_atraso, r.totales.minutos_extra], [315, 440])
 })

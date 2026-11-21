@@ -86,22 +86,53 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
     if (!dia || !dia.trabaja) {
         return { tipo: "libre", colacion: colacionHabitual(dias) }
     }
-    return { tipo: "laboral", entrada: dia.entrada, salida: dia.salida, colacion: Number(dia.colacion ?? 0) }
+    const laboral = { tipo: "laboral", entrada: dia.entrada, salida: dia.salida, colacion: Number(dia.colacion ?? 0) }
+    // Turno que termina al día siguiente (paquete U).
+    return minutosDe(dia.salida) < minutosDe(dia.entrada) ? { ...laboral, cruza: true } : laboral
 }
 
 function conTolerancia(minutos) {
     return minutos > TOLERANCIA_MINUTOS ? minutos : 0
 }
 
+// Paquete U: turnos que cruzan la medianoche. Las horas se llevan a minutos desde la medianoche del día del turno
+// (el día en que empieza): la entrada real se ubica a menos de 12 horas de la entrada esperada (una entrada a las
+// 00:15 de un turno de 20:00 es del día siguiente, con atraso) y una salida igual o anterior a la entrada es del día
+// siguiente (sale a las 08:30 de un turno de 20:00 a 08:00, o a la 01:00 de un turno de día que se alargó).
+function cerca(minutos, referencia) {
+    if (minutos < referencia - 720) {
+        return minutos + 1440
+    }
+    if (minutos >= referencia + 720) {
+        return minutos - 1440
+    }
+    return minutos
+}
+
+function despuesDe(minutos, entrada) {
+    let valor = minutos
+    while (valor <= entrada) {
+        valor += 1440
+    }
+    return valor
+}
+
 // Minutos de un día laboral con marca de hora. La hora vacía se entiende según horario.
 function calcularDiaLaboral(esperado, marca) {
     const entradaEsperada = minutosDe(esperado.entrada)
-    const salidaEsperada = minutosDe(esperado.salida)
-    const entrada = marca.hora_entrada ? minutosDe(marca.hora_entrada) : entradaEsperada
-    const salida = marca.hora_salida ? minutosDe(marca.hora_salida) : salidaEsperada
+    const salidaEsperada = despuesDe(minutosDe(esperado.salida), entradaEsperada)
+    const entrada = marca.hora_entrada ? cerca(minutosDe(marca.hora_entrada), entradaEsperada) : entradaEsperada
+    const salidaMarca = marca.hora_salida ? minutosDe(marca.hora_salida) : null
 
-    if (entrada === null || salida === null || salida <= entrada) {
-        return { error: "La salida debe ser posterior a la entrada (turnos que cruzan la medianoche no están soportados)" }
+    if (entrada === null || (marca.hora_salida && salidaMarca === null)) {
+        return { error: "Las horas de entrada y salida deben tener el formato HH:MM" }
+    }
+    if (marca.hora_entrada && marca.hora_salida && minutosDe(marca.hora_entrada) === salidaMarca) {
+        return { error: "La entrada y la salida no pueden ser a la misma hora" }
+    }
+    const salida = salidaMarca === null ? salidaEsperada : despuesDe(salidaMarca, entrada)
+    if (salida <= entrada) {
+        return { error: "La salida debe ser posterior a la entrada" }
     }
 
     const atraso = Math.max(0, entrada - entradaEsperada)
@@ -175,12 +206,14 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
 
         if (esperado.tipo === "libre" || esperado.tipo === "feriado") {
             const entrada = minutosDe(marca.hora_entrada)
-            const salida = minutosDe(marca.hora_salida)
-            if (entrada === null || salida === null || salida <= entrada) {
+            const salidaMarca = minutosDe(marca.hora_salida)
+            if (entrada === null || salidaMarca === null || salidaMarca === entrada) {
                 fila.advertencias.push("Trabajo en día libre o feriado: indica la hora de entrada y de salida")
                 fila.cuenta = false
                 return fila
             }
+            // Una salida anterior a la entrada es del día siguiente (paquete U).
+            const salida = despuesDe(salidaMarca, entrada)
             fila.minutosExtra = Math.max(0, salida - entrada - esperado.colacion)
             fila.advertencias.push(`Trabajó en día ${esperado.tipo === "feriado" ? "feriado" : "libre"}: todas las horas se proponen como extra; revisar antes de aprobar`)
         } else {
@@ -191,6 +224,9 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
                 return fila
             }
             Object.assign(fila, calculo)
+            if (!esperado.cruza && marca.hora_salida && minutosDe(marca.hora_salida) <= (marca.hora_entrada ? minutosDe(marca.hora_entrada) : minutosDe(esperado.entrada))) {
+                fila.advertencias.push("La salida quedó al día siguiente (pasada la medianoche): revisa las horas antes de aprobar")
+            }
         }
 
         fila.recargo = Number(marca.recargo_hora_extra) === 100 ? 100 : 50

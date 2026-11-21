@@ -36,7 +36,7 @@ function minutosATexto(minutos) {
 
 function textoEsperado(esperado) {
     switch (esperado.tipo) {
-        case "laboral": return `${hora(esperado.entrada)} – ${hora(esperado.salida)}`
+        case "laboral": return `${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
         case "libre": return "Libre"
         case "feriado": return `Feriado · ${esperado.nombre}`
         case "licencia": return "Licencia médica"
@@ -51,7 +51,8 @@ function textoMarca(marca) {
     }
     if (marca.tipo === "normal" || marca.tipo === "atraso") {
         const entrada = marca.hora_entrada ? `entra ${hora(marca.hora_entrada)}` : ""
-        const salida = marca.hora_salida ? `sale ${hora(marca.hora_salida)}` : ""
+        const sigue = marca.hora_salida && marca.hora_entrada && String(marca.hora_salida).slice(0, 5) < String(marca.hora_entrada).slice(0, 5)
+        const salida = marca.hora_salida ? `sale ${hora(marca.hora_salida)}${sigue ? " (día sig.)" : ""}` : ""
         return [entrada, salida].filter(Boolean).join(" · ")
     }
     return TIPOS_MARCA[marca.tipo] ?? marca.tipo
@@ -183,6 +184,7 @@ function editorDeFila(dia) {
     const ayuda = noLaboral
         ? "Trabajo en día libre o feriado: indica entrada y salida. Todas las horas se proponen como extra."
         : `La hora que quede vacía se entiende según horario (${textoEsperado(dia.esperado)}).`
+    const ayudaNoche = " Si sale después de la medianoche, anota la hora tal cual: una salida anterior a la entrada se entiende del día siguiente."
     return `<tr class="libro-editor"><td colspan="8">
         <form id="formMarca" class="form-marca">
             <label>Tipo<select id="tipoMarca">${Object.entries(tipos).map(([v, t]) => `<option value="${v}"${v === tipo ? " selected" : ""}>${escaparHtml(t)}</option>`).join("")}</select></label>
@@ -198,7 +200,7 @@ function editorDeFila(dia) {
                 ${m ? `<button type="button" class="peligro chico" id="eliminarMarca">Eliminar anotación</button>` : ""}
                 <button type="button" class="secundario" id="cancelarMarca">Cancelar</button>
             </div>
-            <p class="texto-suave campo-ancho">${escaparHtml(ayuda)}</p>
+            <p class="texto-suave campo-ancho">${escaparHtml(ayuda + ayudaNoche)}</p>
         </form>
     </td></tr>`
 }

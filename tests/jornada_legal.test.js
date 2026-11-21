@@ -39,8 +39,8 @@ test("detecta más de 10 horas diarias, salida antes de entrada y días fuera de
     const largo = validarJornada(semana({ entrada: "07:00", salida: "19:00", colacion: 60 }, OCHO_A_CINCO), "2026-01-01")
     assert.match(largo.errores.join(), /10 horas/)
 
-    const invertido = validarJornada(semana({ entrada: "18:00", salida: "08:00", colacion: 60 }, OCHO_A_CINCO), "2026-01-01")
-    assert.match(invertido.errores.join(), /posterior a la entrada/)
+    const igual = validarJornada(semana({ entrada: "08:00", salida: "08:00", colacion: 60 }, OCHO_A_CINCO), "2026-01-01")
+    assert.match(igual.errores.join(), /misma hora/)
 
     const tresDias = [1, 2, 3, 4, 5, 6, 7].map((dia) => dia <= 3 ? { dia, trabaja: true, ...OCHO_A_SEIS } : { dia, trabaja: false })
     assert.match(validarJornada(tresDias, "2026-01-01").errores.join(), /4 a 6 días/)
@@ -148,4 +148,20 @@ test("texto y cláusula de una jornada por ciclo", () => {
         "La jornada ordinaria de trabajo se regirá por el sistema excepcional de distribución de jornada de trabajo y descansos autorizado por la Dirección del Trabajo mediante Resolución N° 1234, de 1 de junio de 2026, vigente hasta el 31 de mayo de 2029, conforme al inciso séptimo del artículo 38 del Código del Trabajo, en ciclos de 14 días contados desde el 7 de diciembre de 2026, con un promedio de 38,5 horas semanales: Días 1 a 7 de 8:00 a 20:00 horas; días 8 a 14 de descanso, con 60 minutos de colación diaria.")
     assert.strictEqual(clausulaDistribucion({ tipo: "semanal", dias: semana(OCHO_A_SEIS, OCHO_A_CINCO) }, 44),
         "La jornada ordinaria de trabajo será de 44 horas semanales, distribuidas de la siguiente manera: Lunes a jueves de 8:00 a 18:00 horas; viernes de 8:00 a 17:00 horas, con 60 minutos de colación diaria.")
+})
+
+test("turno de noche que cruza la medianoche (paquete U): horas, validación y texto", () => {
+    const noche = { entrada: "20:00", salida: "08:00", colacion: 60 }
+    assert.strictEqual(horasDelDia({ trabaja: true, ...noche }), 11)
+    // 4x4 de noche: 44 h en 8 días = 38,5 h promedio.
+    const dias = ciclo(8, rango(1, 4), noche)
+    const r = validarJornada(dias, "2026-11-21", { tipo: "excepcional", ciclo_dias: 8, inicio_ciclo: "2026-12-01", ...RESOLUCION })
+    assert.deepStrictEqual(r.errores, [])
+    assert.strictEqual(r.horasSemanales, 38.5)
+    assert.strictEqual(textoDistribucion(dias, "excepcional"), "Días 1 a 4 de 20:00 a 8:00 horas del día siguiente; días 5 a 8 de descanso, con 60 minutos de colación diaria")
+    // En la semanal también: 22:00 a 06:00 (8 h, sin colación) de lunes a viernes = 40 h.
+    const semanal = semana({ entrada: "22:00", salida: "06:00", colacion: 0 }, { entrada: "22:00", salida: "06:00", colacion: 0 })
+    assert.deepStrictEqual(validarJornada(semanal, "2026-11-21").errores, [])
+    // Colación igual o mayor que el turno.
+    assert.match(validarJornada(semana({ entrada: "23:00", salida: "01:00", colacion: 120 }, OCHO_A_CINCO), "2026-11-21").errores.join(), /colación/)
 })

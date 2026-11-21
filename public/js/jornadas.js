@@ -141,7 +141,8 @@ function recalcular() {
             colacion: Number(fila.querySelector(".colacion").value || 0)
         }
         const horas = horasDelDia(dia)
-        fila.querySelector(".horas").textContent = trabaja ? horas.toLocaleString("es-CL") : porCiclo() ? "Descanso" : "Libre"
+        const nocturno = trabaja && dia.entrada && dia.salida && dia.salida < dia.entrada
+        fila.querySelector(".horas").textContent = trabaja ? `${horas.toLocaleString("es-CL")}${nocturno ? " (termina al día siguiente)" : ""}` : porCiclo() ? "Descanso" : "Libre"
         fila.querySelector(".horas").classList.toggle("excedido", horas > maximoDiario)
         total += horas
         dias += trabaja ? 1 : 0
@@ -150,7 +151,7 @@ function recalcular() {
         }
         const nombre = nombreDia(Number(fila.dataset.dia))
         if (!dia.entrada || !dia.salida || horas <= 0) {
-            errores.push(`${nombre}: no tiene un horario válido (la salida debe ser posterior a la entrada; los turnos que cruzan la medianoche todavía no están soportados).`)
+            errores.push(`${nombre}: no tiene un horario válido (indica entrada y salida distintas; si la salida es anterior a la entrada, el turno termina al día siguiente).`)
         } else if (horas > maximoDiario) {
             errores.push(`${nombre}: suma ${horas.toLocaleString("es-CL")} horas y la jornada diaria no puede superar ${maximoDiario} horas.`)
         }

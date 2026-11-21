@@ -88,8 +88,9 @@ async function validarMarca(trabajador, entrada) {
     if (diaNoLaboral && (datos.hora_entrada === null || datos.hora_salida === null)) {
         throw new ValidationError("Trabajo en día libre o feriado: indica la hora de entrada y de salida")
     }
-    if (TIPOS_CON_HORA.includes(datos.tipo) && datos.hora_entrada !== null && datos.hora_salida !== null && datos.hora_salida <= datos.hora_entrada) {
-        throw new ValidationError("La salida debe ser posterior a la entrada")
+    // Una salida anterior a la entrada es del día siguiente (turnos que cruzan la medianoche, paquete U).
+    if (TIPOS_CON_HORA.includes(datos.tipo) && datos.hora_entrada !== null && datos.hora_salida !== null && String(datos.hora_salida).slice(0, 5) === String(datos.hora_entrada).slice(0, 5)) {
+        throw new ValidationError("La entrada y la salida no pueden ser a la misma hora")
     }
     if (esperado.tipo === "laboral" && TIPOS_CON_HORA.includes(datos.tipo) && calcularDiaLaboral(esperado, datos).error) {
         throw new ValidationError(calcularDiaLaboral(esperado, datos).error)

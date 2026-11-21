@@ -702,10 +702,12 @@ function horasDelDia(dia) {
     }
     const inicio = minutosDeHora(dia.entrada)
     const fin = minutosDeHora(dia.salida)
-    if (inicio === null || fin === null || fin <= inicio) {
+    if (inicio === null || fin === null || fin === inicio) {
         return 0
     }
-    return Math.round(((fin - inicio - Number(dia.colacion ?? 0)) / 60) * 100) / 100
+    // Turno que cruza la medianoche (salida anterior a la entrada): termina al día siguiente.
+    const minutos = fin - inicio + (fin < inicio ? 1440 : 0)
+    return Math.round(((minutos - Number(dia.colacion ?? 0)) / 60) * 100) / 100
 }
 
 // Distribución en una línea. Semanal: «Lunes a jueves de 8:00 a 18:00; viernes de 8:00 a 17:00 · colación 60 min».
@@ -729,7 +731,8 @@ function textoDistribucion(dias, tipo = "semanal") {
     const nombre = (g) => semanal
         ? (g.desde === g.hasta ? NOMBRES_DIA[g.desde - 1] : `${NOMBRES_DIA[g.desde - 1]} a ${NOMBRES_DIA[g.hasta - 1]}`)
         : (g.desde === g.hasta ? `día ${g.desde}` : `días ${g.desde} a ${g.hasta}`)
-    const tramos = grupos.map((g) => g.trabaja ? `${nombre(g)} de ${hora(g.entrada)} a ${hora(g.salida)}` : `${nombre(g)} descanso`)
+    const cruza = (g) => minutosDeHora(g.salida) < minutosDeHora(g.entrada)
+    const tramos = grupos.map((g) => g.trabaja ? `${nombre(g)} de ${hora(g.entrada)} a ${hora(g.salida)}${cruza(g) ? " (día sig.)" : ""}` : `${nombre(g)} descanso`)
     const colaciones = [...new Set(grupos.filter((g) => g.trabaja).map((g) => g.colacion))]
     const texto = `${tramos.join("; ")}${colaciones.length === 1 ? ` · colación ${colaciones[0]} min` : ""}`
     return texto.charAt(0).toUpperCase() + texto.slice(1)

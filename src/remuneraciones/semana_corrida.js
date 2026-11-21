@@ -17,7 +17,11 @@ const minutosDe = (hora) => {
 }
 
 function horasDelDia(esperado) {
-    return Math.max(0, minutosDe(esperado.salida) - minutosDe(esperado.entrada) - Number(esperado.colacion ?? 0)) / 60
+    const desde = minutosDe(esperado.entrada)
+    const hasta = minutosDe(esperado.salida)
+    // Turno que cruza la medianoche (paquete U): la salida es del día siguiente.
+    const minutos = hasta - desde + (hasta < desde ? 1440 : 0)
+    return Math.max(0, minutos - Number(esperado.colacion ?? 0)) / 60
 }
 
 const marcaAprobada = (fila, tipos) => fila.marca?.estado_aprobacion === "aprobada" && tipos.includes(fila.marca.tipo)
