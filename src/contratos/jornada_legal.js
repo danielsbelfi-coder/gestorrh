@@ -338,7 +338,7 @@ function textoDistribucion(dias, tipo = "semanal") {
         if (semanal) {
             return g.desde === g.hasta ? NOMBRES_DIA[g.desde - 1] : `${NOMBRES_DIA[g.desde - 1]} a ${NOMBRES_DIA[g.hasta - 1]}`
         }
-        return g.desde === g.hasta ? `día ${g.desde}` : `días ${g.desde} a ${g.hasta}`
+        return g.desde === g.hasta ? `día ${g.desde}` : `días ${g.desde} ${g.hasta === g.desde + 1 ? "y" : "a"} ${g.hasta}`
     }
     const tramos = grupos.map((g) => g.trabaja
         ? `${nombre(g)} de ${horaCorta(g.entrada)} a ${horaCorta(g.salida)} horas${cruzaMedianoche(g) ? " del día siguiente" : ""}`

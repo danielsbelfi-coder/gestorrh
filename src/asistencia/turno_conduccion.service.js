@@ -75,9 +75,11 @@ function validarTipo(datos, actual = {}) {
     return { nombre, clase: t.clase, imputable, pago, valor: imputable ? 0 : valor, minutos_sin_pago: imputable ? 0 : minutosSinPago, redondeo_minutos: redondeo, compensacion: imputable ? "dinero" : compensacion }
 }
 
+// tipo: el tipo existente (actualizar) o null (crear, con campos.empresa_id). Ojo: update() sobre una instancia sin
+// guardar solo inserta las columnas que recibe, por eso la creación usa create().
 async function guardarTipo(tipo, campos) {
     try {
-        return await tipo.update(campos)
+        return tipo === null ? await TipoEspera.create(campos) : await tipo.update(campos)
     } catch (error) {
         if (error.name === "SequelizeUniqueConstraintError") {
             throw new ConflictError("Ya existe un tipo de espera con ese nombre")
@@ -92,7 +94,7 @@ async function crearTipoEspera(datos, empresasPermitidas, usuarioId) {
         throw new NotFoundError("Empresa no encontrada")
     }
     await exigirRol(usuarioId, empresaId, PERMISOS.CONFIGURAR_CONCEPTOS)
-    return await guardarTipo(TipoEspera.build({ empresa_id: empresaId }), validarTipo(datos ?? {}))
+    return await guardarTipo(null, { ...validarTipo(datos ?? {}), empresa_id: empresaId })
 }
 
 // Los cambios rigen para todos los turnos del mes abierto (los meses cerrados ya quedaron en sus liquidaciones).
@@ -139,8 +141,13 @@ async function contextoDelMes(trabajador, anio, mes) {
         return { libro, jornada: null, topeHoras: 0 }
     }
     const jornada = art25[art25.length - 1]
-    const diasContrato = libro.dias.filter((d) => d.esperado.tipo !== "fuera_contrato").length
-    return { libro, jornada, topeHoras: topeDelMes(jornada.horas_mensuales ?? 180, diasContrato, libro.dias.length) }
+    // Días del mes cubiertos por el contrato, en días comerciales (como el sueldo): sin descontar ausencias.
+    const { calcularDiasPago } = require("../remuneraciones/dias_pago.js")
+    const { diasPagados } = calcularDiasPago({
+        anio, mes, fechaIngreso: trabajador.fecha_ingreso, fechaTermino: trabajador.fecha_termino ?? null,
+        resumen: { dias_inasistencia: 0, dias_licencia_medica: 0, dias_permiso_sin_goce: 0 }
+    })
+    return { libro, jornada, topeHoras: topeDelMes(jornada.horas_mensuales ?? 180, diasPagados) }
 }
 
 function datosDelTurno(entrada) {

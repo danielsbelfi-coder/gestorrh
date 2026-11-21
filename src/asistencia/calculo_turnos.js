@@ -172,11 +172,10 @@ function calcularTurno(turno, tipos) {
     }
 }
 
-// Tope de horas del mes: completo si el contrato cubre todo el mes; si entra o sale en el mes, proporcional a los días
-// del contrato sobre los días del mes.
-function topeDelMes(horasMensuales, diasContrato, diasDelMes) {
-    const proporcion = diasContrato >= diasDelMes ? 1 : diasContrato / diasDelMes
-    return Math.round(Number(horasMensuales) * proporcion * 100) / 100
+// Tope de horas del mes en la misma proporción que el sueldo: horas mensuales × días pagados por contrato / 30 (mes
+// comercial: entra el 15 de diciembre → 16 días → 96 h de 180). Mes completo: el tope entero.
+function topeDelMes(horasMensuales, diasContrato) {
+    return Math.round(Number(horasMensuales) * Math.min(30, diasContrato) / 30 * 100) / 100
 }
 
 // Calcula los turnos de un trabajador en el mes, con las alertas entre turnos, y el resumen.

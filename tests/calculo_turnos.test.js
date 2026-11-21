@@ -75,7 +75,7 @@ test("resumen del mes: descanso entre turnos, solo aprobados, tope y horas sobre
     // Aprobados: 9 h + 6 h = 15 h; tope 10 h → 5 h sobre el tope. El pendiente no suma.
     assert.deepEqual([resumen.aprobados, resumen.pendientes, resumen.minutosJornada, resumen.minutosSobreTope, resumen.montoEsperas], [2, 1, 900, 300, 5000])
     assert.deepEqual(resumen.esperas.map((e) => [e.tipo, e.cantidad, e.minutos, e.monto]), [["Espera en terminal", 1, 180, 5000], ["Descanso a bordo", 1, 120, 0]])
-    assert.equal(topeDelMes(180, 28, 28), 180)
-    assert.equal(topeDelMes(180, 15, 30), 90)
-    assert.equal(topeDelMes(180, 14, 28), 90)
+    assert.equal(topeDelMes(180, 30), 180)
+    assert.equal(topeDelMes(180, 16), 96)
+    assert.equal(topeDelMes(180, 13), 78)
 })
