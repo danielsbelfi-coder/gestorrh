@@ -27,7 +27,7 @@ async function validarJornadaDelAnexo(valorNuevo, contrato) {
         throw new ConflictError("El contrato ya tiene esa jornada")
     }
     if (Number(jornada.horas_semanales) !== Number(contrato.horas_semanales) || Number(jornada.dias_trabajados) !== Number(contrato.dias_trabajados)) {
-        throw new ConflictError(`La jornada "${jornada.nombre}" es de ${Number(jornada.horas_semanales)} horas en ${jornada.dias_trabajados} días y el contrato tiene ${Number(contrato.horas_semanales)} horas en ${contrato.dias_trabajados} días. Primero registra y firma el anexo de horas semanales o días trabajados.`)
+        throw new ConflictError(`La jornada "${jornada.nombre}" es de ${Number(jornada.horas_semanales)} horas en ${Number(jornada.dias_trabajados)} días y el contrato tiene ${Number(contrato.horas_semanales)} horas en ${contrato.dias_trabajados} días. Primero registra y firma el anexo de horas semanales o días trabajados.`)
     }
 }
 

@@ -15,14 +15,30 @@ function validarNombre(nombre) {
     return texto
 }
 
-// Valida los días contra el máximo legal de hoy; devuelve los campos calculados y las advertencias.
-function camposDeDias(dias) {
-    const resultado = validarJornada(dias, hoyChile())
+const CAMPOS_CICLO = ["tipo", "ciclo_dias", "inicio_ciclo", "resolucion_numero", "resolucion_fecha", "resolucion_vigencia_hasta"]
+
+// Valida la distribución (días, tipo legal y ciclo) contra el máximo legal de hoy; devuelve los campos calculados
+// y las advertencias. La jornada semanal no guarda inicio de ciclo ni resolución.
+function camposDeDias(datos) {
+    const tipo = datos.tipo ?? "semanal"
+    const opciones = { ...datos, tipo }
+    const resultado = validarJornada(datos.dias, hoyChile(), opciones)
     if (resultado.errores.length > 0) {
         throw new ValidationError(resultado.errores.join(". "))
     }
+    const excepcional = tipo === "excepcional"
     return {
-        campos: { dias: resultado.dias, horas_semanales: resultado.horasSemanales, dias_trabajados: resultado.diasTrabajados },
+        campos: {
+            tipo,
+            dias: resultado.dias,
+            ciclo_dias: resultado.cicloDias,
+            inicio_ciclo: tipo === "semanal" ? null : String(datos.inicio_ciclo).slice(0, 10),
+            resolucion_numero: excepcional ? String(datos.resolucion_numero).trim() : null,
+            resolucion_fecha: excepcional ? String(datos.resolucion_fecha).slice(0, 10) : null,
+            resolucion_vigencia_hasta: excepcional ? String(datos.resolucion_vigencia_hasta).slice(0, 10) : null,
+            horas_semanales: resultado.horasSemanales,
+            dias_trabajados: resultado.diasTrabajados
+        },
         advertencias: resultado.advertencias
     }
 }
@@ -50,10 +66,10 @@ async function crearJornada(datos, empresasPermitidas, usuarioId) {
     await exigirRol(usuarioId, empresaId, PERMISOS.GESTIONAR_FICHAS)
 
     const nombre = validarNombre(datos.nombre)
-    const { campos, advertencias } = camposDeDias(datos.dias)
+    const { campos, advertencias } = camposDeDias(datos)
 
     try {
-        const jornada = await Jornada.create({ empresa_id: empresaId, nombre, tipo: "semanal", ...campos })
+        const jornada = await Jornada.create({ empresa_id: empresaId, nombre, ...campos })
         return { jornada, advertencias }
     } catch (error) {
         if (error.name === "SequelizeUniqueConstraintError") {
@@ -75,12 +91,19 @@ async function actualizarJornada(id, datos, empresasPermitidas, usuarioId) {
     if (datos?.nombre !== undefined) {
         cambios.nombre = validarNombre(datos.nombre)
     }
-    if (datos?.dias !== undefined) {
+    // Cambiar los días o cualquier dato del ciclo cambia la distribución: se valida todo junto, completando con lo
+    // que ya tiene la jornada.
+    if (datos?.dias !== undefined || CAMPOS_CICLO.some((campo) => datos?.[campo] !== undefined)) {
         const enUso = await ContratoTrabajo.count({ where: { jornada_id: jornada.id } })
         if (enUso > 0) {
             throw new ConflictError(`La jornada está asignada a ${enUso} contrato(s): su horario no se puede cambiar. Crea una jornada nueva y asígnala con un anexo.`)
         }
-        const resultado = camposDeDias(datos.dias)
+        const actual = jornada.toJSON()
+        const completos = { dias: actual.dias }
+        for (const campo of CAMPOS_CICLO) {
+            completos[campo] = actual[campo]
+        }
+        const resultado = camposDeDias({ ...completos, ...datos })
         Object.assign(cambios, resultado.campos)
         advertencias = resultado.advertencias
     }

@@ -132,7 +132,7 @@ function aplicarJornada() {
     dias.readOnly = Boolean(jornada)
     if (jornada) {
         horas.value = Number(jornada.horas_semanales)
-        dias.value = jornada.dias_trabajados
+        dias.value = Number(jornada.dias_trabajados)
     }
 }
 

@@ -2,7 +2,7 @@ const { pesosEnPalabras } = require("../shared/numero_en_palabras.js")
 const { formatearRut } = require("../shared/rut.js")
 const { fechaEnTexto } = require("../shared/fechas.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
-const { textoDistribucion } = require("./jornada_legal.js")
+const { clausulaDistribucion } = require("./jornada_legal.js")
 
 const TITULOS = {
     indefinido: "CONTRATO DE TRABAJO INDEFINIDO",
@@ -44,7 +44,7 @@ function textoJornada(contrato, jornada) {
     const parcial = contrato.tipo_jornada === "parcial" ? " Se trata de una jornada parcial, regida por los artículos 40 bis y siguientes del Código del Trabajo." : ""
     // Con jornada asignada se imprime la distribución diaria (art. 10 N° 5 del Código del Trabajo).
     if (jornada?.dias) {
-        return `La jornada ordinaria de trabajo será de ${Number(contrato.horas_semanales)} horas semanales, distribuidas de la siguiente manera: ${textoDistribucion(jornada.dias)}.${parcial} El tiempo de colación no se considerará trabajado para computar la duración de la jornada, conforme al artículo 34 del Código del Trabajo.`
+        return `${clausulaDistribucion(jornada, contrato.horas_semanales)}${parcial} El tiempo de colación no se considerará trabajado para computar la duración de la jornada, conforme al artículo 34 del Código del Trabajo.`
     }
     return `La jornada ordinaria de trabajo será de ${Number(contrato.horas_semanales)} horas semanales, distribuidas en ${contrato.dias_trabajados} días a la semana.${parcial} La jornada diaria se interrumpirá por el tiempo destinado a colación, que no se considerará trabajado para computar la duración de la jornada, conforme al artículo 34 del Código del Trabajo.`
 }

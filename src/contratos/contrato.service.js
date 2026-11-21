@@ -88,8 +88,9 @@ async function validarDatosContrato(datos, empresaId, jornadaYaAsignada = null, 
             throw new ConflictError("Un contrato excluido de la limitación de jornada no lleva plantilla de horario")
         }
 
+        // Promedio semanal del ciclo; los días pueden ser fraccionarios (un 7x7 trabaja 3,5 días por semana).
         datos.horas_semanales = jornada.horas_semanales
-        datos.dias_trabajados = jornada.dias_trabajados
+        datos.dias_trabajados = String(Number(jornada.dias_trabajados))
     }
 }
 

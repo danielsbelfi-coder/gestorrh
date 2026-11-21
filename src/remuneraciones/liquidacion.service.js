@@ -180,11 +180,19 @@ async function sueldoYSemanaCorrida({ periodo, trabajador, contrato, tramosSueld
     }
 
     const trabajaDomingo = laborales.some((f) => f.diaSemana === 7)
-    const semanaCorrida = sc.calcularSemanaCorrida({ sistema, dias: libro.dias, tramos: tramosSueldo, resumen, variablesDiarias, trabajaDomingo })
+    // Jornada por ciclo (paquete T): la vigente al final del mes decide cómo se cuentan los días de descanso.
+    const conPlantilla = (libro.tramos ?? []).filter((t) => t.jornada_id !== null)
+    const jornadaFinal = conPlantilla[conPlantilla.length - 1]
+    const porCiclo = Boolean(jornadaFinal && jornadaFinal.tipo && jornadaFinal.tipo !== "semanal")
+    const semanaCorrida = sc.calcularSemanaCorrida({ sistema, dias: libro.dias, tramos: tramosSueldo, resumen, variablesDiarias, trabajaDomingo, porCiclo })
     if (!porDias) {
         return { sueldoPorDias: null, semanaCorrida, valorHoraContrato: undefined, avisos: [] }
     }
-    const diasSemana = new Set(laborales.map((f) => f.diaSemana)).size
+    // Días por semana para el valor hora del contrato diario: en la semanal, los días de la semana con horario; en una
+    // jornada por ciclo, el promedio semanal de la jornada (un 7x7 = 3,5).
+    const diasSemana = porCiclo && jornadaFinal.dias_trabajados
+        ? Number(jornadaFinal.dias_trabajados)
+        : new Set(laborales.map((f) => f.diaSemana)).size
     const horasSemanales = Number(contrato.horas_semanales)
     return {
         sueldoPorDias: sc.sueldoPorDias({ sistema, dias: libro.dias, tramos: tramosSueldo, resumen }),

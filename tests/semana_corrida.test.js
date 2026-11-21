@@ -90,3 +90,23 @@ test("valorHoraPorDias: incluye un día de descanso y nunca baja del ingreso mí
     assert.equal(sc.valorHoraPorDias({ sistema: "hora", sueldo: 4000, diasSemana: 5, horasSemanales: 40, minimoPorHora: 3000 }), 4800)
     assert.equal(sc.valorHoraPorDias({ sistema: "diario", sueldo: 10000, diasSemana: 5, horasSemanales: 40, minimoPorHora: 3000 }), 3000)
 })
+
+test("jornada por ciclo (7x7, paquete T): se pagan los domingos y festivos del mes, no todos los días libres del ciclo", () => {
+    // Ciclo de 14 días desde el lunes 02-11-2026: días 1 a 7 trabaja (incluye el domingo 8), 8 a 14 descanso.
+    const plantilla = Array.from({ length: 14 }, (_, i) => ({ dia: i + 1, trabaja: i < 7, entrada: "08:00", salida: "20:00", colacion: 60 }))
+    const dias = calcularLibro({
+        anio: 2026, mes: 11, desde: "2026-11-02",
+        tramosJornada: [{ desde: "0000-01-01", dias: plantilla, tipo: "excepcional", ciclo_dias: 14, inicio_ciclo: "2026-11-02" }],
+        feriados: FERIADOS, marcas: []
+    }).dias
+    const tramos = [{ desdeDia: 1, sueldo: 40000 }]
+    // Trabaja del 02 al 08, del 16 al 22 y el 30 = 15 días; el festivo 13 cae en descanso.
+    const sueldo = sc.sueldoPorDias({ sistema: "diario", dias, tramos, resumen: SIN_AUSENCIAS })
+    assert.equal(sueldo.cantidad, 15)
+    const s = sc.calcularSemanaCorrida({ sistema: "diario", dias, tramos, resumen: SIN_AUSENCIAS, trabajaDomingo: true, porCiclo: true })
+    // Domingos 8, 15, 22 y 29 (el 1 es antes del contrato) + festivo 13 = 5 días: 600.000 / 15 × 5 = 200.000.
+    assert.deepEqual(s.fechas, ["2026-11-08", "2026-11-13", "2026-11-15", "2026-11-22", "2026-11-29"])
+    assert.deepEqual([s.base, s.divisor, s.dias, s.monto], [600000, 15, 5, 200000])
+    // Sin la regla del ciclo se pagarían los 14 días de descanso del contrato (13 libres + el festivo).
+    assert.equal(sc.calcularSemanaCorrida({ sistema: "diario", dias, tramos, resumen: SIN_AUSENCIAS, trabajaDomingo: true }).dias, 14)
+})

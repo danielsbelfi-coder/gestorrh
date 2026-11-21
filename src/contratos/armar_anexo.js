@@ -3,7 +3,7 @@ const { pesosEnPalabras } = require("../shared/numero_en_palabras.js")
 const { formatearRut } = require("../shared/rut.js")
 const { fechaEnTexto, fechaISO } = require("../shared/fechas.js")
 const { COMUNAS } = require("../shared/comunas_lre.js")
-const { textoDistribucion } = require("./jornada_legal.js")
+const { textoDistribucion, clausulaDistribucion } = require("./jornada_legal.js")
 const { leerValorLugar } = require("./anexo_sucursal.js")
 
 const TIPOS = { indefinido: "indefinido", plazo_fijo: "a plazo fijo", obra_faena: "por obra o faena" }
@@ -41,6 +41,11 @@ function textoModificacion(anexo, jornadaNueva) {
         case "tipo_jornada":
             return `Las partes acuerdan que, ${desde}, la jornada de trabajo será ${JORNADAS[nuevo] ?? nuevo}.`
         case "jornada_id":
+            if (jornadaNueva?.dias && (jornadaNueva.tipo ?? "semanal") !== "semanal") {
+                // Cambio a una jornada por ciclo: la cláusula completa con su base legal.
+                const clausula = clausulaDistribucion(jornadaNueva, jornadaNueva.horas_semanales)
+                return `Las partes acuerdan que, ${desde}, ${clausula.charAt(0).toLowerCase()}${clausula.slice(1)}`
+            }
             return jornadaNueva?.dias
                 ? `Las partes acuerdan que, ${desde}, la jornada ordinaria se distribuirá de la siguiente manera: ${textoDistribucion(jornadaNueva.dias)}.`
                 : `Las partes acuerdan modificar, ${desde}, la distribución de la jornada ordinaria de trabajo.`

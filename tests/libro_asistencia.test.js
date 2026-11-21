@@ -169,3 +169,31 @@ test("trabajo en feriado: descuenta la colación de ese día de la jornada, no l
     const sabado = calcularLibro({ anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [{ desde: "2027-01-01", dias: corta }], feriados: [], marcas: [marca("2027-10-02", "08:00", "13:00")] })
     assert.strictEqual(sabado.totales.minutos_extra, 240)
 })
+
+test("pagadores de subsidio: las cajas de compensación están en la tabla, con DV en mayúscula o minúscula", () => {
+    const { buscarPagador } = require("../src/asistencia/pagadores_subsidio.js")
+    assert.strictEqual(buscarPagador("81826800-9").nombre, "Caja Los Andes")
+    assert.strictEqual(buscarPagador("70016330-k").nombre, "Caja Los Héroes")
+    assert.strictEqual(buscarPagador("82606800-0").nombre, "Caja 18 de Septiembre")
+    assert.strictEqual(buscarPagador("12345678-9"), null)
+})
+
+test("jornada por ciclo (7x7): el horario esperado sigue el ciclo desde su inicio, sin importar el día de la semana", () => {
+    // Ciclo de 14 días desde el lunes 04-10-2027: días 1 a 7 trabaja 8:00–20:00, 8 a 14 descanso.
+    const dias = Array.from({ length: 14 }, (_, i) => i < 7 ? { dia: i + 1, trabaja: true, entrada: "08:00", salida: "20:00", colacion: 60 } : { dia: i + 1, trabaja: false })
+    const tramo = { desde: "2027-01-01", dias, tipo: "excepcional", ciclo_dias: 14, inicio_ciclo: "2027-10-04" }
+    const r = calcularLibro({ anio: 2027, mes: 10, desde: "2027-01-01", tramosJornada: [tramo], feriados: FERIADOS, marcas: [marca("2027-10-09", "08:00", "21:00"), marca("2027-10-12", "08:00", "12:00")] })
+    // Sábado 09 y domingo 10: días 6 y 7 del ciclo, laborales.
+    assert.strictEqual(dia(r, "2027-10-09").esperado.tipo, "laboral")
+    assert.strictEqual(dia(r, "2027-10-09").minutosExtra, 60)
+    assert.strictEqual(dia(r, "2027-10-10").esperado.tipo, "laboral")
+    // Lunes 11 (feriado) es día 8: descanso del ciclo, el festivo no cae en jornada.
+    assert.strictEqual(dia(r, "2027-10-11").esperado.enJornada, false)
+    // Martes 12: día 9, descanso; trabajar ahí es trabajo en día libre (todo extra, menos la colación habitual).
+    assert.strictEqual(dia(r, "2027-10-12").esperado.tipo, "libre")
+    assert.strictEqual(dia(r, "2027-10-12").minutosExtra, 180)
+    // Lunes 18: día 1 del ciclo siguiente.
+    assert.strictEqual(dia(r, "2027-10-18").esperado.tipo, "laboral")
+    // 1 y 2 de octubre (antes del inicio): días 13 y 14 del ciclo anterior, descanso.
+    assert.strictEqual(dia(r, "2027-10-01").esperado.tipo, "libre")
+})

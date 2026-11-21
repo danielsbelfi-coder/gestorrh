@@ -159,3 +159,12 @@ test("técnico extranjero: 1141 = 100 (no está en AFP) y 1146 = 1", () => {
     assert.equal(campos[1146], 1)
     assert.equal(camposIdentificacionLre(ana)[1146], 0)
 })
+
+test("identificación: código de jornada según el tipo de distribución (paquete T)", () => {
+    const codigo = (extra) => camposIdentificacionLre({ ...ana, ...extra })[1107]
+    assert.strictEqual(codigo({ tipoDistribucion: "bisemanal" }), 501)
+    assert.strictEqual(codigo({ tipoDistribucion: "excepcional" }), 601)
+    assert.strictEqual(codigo({ tipoDistribucion: "promedio" }), 101)
+    assert.strictEqual(codigo({ tipoDistribucion: "semanal" }), 101)
+    assert.strictEqual(codigo({ tipoJornada: "parcial", tipoDistribucion: "excepcional" }), 201)
+})

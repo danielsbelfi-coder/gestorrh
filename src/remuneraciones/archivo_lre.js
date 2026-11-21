@@ -23,6 +23,9 @@ function lineaLre(columnas, valores) {
 }
 
 const JORNADA_LRE = { completa: 101, parcial: 201, excluido_limitacion: 701 }
+// Paquete T: la jornada completa bisemanal (art. 39) y la del sistema excepcional (art. 38 inc. final) tienen su propio
+// código en la tabla del Suplemento del LRE. La jornada en promedio del art. 22 bis no tiene código propio: 101.
+const DISTRIBUCION_LRE = { bisemanal: 501, excepcional: 601 }
 const INVALIDEZ_LRE = { invalidez_total: 2, invalidez_parcial: 3 }
 const FONASA_LRE = 102
 
@@ -43,7 +46,7 @@ function camposIdentificacionLre(datos) {
         1106: Number(datos.comuna),
         1170: 1,
         1146: datos.tecnicoExtranjero ? 1 : 0,
-        1107: JORNADA_LRE[datos.tipoJornada],
+        1107: (datos.tipoJornada === "completa" && DISTRIBUCION_LRE[datos.tipoDistribucion]) || JORNADA_LRE[datos.tipoJornada],
         1108: INVALIDEZ_LRE[datos.tipoPension] ?? 0,
         1109: datos.tipoPension === "vejez" ? 1 : 0,
         1141: datos.afpLre,

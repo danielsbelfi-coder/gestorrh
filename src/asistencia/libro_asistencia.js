@@ -14,6 +14,8 @@
 // - Cada marca indica el recargo de sus horas extra: 50 % (por defecto) o 100 % (por trato o contrato). Los totales
 //   separan minutos_extra_50 y minutos_extra_100 (16-11-2026: las horas extra del mes solo se registran aquí).
 
+const { diaDelCiclo } = require("../contratos/jornada_legal.js")
+
 const TOLERANCIA_MINUTOS = 5
 const MAXIMO_EXTRA_DIARIO = 120
 const TIPOS_CON_HORA = ["normal", "atraso"]
@@ -36,10 +38,12 @@ function diaDeLaSemana(fecha) {
     return dia === 0 ? 7 : dia
 }
 
-// La plantilla vigente en una fecha: tramos [{ desde, dias }] (cambios de jornada por anexo).
+// La plantilla vigente en una fecha: tramos [{ desde, dias, tipo, ciclo_dias, inicio_ciclo }] (cambios de jornada por
+// anexo). Devuelve el tramo, o null si no hay plantilla (tramo sin días).
 function jornadaEn(tramos, fecha) {
     const vigentes = (tramos ?? []).filter((t) => t.desde <= fecha).sort((a, b) => a.desde.localeCompare(b.desde))
-    return vigentes.length > 0 ? vigentes[vigentes.length - 1].dias : null
+    const tramo = vigentes.length > 0 ? vigentes[vigentes.length - 1] : null
+    return Array.isArray(tramo?.dias) ? tramo : null
 }
 
 // Colación más frecuente de la plantilla, para descontarla cuando trabaja un día libre o feriado.
@@ -63,11 +67,13 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
         return { tipo: "licencia" }
     }
     const feriado = (feriados ?? []).find((f) => String(f.fecha).slice(0, 10) === fecha)
-    const dias = jornadaEn(tramosJornada, fecha)
+    const jornada = jornadaEn(tramosJornada, fecha)
+    const dias = jornada?.dias ?? null
     if (feriado) {
-        // enJornada: si ese día de la semana se trabaja según la jornada (semana corrida: un festivo en un día de
-        // descanso convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
-        const delDia = dias === null ? null : dias.find((d) => Number(d.dia) === diaDeLaSemana(fecha))
+        // enJornada: si ese día se trabaja según la jornada (semana corrida: un festivo en un día de descanso
+        // convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
+        // En una jornada por ciclo, el día se busca por su posición en el ciclo (paquete T).
+        const delDia = jornada === null ? null : diaDelCiclo(jornada, fecha)
         // Colación: la de ese día si la jornada lo trabaja (un viernes corto sin colación no descuenta nada);
         // si no, la más frecuente de la plantilla, como en un día libre.
         const colacion = delDia?.trabaja ? Number(delDia.colacion ?? 0) : colacionHabitual(dias)
@@ -76,7 +82,7 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
     if (dias === null) {
         return { tipo: "sin_horario" }
     }
-    const dia = dias.find((d) => Number(d.dia) === diaDeLaSemana(fecha))
+    const dia = diaDelCiclo(jornada, fecha)
     if (!dia || !dia.trabaja) {
         return { tipo: "libre", colacion: colacionHabitual(dias) }
     }

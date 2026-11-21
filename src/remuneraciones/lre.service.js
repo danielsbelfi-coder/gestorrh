@@ -1,7 +1,7 @@
 const { aplicarPrevisionGuardada } = require("./prevision_liquidacion.js")
 const { Liquidacion, LiquidacionLinea, ConceptoRemuneracion, Trabajador, Persona, Afp, Isapre,
     Empresa, Mutualidad, ContratoTrabajo, ContratoAnexo,
-    Finiquito } = require("../shared/associations.js")
+    Finiquito, Jornada } = require("../shared/associations.js")
 const { Op } = require("sequelize")
 const { obtenerPeriodoPorId, rangoDelPeriodo } = require("./periodo_remuneracion.service.js")
 const { obtenerLimitesTramo } = require("./previred.service.js")
@@ -164,6 +164,7 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             ultimoDia,
             comuna: contrato.comuna_prestacion,
             tipoJornada: contrato.tipo_jornada,
+            tipoDistribucion: contrato.jornada_id ? (await Jornada.findByPk(contrato.jornada_id))?.tipo ?? null : null,
             tipoPension: detalle.cotizante.tipoPension,
             afpLre: detalle.cotizante.tecnicoExtranjero ? AFP_LRE_SIN_AFP : persona.Afp.codigo_lre,
             tecnicoExtranjero: detalle.cotizante.tecnicoExtranjero === true,

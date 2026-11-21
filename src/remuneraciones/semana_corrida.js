@@ -79,7 +79,10 @@ function sueldoPorDias({ sistema, dias, tramos, resumen }) {
 // Domingos y festivos del mes que se pagan. Con jornada que incluye el domingo (art. 38), los días libres de la
 // semana son el descanso (art. 45, inciso final). No se pagan los de una semana sin ningún día laboral disponible
 // (toda la semana con licencia, vacaciones o permisos); la inasistencia no hace perder el derecho.
-function diasDeDescanso(dias, trabajaDomingo) {
+// Jornada por ciclo (paquete T: art. 22 bis, 39 y 38 inc. 7): los días libres del ciclo no son todos descanso
+// dominical. Se pagan tantos días como domingos y festivos tiene el mes dentro del contrato (los días de descanso del
+// ciclo los compensan), salvo los de licencia y los de una semana sin ningún día laboral disponible.
+function diasDeDescanso(dias, trabajaDomingo, porCiclo = false) {
     const semanas = new Map()
     for (const fila of dias) {
         const clave = lunesDe(fila)
@@ -96,6 +99,18 @@ function diasDeDescanso(dias, trabajaDomingo) {
                 semana.disponibles++
             }
         }
+    }
+
+    if (porCiclo) {
+        return dias.filter((fila) => {
+            const cuenta = fila.esperado.tipo === "feriado"
+                || (fila.diaSemana === DOMINGO && ["laboral", "libre"].includes(fila.esperado.tipo))
+            if (!cuenta) {
+                return false
+            }
+            const semana = semanas.get(lunesDe(fila))
+            return !(semana.ausentes > 0 && semana.disponibles === 0)
+        }).map((fila) => fila.fecha)
     }
 
     return dias.filter((fila) => {
@@ -118,7 +133,7 @@ function diasDeDescanso(dias, trabajaDomingo) {
 // trabajar × domingos y festivos. Base: el sueldo de los días u horas efectivamente trabajados (contrato diario o por
 // hora) más los haberes variables de devengo diario (comisiones, tratos). Con sueldo mensual, solo lo variable.
 // variablesDiarias: monto total del mes de los conceptos marcados «devengo diario».
-function calcularSemanaCorrida({ sistema, dias, tramos, resumen, variablesDiarias = 0, trabajaDomingo = false }) {
+function calcularSemanaCorrida({ sistema, dias, tramos, resumen, variablesDiarias = 0, trabajaDomingo = false, porCiclo = false }) {
     const { trabajadas, divisor } = clasificarDias(dias, resumen)
     let sueldo = 0
     if (sistema === "diario" || sistema === "hora") {
@@ -126,7 +141,7 @@ function calcularSemanaCorrida({ sistema, dias, tramos, resumen, variablesDiaria
         sueldo = Math.round(trabajadas.reduce((suma, f) => suma + unidad(f) * sueldoDelDia(tramos, f.fecha), 0))
     }
     const base = sueldo + Math.round(Number(variablesDiarias) || 0)
-    const fechas = diasDeDescanso(dias, trabajaDomingo)
+    const fechas = diasDeDescanso(dias, trabajaDomingo, porCiclo)
     const monto = base > 0 && divisor > 0 ? Math.round(base / divisor * fechas.length) : 0
     return { sueldo, variables: base - sueldo, base, divisor, dias: fechas.length, fechas, monto }
 }

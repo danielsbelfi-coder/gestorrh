@@ -14,7 +14,7 @@
         <div class="encabezado-pagina">
             <div>
                 <h1>Jornadas de trabajo</h1>
-                <p>Plantillas de horario de la empresa. Se asignan a los contratos y su distribución diaria aparece en el contrato. Máximo legal vigente: <strong id="maximoLegal"></strong> horas semanales, hasta 10 horas diarias, en 4 a 6 días.</p>
+                <p>Plantillas de horario de la empresa. Se asignan a los contratos y su distribución diaria aparece en el contrato. Máximo legal vigente: <strong id="maximoLegal"></strong> horas semanales (en promedio en las jornadas por ciclo), hasta 10 horas diarias (12 en un sistema excepcional).</p>
             </div>
         </div>
         <p id="mensajeError" role="alert"></p>
@@ -23,11 +23,37 @@
         <details class="tarjeta plegable" id="panelCrear">
             <summary id="tituloPanel">＋ Nueva jornada</summary>
             <form id="formJornada" class="form-jornada">
-                <label class="campo-ancho">Nombre<input type="text" id="nombre" maxlength="80" placeholder="Ej.: Administrativa lunes a viernes" required></label>
+                <label class="campo-ancho">Nombre<input type="text" id="nombre" maxlength="80" placeholder="Ej.: Administrativa lunes a viernes, 7x7 Turno A" required></label>
+                <div class="rejilla">
+                    <label>Tipo de jornada
+                        <select id="tipo">
+                            <option value="semanal">Semanal, de lunes a domingo (art. 22 y 28)</option>
+                            <option value="promedio">En promedio, ciclos de 2 a 4 semanas (art. 22 bis)</option>
+                            <option value="bisemanal">Bisemanal, faenas alejadas (art. 39)</option>
+                            <option value="excepcional">Sistema excepcional autorizado por la DT (art. 38)</option>
+                        </select>
+                    </label>
+                    <label data-ciclo>Días del ciclo<input type="number" id="cicloDias" min="2" max="56" step="1" value="14"></label>
+                    <label data-ciclo>Día 1 del ciclo<input type="date" id="inicioCiclo"></label>
+                </div>
+                <p class="texto-suave" id="ayudaTipo"></p>
+                <div class="rejilla" data-excepcional>
+                    <label>N° de resolución de la DT<input type="text" id="resolucionNumero" maxlength="60" placeholder="Ej.: 1234"></label>
+                    <label>Fecha de la resolución<input type="date" id="resolucionFecha"></label>
+                    <label>Vigente hasta<input type="date" id="resolucionVigencia"></label>
+                </div>
+                <div class="rejilla" data-ciclo>
+                    <label>Días de trabajo<input type="number" id="patronTrabajo" min="1" max="56" value="7"></label>
+                    <label>Días de descanso<input type="number" id="patronDescanso" min="1" max="56" value="7"></label>
+                    <label>Entrada<input type="time" id="patronEntrada" value="08:00"></label>
+                    <label>Salida<input type="time" id="patronSalida" value="20:00"></label>
+                    <label>Colación (min)<input type="number" id="patronColacion" min="0" step="5" value="60"></label>
+                    <div class="acciones-grupo"><button type="button" class="chico secundario" id="generarPatron">Armar el ciclo</button></div>
+                </div>
                 <table class="tabla-jornada">
-                    <thead><tr><th>Día</th><th>Trabaja</th><th>Entrada</th><th>Salida</th><th>Colación (min)</th><th class="numero">Horas</th></tr></thead>
+                    <thead><tr><th>Día</th><th id="cabeceraFecha" hidden>Primer ciclo</th><th>Trabaja</th><th>Entrada</th><th>Salida</th><th>Colación (min)</th><th class="numero">Horas</th></tr></thead>
                     <tbody id="filasDias"></tbody>
-                    <tfoot><tr><td colspan="5"><button type="button" class="chico secundario" id="copiarLunes">Copiar el horario del lunes a los días marcados</button></td><td class="numero"><strong id="totalSemana">0</strong> h</td></tr></tfoot>
+                    <tfoot><tr><td colspan="5" id="pieAcciones"><button type="button" class="chico secundario" id="copiarLunes">Copiar el horario del lunes a los días marcados</button></td><td class="numero"><strong id="totalSemana">0</strong> h<br><span class="texto-suave" id="detalleCiclo"></span></td></tr></tfoot>
                 </table>
                 <ul id="problemasJornada" class="problemas-jornada" aria-live="polite"></ul>
                 <div class="acciones-grupo">
