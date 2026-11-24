@@ -1240,6 +1240,20 @@ input.campo-corto {
     background: #f8fafc;
 }
 
+.detalle tr.subtitulo td {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    padding-top: 12px;
+}
+
+.detalle tr.subtotal td {
+    font-weight: 600;
+    border-top: 1px solid #e2e8f0;
+}
+
 .detalle .liquido {
     font-size: 1.15rem;
     margin: 18px 0 6px;

@@ -186,6 +186,17 @@ test("líquido negativo: se cuadra en cero con el ajuste y queda saldo para el m
     assert.strictEqual(r.totalHaberes, r.totalDescuentos)
 })
 
+test("el atraso rebaja el total de haberes (como en el PDF y el LRE) y no suma a los descuentos", () => {
+    const r = liquidar({ sueldoBase: 900000, minutosAtraso: 30 })
+    const haberes = r.lineas.filter((l) => l.concepto.tipo === "haber").reduce((s, l) => s + l.monto, 0)
+    const descuentos = r.lineas.filter((l) => l.concepto.tipo === "descuento").reduce((s, l) => s + l.monto, 0)
+
+    assert.strictEqual(monto(r, "DESCUENTO_ATRASOS"), 2500)
+    assert.strictEqual(r.totalHaberes, haberes - 2500)
+    assert.strictEqual(r.totalDescuentos, descuentos - 2500)
+    assert.strictEqual(r.liquidoAPagar, r.totalHaberes - r.totalDescuentos)
+})
+
 test("base de 13,55 UTM cae en el segundo tramo, sin hueco", () => {
     assert.strictEqual(buscarTramo(TRAMOS, 13.55).tasa, 4)
 })

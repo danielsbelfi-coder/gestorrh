@@ -169,7 +169,36 @@ function textoSemanaCorrida(detalle) {
     return partes.length > 0 ? `<p class="texto-suave">${escaparHtml(partes.join(" "))}</p>` : ""
 }
 
-function mostrarDetalle(liquidacion) {
+// Una fila del detalle con el mismo texto que el PDF: "Sueldo base (16)".
+function filaConcepto(fila) {
+    const texto = fila.cantidad === null ? fila.nombre : `${fila.nombre} (${String(fila.cantidad).replace(".", ",")})`
+    if (fila.monto < 0) {
+        return `<tr><td>${escaparHtml(texto)}</td><td class="numero">−${escaparHtml(pesos(-fila.monto))}</td></tr>`
+    }
+    return filaDetalle(texto, fila.monto)
+}
+
+// Una sección del detalle (por ejemplo "Haberes imponibles") con sus filas y su total; vacía no se muestra.
+function seccionDetalle(titulo, filas, etiquetaTotal, total) {
+    if (filas.length === 0) {
+        return ""
+    }
+    return `
+        <tr class="subtitulo"><td colspan="2">${escaparHtml(titulo)}</td></tr>
+        ${filas.map(filaConcepto).join("")}
+        ${filaDetalle(etiquetaTotal, total, "subtotal")}`
+}
+
+// El detalle en pantalla usa las mismas secciones y totales que la liquidación impresa,
+// para que lo que se ve aquí, el PDF y el LRE cuadren siempre.
+async function mostrarDetalle(liquidacion) {
+    const resultado = await llamarApi(`/api/periodos-remuneracion/${selectorPeriodo.value}/liquidaciones/${liquidacion.id}/detalle`)
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo cargar el detalle")
+        return
+    }
+    const { secciones: s, totales: t } = resultado.datos
+
     const panel = document.getElementById("detalle")
     panel.innerHTML = `
         <div class="encabezado-pagina">
@@ -183,28 +212,24 @@ function mostrarDetalle(liquidacion) {
             <table>
                 <thead><tr><th>Haberes</th><th class="numero">Monto</th></tr></thead>
                 <tbody>
-                    ${filaDetalle("Sueldo proporcional", liquidacion.sueldo_base_proporcional)}
-                    ${filaDetalle("Horas extra", liquidacion.monto_horas_extra)}
-                    ${liquidacion.detalle_calculo?.semanaCorrida?.monto > 0 ? filaDetalle("Semana corrida", liquidacion.detalle_calculo.semanaCorrida.monto) : ""}
-                    ${filaDetalle("Gratificación", liquidacion.monto_gratificacion)}
-                    ${filaDetalle("Total haberes", liquidacion.total_haberes, "total")}
+                    ${seccionDetalle("Imponibles", s.imponibles, "Total imponible", t.imponible)}
+                    ${seccionDetalle("No imponibles", s.noImponibles, "Total no imponible", t.noImponible)}
+                    ${filaDetalle("Total haberes", t.haberes, "total")}
                 </tbody>
             </table>
             <table>
                 <thead><tr><th>Descuentos</th><th class="numero">Monto</th></tr></thead>
                 <tbody>
-                    ${filaDetalle("AFP", liquidacion.descuento_afp)}
-                    ${filaDetalle("Salud", liquidacion.descuento_salud)}
-                    ${filaDetalle("Seguro de cesantía", liquidacion.descuento_cesantia)}
-                    ${filaDetalle("Impuesto único", liquidacion.monto_impuesto_unico)}
-                    ${filaDetalle("Total descuentos", liquidacion.total_descuentos, "total")}
+                    ${seccionDetalle("Legales", s.legales, "Total descuentos legales", t.legales)}
+                    ${seccionDetalle("Otros descuentos", s.otros, "Total otros descuentos", t.otros)}
+                    ${filaDetalle("Total descuentos", t.descuentos, "total")}
                 </tbody>
             </table>
         </div>
         <p class="liquido">Líquido a pagar: <strong>${escaparHtml(pesos(liquidacion.liquido_a_pagar))}</strong></p>
         ${liquidacion.detalle_calculo?.art58?.exceso > 0 ? `<p class="aviso-art58"><span class="insignia advertencia">Art. 58</span> Los descuentos voluntarios (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.voluntarios))}) superan el 15 % de la remuneración imponible (${escaparHtml(pesos(liquidacion.detalle_calculo.art58.tope))}) por ${escaparHtml(pesos(liquidacion.detalle_calculo.art58.exceso))}.</p>` : ""}
         ${textoSemanaCorrida(liquidacion.detalle_calculo)}
-        <p class="texto-suave">El detalle completo, con todos los conceptos, está en el PDF.</p>`
+        <p class="texto-suave">Total haberes − total descuentos = líquido a pagar. Los atrasos e inasistencias se restan dentro de los haberes imponibles, igual que en el PDF y en el LRE.</p>`
     panel.hidden = false
     panel.querySelector("#cerrarDetalle").addEventListener("click", () => { panel.hidden = true })
     panel.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -307,7 +332,7 @@ document.getElementById("tablaLiquidaciones").addEventListener("click", async fu
     const base = `/api/periodos-remuneracion/${selectorPeriodo.value}/liquidaciones/${id}`
 
     if (accion === "detalle") {
-        mostrarDetalle(liquidacion)
+        await mostrarDetalle(liquidacion)
         return
     }
 

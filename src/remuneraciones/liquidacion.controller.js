@@ -79,6 +79,12 @@ async function documento(req, res) {
     enviarPdf(res, `liquidacion-${req.params.id}-${sufijoPeriodo(periodo)}.pdf`, documentos, req.query.con_aportes === "1")
 }
 
+// Lo mismo que muestra el PDF (secciones y totales), para el detalle en pantalla.
+async function detalle(req, res) {
+    const { documentos } = await documentoLiquidacion(req.params.periodoId, req.params.id, req.empresasPermitidas)
+    res.status(200).json(documentos[0])
+}
+
 async function documentoPeriodo(req, res) {
     const { periodo, documentos } = await documentosPeriodo(req.params.periodoId, req.empresasPermitidas)
     enviarPdf(res, `liquidaciones-${sufijoPeriodo(periodo)}.pdf`, documentos, req.query.con_aportes === "1")
@@ -98,5 +104,6 @@ module.exports = {
     emitir,
     emitirPeriodo,
     documento,
+    detalle,
     documentoPeriodo
 }

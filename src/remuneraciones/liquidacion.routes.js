@@ -1,5 +1,5 @@
 const express = require("express")
-const { eliminar, crear, listar, obtenerPorId, recalcular, emitir, emitirPeriodo, documentoPeriodo, documento } = require("./liquidacion.controller")
+const { eliminar, crear, listar, obtenerPorId, recalcular, emitir, emitirPeriodo, documentoPeriodo, documento, detalle } = require("./liquidacion.controller")
 const router = express.Router({ mergeParams: true })
 
 
@@ -9,6 +9,7 @@ router.get("/", listar)
 router.get("/documento", documentoPeriodo)
 router.get("/:id", obtenerPorId)
 router.get("/:id/documento", documento)
+router.get("/:id/detalle", detalle)
 router.post("/:id/recalcular", recalcular)
 router.post("/:id/emitir", emitir)
 router.post("/:id/eliminar", eliminar)

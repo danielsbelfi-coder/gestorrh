@@ -186,10 +186,13 @@ function calcularLiquidacionPorLineas(datos) {
         lineas.push({ concepto: conceptos.DEPOSITO_CONVENIDO, cantidad: null, monto: ahorros.depositoConvenido.exento })
     }
 
-    const sumarTipo = (tipo) => lineas.filter((l) => l.concepto.tipo === tipo).reduce((suma, l) => suma + l.monto, 0)
+    const sumar = (filtro) => lineas.filter(filtro).reduce((suma, l) => suma + l.monto, 0)
 
-    let totalHaberes = sumarTipo("haber")
-    const totalDescuentos = sumarTipo("descuento")
+    // Los totales siguen el mismo criterio de la liquidación impresa y del LRE: los descuentos imponibles
+    // (atrasos, inasistencias) rebajan los haberes; los demás descuentos van en "Total descuentos".
+    const descuentosImponibles = sumar((l) => l.concepto.tipo === "descuento" && l.concepto.imponible)
+    let totalHaberes = sumar((l) => l.concepto.tipo === "haber") - descuentosImponibles
+    const totalDescuentos = sumar((l) => l.concepto.tipo === "descuento" && !l.concepto.imponible)
     let liquidoAPagar = totalHaberes - totalDescuentos
     let nuevoSaldoPendiente = 0
 
