@@ -240,8 +240,8 @@ async function crearTurno(entrada, empresasPermitidas, usuarioId) {
 
 const MAXIMO_DIAS_LOTE = 31
 
-// Registra el mismo turno (horario, servicio y pausas) en cada fecha de un rango, filtrando por días de la semana
-// (1 = lunes … 7 = domingo). Cada fecha se valida como un turno suelto: las que no se pueden registrar (inasistencia,
+// Registra el mismo turno (horario, servicio y pausas) en las fechas elegidas de un rango: las marcadas en el
+// calendario (`fechas`) o las de ciertos días de la semana (`dias_semana`, 1 = lunes … 7 = domingo). Cada fecha se valida como un turno suelto: las que no se pueden registrar (inasistencia,
 // licencia, superposición, fuera del contrato, periodo cerrado) se omiten con su motivo y las demás se crean.
 async function crearTurnosEnLote(entrada, empresasPermitidas, usuarioId) {
     const trabajador = await trabajadorPermitido(Number(entrada?.trabajador_id), empresasPermitidas)
@@ -255,9 +255,23 @@ async function crearTurnosEnLote(entrada, empresasPermitidas, usuarioId) {
     if (largo > MAXIMO_DIAS_LOTE) {
         throw new ValidationError(`El rango puede tener hasta ${MAXIMO_DIAS_LOTE} días`)
     }
-    const dias = (Array.isArray(entrada?.dias_semana) ? entrada.dias_semana : [1, 2, 3, 4, 5, 6, 7]).map(Number)
-    if (dias.length === 0 || dias.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
-        throw new ValidationError("Elige al menos un día de la semana")
+    // Las fechas se eligen en el calendario (paquete Z, `fechas`) o, como antes, por días de la semana (`dias_semana`).
+    let elegidas
+    if (Array.isArray(entrada?.fechas)) {
+        elegidas = [...new Set(entrada.fechas.map((f) => String(f).slice(0, 10)))].sort()
+        if (elegidas.length === 0) {
+            throw new ValidationError("Elige al menos una fecha en el calendario")
+        }
+        if (elegidas.some((f) => !esFechaValida(f) || f < desde || f > hasta)) {
+            throw new ValidationError("Las fechas elegidas deben estar entre desde y hasta")
+        }
+    } else {
+        const dias = (Array.isArray(entrada?.dias_semana) ? entrada.dias_semana : [1, 2, 3, 4, 5, 6, 7]).map(Number)
+        if (dias.length === 0 || dias.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
+            throw new ValidationError("Elige al menos un día de la semana")
+        }
+        elegidas = Array.from({ length: largo }, (_, i) => sumarDias(desde, i))
+            .filter((fecha) => dias.includes(((new Date(`${fecha}T00:00:00Z`).getUTCDay() + 6) % 7) + 1))
     }
     // Revisa el horario y las pausas una vez, con la primera fecha, antes de recorrer el rango: un error del turno
     // (pausa fuera del horario, tipo inexistente) se informa una sola vez y no se registra nada.
@@ -268,12 +282,7 @@ async function crearTurnosEnLote(entrada, empresasPermitidas, usuarioId) {
 
     const creados = []
     const omitidos = []
-    for (let i = 0; i < largo; i++) {
-        const fecha = sumarDias(desde, i)
-        const diaSemana = ((new Date(`${fecha}T00:00:00Z`).getUTCDay() + 6) % 7) + 1
-        if (!dias.includes(diaSemana)) {
-            continue
-        }
+    for (const fecha of elegidas) {
         try {
             const datos = datosDelTurno({ ...entrada, fecha })
             const calculo = await validarTurno(trabajador, datos)

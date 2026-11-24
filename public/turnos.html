@@ -87,17 +87,17 @@
                     <label class="campo-ancho">Observaciones<input type="text" id="turnoObs" maxlength="300"></label>
                 </div>
                 <fieldset class="dias-repetir" id="diasRepetir" hidden>
-                    <legend>Repetir los días</legend>
-                    <label><input type="checkbox" value="1" checked> Lu</label>
-                    <label><input type="checkbox" value="2" checked> Ma</label>
-                    <label><input type="checkbox" value="3" checked> Mi</label>
-                    <label><input type="checkbox" value="4" checked> Ju</label>
-                    <label><input type="checkbox" value="5" checked> Vi</label>
-                    <label><input type="checkbox" value="6" checked> Sá</label>
-                    <label><input type="checkbox" value="7" checked> Do</label>
-                    <span class="texto-suave" id="resumenRepetir"></span>
+                    <legend>Días en que se registra el turno</legend>
+                    <div class="acciones-calendario">
+                        <button type="button" class="chico secundario" data-seleccion="todos">Todos</button>
+                        <button type="button" class="chico secundario" data-seleccion="habiles">Lunes a viernes</button>
+                        <button type="button" class="chico secundario" data-seleccion="ninguno">Ninguno</button>
+                        <span class="texto-suave" id="resumenRepetir"></span>
+                    </div>
+                    <div class="calendarios-turno" id="calendarioTurnos"></div>
+                    <p class="texto-suave">Haz clic en un día para marcarlo o desmarcarlo; en la letra de la columna, para marcar o desmarcar ese día de la semana. Los días con un punto ya tienen un turno registrado.</p>
                 </fieldset>
-                <p class="texto-suave">Para registrar el mismo turno en varios días, indica «Hasta» y marca los días de la semana (hasta 31 días): se registra uno por cada fecha, y las que no se puedan (inasistencia, licencia, superposición, fuera del contrato) se omiten con su motivo. Si el fin es anterior al inicio, el turno termina al día siguiente. Las pausas se anotan con su hora; una hora anterior al inicio del turno se entiende del día siguiente.</p>
+                <p class="texto-suave">Para registrar el mismo turno en varios días, indica «Hasta» (hasta 31 días) y marca en el calendario los días que trabaja: se registra uno por cada fecha, y las que no se puedan (inasistencia, licencia, superposición, fuera del contrato) se omiten con su motivo. Si el fin es anterior al inicio, el turno termina al día siguiente. Las pausas se anotan con su hora; una hora anterior al inicio del turno se entiende del día siguiente.</p>
                 <table class="tabla-jornada">
                     <thead><tr><th>Espera o descanso</th><th>Inicio</th><th>Fin</th><th>Lugar</th><th>Causa</th><th></th></tr></thead>
                     <tbody id="filasPausas"></tbody>

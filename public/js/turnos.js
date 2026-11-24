@@ -221,6 +221,9 @@ function dibujarMes() {
             </tr>`
         }).join("")
         : `<tr><td colspan="9" class="texto-suave">Sin turnos registrados en el mes.</td></tr>`
+    if (!document.getElementById("diasRepetir").hidden) {
+        dibujarCalendario()
+    }
 }
 
 // ---------- Formulario de turno ----------
@@ -258,37 +261,112 @@ document.getElementById("filasPausas").addEventListener("click", function (event
     }
 })
 
-// «Repetir hasta»: el mismo turno en cada día marcado del rango (solo al registrar, no al editar).
-function diasMarcados() {
-    return [...document.querySelectorAll("#diasRepetir input:checked")].map((c) => Number(c.value))
+// «Hasta» (paquete Z): el mismo turno en los días marcados en un calendario del rango (solo al registrar, no al
+// editar). Por defecto se marcan todos; los botones y la letra de cada columna ayudan con los patrones habituales.
+const MAXIMO_DIAS_RANGO = 31
+let seleccion = new Set()
+let rangoActual = ""
+
+function isoMas(fecha, dias) {
+    const d = new Date(`${fecha}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + dias)
+    return d.toISOString().slice(0, 10)
 }
 
+function diaSemanaDe(fecha) {
+    return ((new Date(`${fecha}T00:00:00Z`).getUTCDay() + 6) % 7) + 1
+}
+
+// Fechas del rango (vacío si no hay rango válido o pasa del máximo).
 function fechasDelRango() {
     const desde = document.getElementById("turnoFecha").value
     const hasta = document.getElementById("turnoHasta").value
     if (!desde || !hasta || hasta < desde) {
         return []
     }
-    const marcados = diasMarcados()
     const fechas = []
-    for (let d = new Date(`${desde}T00:00:00Z`); d.toISOString().slice(0, 10) <= hasta && fechas.length < 400; d.setUTCDate(d.getUTCDate() + 1)) {
-        if (marcados.includes(((d.getUTCDay() + 6) % 7) + 1)) {
-            fechas.push(d.toISOString().slice(0, 10))
-        }
+    for (let f = desde; f <= hasta && fechas.length <= MAXIMO_DIAS_RANGO; f = isoMas(f, 1)) {
+        fechas.push(f)
     }
     return fechas
+}
+
+function fechasConTurno() {
+    return new Set((datosMes?.turnos ?? []).map((t) => String(t.fecha).slice(0, 10)))
+}
+
+function dibujarCalendario() {
+    const fechas = fechasDelRango()
+    const contenedor = document.getElementById("calendarioTurnos")
+    if (fechas.length === 0 || fechas.length > MAXIMO_DIAS_RANGO) {
+        contenedor.innerHTML = fechas.length > MAXIMO_DIAS_RANGO ? `<p class="error">El rango puede tener hasta ${MAXIMO_DIAS_RANGO} días.</p>` : ""
+        return
+    }
+    const enRango = new Set(fechas)
+    const conTurno = fechasConTurno()
+    const meses = [...new Set(fechas.map((f) => f.slice(0, 7)))]
+    const NOMBRES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    contenedor.innerHTML = meses.map((mes) => {
+        const [anio, m] = mes.split("-").map(Number)
+        const primero = `${mes}-01`
+        const ultimoDia = new Date(Date.UTC(anio, m, 0)).getUTCDate()
+        const celdas = Array.from({ length: diaSemanaDe(primero) - 1 }, () => "<td></td>")
+        for (let dia = 1; dia <= ultimoDia; dia++) {
+            const fecha = `${mes}-${String(dia).padStart(2, "0")}`
+            if (!enRango.has(fecha)) {
+                celdas.push(`<td><span class="dia-fuera">${dia}</span></td>`)
+                continue
+            }
+            const clases = ["dia-calendario", seleccion.has(fecha) ? "elegido" : "", conTurno.has(fecha) ? "con-turno" : ""].join(" ")
+            const titulo = `${fechaCorta(fecha)}${conTurno.has(fecha) ? " · ya tiene un turno" : ""}`
+            celdas.push(`<td><button type="button" class="${clases}" data-fecha="${fecha}" aria-pressed="${seleccion.has(fecha)}" title="${escaparHtml(titulo)}">${dia}</button></td>`)
+        }
+        const filas = []
+        for (let i = 0; i < celdas.length; i += 7) {
+            filas.push(`<tr>${celdas.slice(i, i + 7).join("")}</tr>`)
+        }
+        const cabecera = ["L", "M", "M", "J", "V", "S", "D"].map((letra, i) => `<th><button type="button" data-columna="${i + 1}" title="Marcar o desmarcar ese día de la semana">${letra}</button></th>`).join("")
+        return `<table class="calendario-turno"><caption>${NOMBRES[m - 1]} ${anio}</caption><thead><tr>${cabecera}</tr></thead><tbody>${filas.join("")}</tbody></table>`
+    }).join("")
 }
 
 function actualizarRepetir() {
     const conRango = !turnoEnEdicion && Boolean(document.getElementById("turnoHasta").value)
     document.getElementById("diasRepetir").hidden = !conRango
     const fechas = fechasDelRango()
-    document.getElementById("resumenRepetir").textContent = conRango ? `${fechas.length} turno(s) a registrar` : ""
+    const clave = fechas.length ? `${fechas[0]}|${fechas[fechas.length - 1]}` : ""
+    if (clave !== rangoActual) {
+        // Rango nuevo: se marcan todos sus días.
+        rangoActual = clave
+        seleccion = new Set(fechas.length <= MAXIMO_DIAS_RANGO ? fechas : [])
+    }
+    if (conRango) {
+        dibujarCalendario()
+    }
+    document.getElementById("resumenRepetir").textContent = conRango ? `${seleccion.size} turno(s) a registrar` : ""
     document.getElementById("guardarTurno").textContent = turnoEnEdicion ? "Guardar cambios" : conRango ? "Registrar turnos" : "Registrar turno"
 }
 document.getElementById("turnoFecha").addEventListener("change", actualizarRepetir)
 document.getElementById("turnoHasta").addEventListener("change", actualizarRepetir)
-document.getElementById("diasRepetir").addEventListener("change", actualizarRepetir)
+
+document.getElementById("diasRepetir").addEventListener("click", function (evento) {
+    const dia = evento.target.closest("[data-fecha]")?.dataset.fecha
+    const columna = evento.target.closest("[data-columna]")?.dataset.columna
+    const accion = evento.target.closest("[data-seleccion]")?.dataset.seleccion
+    const fechas = fechasDelRango()
+    if (dia) {
+        seleccion.has(dia) ? seleccion.delete(dia) : seleccion.add(dia)
+    } else if (columna) {
+        const deLaColumna = fechas.filter((f) => diaSemanaDe(f) === Number(columna))
+        const todas = deLaColumna.every((f) => seleccion.has(f))
+        deLaColumna.forEach((f) => (todas ? seleccion.delete(f) : seleccion.add(f)))
+    } else if (accion) {
+        seleccion = new Set(accion === "todos" ? fechas : accion === "habiles" ? fechas.filter((f) => diaSemanaDe(f) <= 5) : [])
+    } else {
+        return
+    }
+    actualizarRepetir()
+})
 
 function salirDeTurno() {
     turnoEnEdicion = null
@@ -299,7 +377,7 @@ function salirDeTurno() {
     document.getElementById("guardarTurno").textContent = "Registrar turno"
     document.getElementById("cancelarTurno").hidden = true
     document.querySelectorAll("[data-solo-alta]").forEach((el) => { el.hidden = false })
-    document.querySelectorAll("#diasRepetir input").forEach((c) => { c.checked = true })
+    rangoActual = ""
     actualizarRepetir()
 }
 document.getElementById("cancelarTurno").addEventListener("click", () => { salirDeTurno(); document.getElementById("panelTurno").removeAttribute("open") })
@@ -318,13 +396,13 @@ document.getElementById("formTurno").addEventListener("submit", async function (
     }
     const hasta = document.getElementById("turnoHasta").value
     if (!turnoEnEdicion && hasta) {
-        const fechas = fechasDelRango()
+        const fechas = [...seleccion].sort()
         if (fechas.length === 0) {
-            document.getElementById("problemasTurno").innerHTML = `<li class="error">El rango no tiene días marcados (revisa las fechas y los días de la semana)</li>`
+            document.getElementById("problemasTurno").innerHTML = `<li class="error">Marca en el calendario al menos un día (revisa también las fechas desde y hasta)</li>`
             return
         }
         const { fecha, ...resto } = cuerpo
-        const r = await llamarApi("/api/turnos-conduccion/lote", { method: "POST", body: JSON.stringify({ ...resto, desde: fecha, hasta, dias_semana: diasMarcados() }) })
+        const r = await llamarApi("/api/turnos-conduccion/lote", { method: "POST", body: JSON.stringify({ ...resto, desde: fecha, hasta, fechas }) })
         if (r.status !== 201) {
             document.getElementById("problemasTurno").innerHTML = `<li class="error">${escaparHtml(r.datos?.error ?? "No se pudieron registrar los turnos")}</li>`
             return

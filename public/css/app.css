@@ -1879,13 +1879,9 @@ button.enlace {
 }
 
 .dias-repetir {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 14px;
     border: 1px solid var(--borde);
     border-radius: var(--radio);
-    padding: 8px 12px;
+    padding: 8px 12px 10px;
 }
 
 .dias-repetir legend {
@@ -1894,8 +1890,86 @@ button.enlace {
     padding: 0 4px;
 }
 
-.dias-repetir label {
-    flex-direction: row;
+.acciones-calendario {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.calendarios-turno {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.calendario-turno {
+    border-collapse: separate;
+    border-spacing: 3px;
+    width: auto;
+    margin: 0;
+}
+
+.calendario-turno caption {
+    font-weight: 650;
+    text-align: left;
+    padding-bottom: 4px;
+}
+
+.calendario-turno th,
+.calendario-turno td {
+    border: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.calendario-turno th button {
+    width: 36px;
+    border: 0;
+    background: none;
+    color: var(--texto-suave);
+    font-size: 0.8rem;
+    font-weight: 650;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.dia-calendario {
+    position: relative;
+    width: 36px;
+    height: 32px;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    background: var(--superficie);
+    color: var(--texto);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.dia-calendario.elegido {
+    background: var(--primario);
+    border-color: var(--primario);
+    color: #fff;
+    font-weight: 650;
+}
+
+.dia-calendario.con-turno::after {
+    content: "";
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 50%;
+    background: #e0a800;
+}
+
+.dia-fuera {
+    width: 36px;
+    height: 32px;
+    color: var(--borde);
+    font-size: 0.8rem;
 }
