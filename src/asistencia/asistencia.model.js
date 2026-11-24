@@ -26,7 +26,9 @@ const Asistencia = sequelize.define("Asistencia", {
             "permiso_con_goce",
             "permiso_sin_goce",
             "vacaciones",
-            "licencia_medica"
+            "licencia_medica",
+            "festivo_libre",
+            "descanso_compensatorio"
         ),
         allowNull: false
     },

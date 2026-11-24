@@ -15,7 +15,28 @@ function validarNombre(nombre) {
     return texto
 }
 
-const CAMPOS_CICLO = ["tipo", "ciclo_dias", "inicio_ciclo", "resolucion_numero", "resolucion_fecha", "resolucion_vigencia_hasta", "horas_mensuales", "dias_trabajados"]
+const CAMPOS_CICLO = ["tipo", "ciclo_dias", "inicio_ciclo", "resolucion_numero", "resolucion_fecha", "resolucion_vigencia_hasta", "horas_mensuales", "dias_trabajados", "festivos", "festivo_compensacion"]
+
+// Paquete AD: festivos que caen en un día de trabajo. «turno»: se trabajan según la jornada (art. 38: exceptuados del
+// descanso o sistemas de turnos) y cada uno se compensa con un día de descanso o se paga con recargo (art. 38 inc. 5°).
+// Por defecto se trabajan en el sistema excepcional y el bisemanal; en las demás, se descansan.
+const FESTIVOS = ["descanso", "turno"]
+const COMPENSACIONES_FESTIVO = ["descanso", "pago"]
+
+function camposFestivos(datos, tipo) {
+    if (tipo === "art25") {
+        return { festivos: "descanso", festivo_compensacion: "descanso" }
+    }
+    const festivos = datos.festivos ?? (["excepcional", "bisemanal"].includes(tipo) ? "turno" : "descanso")
+    const compensacion = datos.festivo_compensacion ?? "descanso"
+    if (!FESTIVOS.includes(festivos)) {
+        throw new ValidationError("Indica si los festivos en día de trabajo se descansan o se trabajan según el turno")
+    }
+    if (!COMPENSACIONES_FESTIVO.includes(compensacion)) {
+        throw new ValidationError("El festivo trabajado se compensa con un día de descanso o se paga con recargo")
+    }
+    return { festivos, festivo_compensacion: compensacion }
+}
 
 // Valida la distribución (días, tipo legal y ciclo) contra el máximo legal de hoy; devuelve los campos calculados
 // y las advertencias. La jornada semanal no guarda inicio de ciclo ni resolución.
@@ -39,7 +60,8 @@ function camposDeDias(datos) {
             resolucion_fecha: excepcional ? String(datos.resolucion_fecha).slice(0, 10) : null,
             resolucion_vigencia_hasta: excepcional ? String(datos.resolucion_vigencia_hasta).slice(0, 10) : null,
             horas_semanales: resultado.horasSemanales,
-            dias_trabajados: resultado.diasTrabajados
+            dias_trabajados: resultado.diasTrabajados,
+            ...camposFestivos(datos, tipo)
         },
         advertencias: resultado.advertencias
     }

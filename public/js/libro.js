@@ -5,7 +5,9 @@ const TIPOS_MARCA = {
     inasistencia: "Inasistencia",
     permiso_con_goce: "Permiso con goce",
     permiso_sin_goce: "Permiso sin goce",
-    vacaciones: "Vacaciones"
+    vacaciones: "Vacaciones",
+    festivo_libre: "Festivo libre (no trabajó el festivo de turno)",
+    descanso_compensatorio: "Descanso compensatorio por festivo trabajado"
 }
 const DIAS_CORTOS = ["", "lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
@@ -36,8 +38,8 @@ function minutosATexto(minutos) {
 
 function textoEsperado(esperado) {
     switch (esperado.tipo) {
-        case "laboral": return `${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
-        case "libre": return "Libre"
+        case "laboral": return `${esperado.festivo ? `Festivo de turno · ${esperado.nombre} · ` : ""}${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
+        case "libre": return esperado.compensatorio ? "Libre (descanso compensatorio)" : "Libre"
         case "feriado": return `Feriado · ${esperado.nombre}`
         case "licencia": return "Licencia médica"
         case "fuera_contrato": return "Fuera de contrato"
@@ -127,6 +129,17 @@ function dibujarResumen() {
         ["Vacaciones", t.dias_vacaciones, ""],
         ["Anotaciones pendientes", t.marcas_pendientes, t.marcas_pendientes > 0 ? "advertencia" : ""]
     ]
+    // Paquete AD: festivos de turno trabajados y su saldo de días de descanso compensatorio.
+    if (t.festivos_trabajados > 0) {
+        tarjetas.push(["Festivos de turno trabajados", t.festivos_trabajados, ""])
+    }
+    if (t.minutos_festivo_pago > 0) {
+        tarjetas.push(["Horas de festivo a pagar (50 %)", minutosATexto(t.minutos_festivo_pago), "exito"])
+    }
+    const f = libro.festivos
+    if (f) {
+        tarjetas.push(["Días compensatorios por festivos", `${f.saldoInicial} + ${f.ganados} − ${f.otorgados} = ${f.saldoFinal}`, f.saldoFinal < 0 ? "peligro" : ""])
+    }
     document.getElementById("totales").innerHTML = tarjetas.map(([titulo, valor, clase]) => `
         <div class="libro-total ${clase}"><span>${escaparHtml(titulo)}</span><strong>${escaparHtml(valor)}</strong></div>`).join("")
 
@@ -179,11 +192,18 @@ function dibujarFilas() {
 function editorDeFila(dia) {
     const m = dia.marca
     const tipo = m ? (m.tipo === "atraso" ? "normal" : m.tipo) : "normal"
-    const noLaboral = dia.esperado.tipo === "libre" || dia.esperado.tipo === "feriado"
-    const tipos = noLaboral ? { normal: TIPOS_MARCA.normal } : TIPOS_MARCA
+    // Lo esperado antes de la marca (un festivo libre o un descanso compensatorio aprobados lo cambian).
+    const esperado = dia.esperadoOriginal ?? dia.esperado
+    const noLaboral = esperado.tipo === "libre" || esperado.tipo === "feriado"
+    // Paquete AD: «Festivo libre» solo en un festivo de turno; el descanso compensatorio, en un día de trabajo que no
+    // sea festivo y si la jornada compensa los festivos con días de descanso.
+    const deFestivo = (v) => (v === "festivo_libre" && esperado.festivo === true)
+        || (v === "descanso_compensatorio" && !esperado.festivo && libro.festivos !== null && libro.festivos !== undefined)
+        || !["festivo_libre", "descanso_compensatorio"].includes(v)
+    const tipos = noLaboral ? { normal: TIPOS_MARCA.normal } : Object.fromEntries(Object.entries(TIPOS_MARCA).filter(([v]) => deFestivo(v)))
     const ayuda = noLaboral
         ? "Trabajo en día libre o feriado: indica entrada y salida. Todas las horas se proponen como extra."
-        : `La hora que quede vacía se entiende según horario (${textoEsperado(dia.esperado)}).`
+        : `La hora que quede vacía se entiende según horario (${textoEsperado(esperado)}).`
     const ayudaNoche = " Si sale después de la medianoche, anota la hora tal cual: una salida anterior a la entrada se entiende del día siguiente."
     return `<tr class="libro-editor"><td colspan="8">
         <form id="formMarca" class="form-marca">

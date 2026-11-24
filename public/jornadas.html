@@ -47,6 +47,20 @@
                     <label>Fecha de la resolución<input type="date" id="resolucionFecha"></label>
                     <label>Vigente hasta<input type="date" id="resolucionVigencia"></label>
                 </div>
+                <div class="rejilla" data-festivos>
+                    <label>Festivos que caen en un día de trabajo
+                        <select id="festivos">
+                            <option value="descanso">Se descansan</option>
+                            <option value="turno">Se trabajan según el turno (art. 38)</option>
+                        </select>
+                    </label>
+                    <label id="campoCompensacion">Festivo trabajado
+                        <select id="festivoCompensacion">
+                            <option value="descanso">Se compensa con un día de descanso (art. 38 inc. 3°)</option>
+                            <option value="pago">Se pagan sus horas con recargo del 50 % (art. 38 inc. 5°)</option>
+                        </select>
+                    </label>
+                </div>
                 <div class="rejilla" data-ciclo>
                     <label>Días de trabajo<input type="number" id="patronTrabajo" min="1" max="56" value="7"></label>
                     <label>Días de descanso<input type="number" id="patronDescanso" min="1" max="56" value="7"></label>

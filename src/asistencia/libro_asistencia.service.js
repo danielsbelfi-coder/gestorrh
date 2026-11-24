@@ -55,7 +55,9 @@ async function tramosDeJornada(contrato, transaction) {
             dias_trabajados: jornada ? Number(jornada.dias_trabajados) : null,
             horas_mensuales: jornada?.horas_mensuales ? Number(jornada.horas_mensuales) : null,
             jornada_id: jornada?.id ?? null,
-            nombre: jornada?.nombre ?? null
+            nombre: jornada?.nombre ?? null,
+            festivos: jornada?.festivos ?? "descanso",
+            festivo_compensacion: jornada?.festivo_compensacion ?? "descanso"
         }
     })
 }
@@ -105,7 +107,7 @@ async function libroDelTrabajador(trabajador, anio, mes, transaction, { conSeman
     return {
         ...libro,
         contrato: { id: contrato.id, comuna_prestacion: contrato.comuna_prestacion, tipo_jornada: contrato.tipo_jornada },
-        tramos: tramos.map(({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales }) => ({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales }))
+        tramos: tramos.map(({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales, festivos, festivo_compensacion }) => ({ desde, jornada_id, nombre, tipo, ciclo_dias, inicio_ciclo, dias_trabajados, horas_mensuales, festivos, festivo_compensacion }))
     }
 }
 
@@ -121,7 +123,11 @@ async function obtenerLibro({ trabajador_id, anio, mes }, empresasPermitidas) {
         throw new NotFoundError("Trabajador no encontrado")
     }
 
-    return { trabajador_id: trabajador.id, anio: año, mes: numeroMes, ...await libroDelTrabajador(trabajador, año, numeroMes) }
+    const libro = await libroDelTrabajador(trabajador, año, numeroMes)
+    // Paquete AD: saldo de días de descanso compensatorio por festivos trabajados (si corresponde).
+    const { festivosDelMes } = require("./festivos_compensatorios.service.js")
+    const festivos = await festivosDelMes(trabajador, año, numeroMes, libro.tramos)
+    return { trabajador_id: trabajador.id, anio: año, mes: numeroMes, ...libro, festivos }
 }
 
 module.exports = {

@@ -237,6 +237,12 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
     // al 50 %, en variables aparte (con su glosa y, si son de un mes anterior ya cerrado, su mes de origen).
     const propuestas = RECARGOS.filter((recargo) => horas[recargo] > 0)
         .map((recargo) => ({ recargo, cantidad: horas[recargo], mes_origen: null, glosa: glosaHoras }))
+    // Paquete AD: festivos de turno trabajados que se pagan (art. 38 inc. 5°): sus horas, con recargo del 50 %.
+    const horasFestivo = Math.round(Number(totales.minutos_festivo_pago ?? 0) / 60 * 100) / 100
+    if (horasFestivo > 0) {
+        propuestas.push({ recargo: 50, cantidad: horasFestivo, mes_origen: null, glosa: `Festivos trabajados según el turno (art. 38 inc. 5°): ${totales.festivos_trabajados - totales.festivos_por_compensar} festivo(s), sus horas con recargo del 50 %` })
+        resultado.festivos_pagados = horasFestivo
+    }
     const promedio = await horasPromedioDelPeriodo(trabajador, periodo, transaction)
     for (const p of promedio.propuestas) {
         propuestas.push({ recargo: 50, cantidad: p.horas, mes_origen: p.mes_origen, glosa: p.glosa })

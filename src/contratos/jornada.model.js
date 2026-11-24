@@ -20,6 +20,9 @@ const Jornada = sequelize.define("Jornada", {
     // Promedio semanal del ciclo.
     horas_semanales: { type: DataTypes.DECIMAL(5, 2), allowNull: false },
     dias_trabajados: { type: DataTypes.DECIMAL(4, 2), allowNull: false },
+    // Paquete AD: festivos en día de trabajo (descanso | turno) y compensación del festivo trabajado (descanso | pago).
+    festivos: { type: DataTypes.ENUM("descanso", "turno"), allowNull: false, defaultValue: "descanso" },
+    festivo_compensacion: { type: DataTypes.ENUM("descanso", "pago"), allowNull: false, defaultValue: "descanso" },
     activo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }
 }, {
     tableName: "jornadas",

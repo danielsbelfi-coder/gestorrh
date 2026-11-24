@@ -107,7 +107,8 @@ function diasDeDescanso(dias, trabajaDomingo, porCiclo = false) {
 
     if (porCiclo) {
         return dias.filter((fila) => {
-            // esperado.festivo: un festivo con turno de conducción, que se trabaja y sigue siendo festivo (art. 25).
+            // esperado.festivo: un festivo con turno de conducción (art. 25) o de turno (art. 38, paquete AD), que se
+            // trabaja y sigue siendo festivo.
             const cuenta = fila.esperado.tipo === "feriado" || fila.esperado.festivo === true
                 || (fila.diaSemana === DOMINGO && ["laboral", "libre"].includes(fila.esperado.tipo))
             if (!cuenta) {
@@ -122,8 +123,10 @@ function diasDeDescanso(dias, trabajaDomingo, porCiclo = false) {
         // Festivo: se paga si cae en domingo o en un día que la jornada trabaja. En un día de descanso convencional
         // (el sábado de una jornada de lunes a viernes) no se paga (DT: no procede remunerar el sábado festivo).
         // Con jornada que incluye el domingo (art. 38), los días libres ya son el descanso y se pagan como tal.
-        const festivoPagado = fila.esperado.tipo === "feriado"
-            && (fila.diaSemana === DOMINGO || trabajaDomingo || fila.esperado.enJornada !== false)
+        // Paquete AD: un festivo que se trabaja según el turno (esperado.festivo) sigue siendo festivo.
+        const festivoPagado = (fila.esperado.tipo === "feriado"
+            && (fila.diaSemana === DOMINGO || trabajaDomingo || fila.esperado.enJornada !== false))
+            || fila.esperado.festivo === true
         const descanso = festivoPagado
             || (fila.esperado.tipo === "libre" && (fila.diaSemana === DOMINGO || trabajaDomingo))
         if (!descanso) {

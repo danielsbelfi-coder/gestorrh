@@ -842,6 +842,16 @@ async function prepararCalculo(periodo, trabajador) {
     if (saldoCompensatorio.variable !== null) {
         datos.variables = [...datos.variables, saldoCompensatorio.variable]
     }
+    // Paquete AD: festivos trabajados sin día compensatorio al término, a un día de sueldo cada uno (sueldo del mes / 30;
+    // en el contrato diario, el valor del día).
+    const { variableFestivosAlTermino } = require("../asistencia/festivos_compensatorios.service.js")
+    // (Los tramos del sistema semanal ya vienen mensualizados.)
+    const ultimoSueldo = Number(tramosSueldo[tramosSueldo.length - 1].sueldo)
+    const valorDia = contrato.sistema_remuneracion === "diario" ? ultimoSueldo : ultimoSueldo / 30
+    const festivosTermino = await variableFestivosAlTermino(trabajador, periodo, valorDia)
+    if (festivosTermino.variable !== null) {
+        datos.variables = [...datos.variables, festivosTermino.variable]
+    }
 
     let resultado
     try {
@@ -918,10 +928,12 @@ async function prepararCalculo(periodo, trabajador) {
         const { horasPromedioDelPeriodo } = require("../asistencia/promedio_ciclo.service.js")
         const promedio = await horasPromedioDelPeriodo(trabajador, periodo)
         const horasLibro = horasPorRecargo(libro.totales)
-        horasLibro[50] = Math.round((horasLibro[50] + promedio.propuestas.reduce((suma, p) => suma + p.horas, 0)) * 100) / 100
+        // Paquete AD: y las horas de los festivos de turno que se pagan con recargo.
+        const horasFestivo = Math.round(Number(libro.totales.minutos_festivo_pago ?? 0) / 60 * 100) / 100
+        horasLibro[50] = Math.round((horasLibro[50] + horasFestivo + promedio.propuestas.reduce((suma, p) => suma + p.horas, 0)) * 100) / 100
         return [...avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales: libro.totales }), ...promedio.avisos]
     })()
-    const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...(resultado.nuevoSaldoPendiente > 0
+    const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...festivosTermino.avisos, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : [])]
     // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
@@ -975,6 +987,7 @@ async function prepararCalculo(periodo, trabajador) {
         },
         sueldo: { tramos: tramosConDias },
         ...(saldoCompensatorio.detalle ? { saldoCompensatorio: saldoCompensatorio.detalle } : {}),
+        ...(festivosTermino.detalle ? { festivosCompensatorios: festivosTermino.detalle } : {}),
         // Fecha de pago según la regla de la empresa al calcular (null si no tiene). El PDF y la nómina la muestran.
         fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
         cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },

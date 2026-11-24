@@ -4,7 +4,7 @@ const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 const { calcularDiaLaboral } = require("./libro_asistencia.js")
 
 // Tipos que se registran en el libro. licencia_medica no: las licencias se cargan en su propio módulo.
-const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones"]
+const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones", "festivo_libre", "descanso_compensatorio"]
 const TIPOS_CON_HORA = ["normal", "atraso"]
 const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "recargo_hora_extra", "observaciones"]
 
@@ -42,7 +42,7 @@ async function exigirPeriodoAbierto(empresaId, fecha) {
 
 // Valida una marca contra lo esperado ese día según el libro (jornada, feriados, licencias, contrato).
 // Devuelve los datos normalizados.
-async function validarMarca(trabajador, entrada) {
+async function validarMarca(trabajador, entrada, idActual = null) {
     const datos = {
         fecha: entrada.fecha,
         tipo: entrada.tipo,
@@ -72,13 +72,35 @@ async function validarMarca(trabajador, entrada) {
     await exigirPeriodoAbierto(trabajador.empresa_id, datos.fecha)
 
     const libro = await libroDelTrabajador(trabajador, Number(datos.fecha.slice(0, 4)), Number(datos.fecha.slice(5, 7)))
-    const esperado = libro.dias.find((d) => d.fecha === datos.fecha).esperado
+    // Lo esperado según la jornada, antes de aplicar la marca que ya tiene el día (paquete AD: un festivo libre o un
+    // descanso compensatorio aprobados cambian lo esperado del día).
+    const dia = libro.dias.find((d) => d.fecha === datos.fecha)
+    const esperado = dia.esperadoOriginal ?? dia.esperado
 
     if (esperado.tipo === "fuera_contrato") {
         throw new ConflictError("Esa fecha está fuera del contrato del trabajador")
     }
     if (esperado.tipo === "licencia") {
         throw new ConflictError("Ese día el trabajador tiene licencia médica")
+    }
+
+    // Paquete AD: festivos que se trabajan según el turno (art. 38).
+    if (datos.tipo === "festivo_libre" && !(esperado.tipo === "laboral" && esperado.festivo === true)) {
+        throw new ConflictError("«Festivo libre» se registra solo en un festivo que la jornada trabaja según el turno")
+    }
+    if (datos.tipo === "descanso_compensatorio") {
+        if (esperado.tipo !== "laboral" || esperado.festivo === true) {
+            throw new ConflictError("El descanso compensatorio se registra en un día de trabajo que no sea festivo")
+        }
+        const { jornadaEn } = require("./libro_asistencia.js")
+        const { tramosDeJornada, contratoDelMes } = require("./libro_asistencia.service.js")
+        const contrato = await contratoDelMes(trabajador.id, datos.fecha, datos.fecha)
+        const jornada = contrato ? jornadaEn(await tramosDeJornada(contrato), datos.fecha) : null
+        if (jornada?.festivos !== "turno" || jornada.festivo_compensacion !== "descanso") {
+            throw new ConflictError("La jornada del trabajador no compensa los festivos con días de descanso")
+        }
+        const { exigirFestivoDisponible } = require("./festivos_compensatorios.service.js")
+        await exigirFestivoDisponible(trabajador, datos.fecha, idActual)
     }
 
     if (esperado.tipo === "turnos" && TIPOS_CON_HORA.includes(datos.tipo)) {
@@ -227,7 +249,7 @@ async function editarAsistencia(id, entrada, empresasPermitidas, usuarioId) {
         throw new ValidationError("La fecha de una marca no se cambia: elimínala y registra una nueva")
     }
 
-    const datos = await validarMarca(asistencia.Trabajador, finales)
+    const datos = await validarMarca(asistencia.Trabajador, finales, asistencia.id)
 
     return await asistencia.update({
         ...datos,

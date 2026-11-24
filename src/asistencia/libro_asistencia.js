@@ -14,12 +14,14 @@
 // - Cada marca indica el recargo de sus horas extra: 50 % (por defecto) o 100 % (por trato o contrato). Los totales
 //   separan minutos_extra_50 y minutos_extra_100 (16-11-2026: las horas extra del mes solo se registran aquí).
 
-const { diaDelCiclo } = require("../contratos/jornada_legal.js")
+const { diaDelCiclo, minutosDelTurno } = require("../contratos/jornada_legal.js")
 
 const TOLERANCIA_MINUTOS = 5
 const MAXIMO_EXTRA_DIARIO = 120
 const TIPOS_CON_HORA = ["normal", "atraso"]
 const TIPOS_DIA_COMPLETO = ["inasistencia", "permiso_sin_goce", "permiso_con_goce", "vacaciones", "licencia_medica"]
+// Paquete AD: marcas de los festivos que se trabajan según el turno.
+const TIPOS_FESTIVO = ["festivo_libre", "descanso_compensatorio"]
 
 function minutosDe(hora) {
     const coincidencia = /^(\d{2}):(\d{2})/.exec(String(hora ?? ""))
@@ -70,6 +72,15 @@ function esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencia
     const jornada = jornadaEn(tramosJornada, fecha)
     const dias = jornada?.dias ?? null
     if (feriado) {
+        // Paquete AD: festivo en un día de trabajo de una jornada que los trabaja según el turno (art. 38): es un día
+        // laboral (festivo: true). Se compensa con un día de descanso o se pagan sus horas con recargo (ver más abajo).
+        if (jornada !== null && jornada.tipo !== "art25" && jornada.festivos === "turno") {
+            const delTurno = diaDelCiclo(jornada, fecha)
+            if (delTurno?.trabaja) {
+                const laboral = { tipo: "laboral", entrada: delTurno.entrada, salida: delTurno.salida, colacion: Number(delTurno.colacion ?? 0), festivo: true, nombre: feriado.nombre }
+                return minutosDe(delTurno.salida) < minutosDe(delTurno.entrada) ? { ...laboral, cruza: true } : laboral
+            }
+        }
         // enJornada: si ese día se trabaja según la jornada (semana corrida: un festivo en un día de descanso
         // convencional, como el sábado en una jornada de lunes a viernes, no se paga). null = sin jornada.
         // En una jornada por ciclo, el día se busca por su posición en el ciclo (paquete T).
@@ -155,7 +166,8 @@ function calcularDiaLaboral(esperado, marca) {
 
 function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], feriados = [], licencias = [], marcas = [] }) {
     const marcaPorFecha = new Map(marcas.map((m) => [String(m.fecha).slice(0, 10), m]))
-    const totales = { minutos_atraso: 0, minutos_extra: 0, minutos_extra_50: 0, minutos_extra_100: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0 }
+    const totales = { minutos_atraso: 0, minutos_extra: 0, minutos_extra_50: 0, minutos_extra_100: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0,
+        festivos_trabajados: 0, festivos_por_compensar: 0, minutos_festivo_pago: 0, dias_descanso_compensatorio: 0 }
     const advertencias = []
 
     const dias = diasDelMes(anio, mes).map((fecha) => {
@@ -181,6 +193,29 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
         if (esperado.tipo === "licencia") {
             fila.advertencias.push("Marca en un día con licencia médica: no se considera")
             fila.cuenta = false
+            return fila
+        }
+
+        // Paquete AD: festivo de turno que no se trabajó (vuelve a ser feriado) y día de descanso que compensa un festivo
+        // trabajado (el día queda libre: no se trabaja ni se descuenta).
+        if (TIPOS_FESTIVO.includes(marca.tipo)) {
+            const festivoDeTurno = esperado.tipo === "laboral" && esperado.festivo === true
+            if (marca.tipo === "festivo_libre" ? !festivoDeTurno : (esperado.tipo !== "laboral" || festivoDeTurno)) {
+                fila.advertencias.push(marca.tipo === "festivo_libre"
+                    ? "Festivo libre: solo corresponde en un festivo que se trabaja según el turno; no se considera"
+                    : "Descanso compensatorio: solo corresponde en un día de trabajo que no sea festivo; no se considera")
+                fila.cuenta = false
+                return fila
+            }
+            if (aprobada) {
+                fila.esperadoOriginal = esperado
+                fila.esperado = marca.tipo === "festivo_libre"
+                    ? { tipo: "feriado", nombre: esperado.nombre, colacion: esperado.colacion, enJornada: true }
+                    : { tipo: "libre", colacion: esperado.colacion, compensatorio: true }
+                if (marca.tipo === "descanso_compensatorio") {
+                    totales.dias_descanso_compensatorio++
+                }
+            }
             return fila
         }
 
@@ -250,6 +285,28 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
         return fila
     })
 
+    // Paquete AD: festivos de turno trabajados (sin una ausencia de día completo aprobada). Con compensación «pago» se
+    // suman sus horas ordinarias (las trabajadas: sin los minutos descontados) para pagarlas con recargo del 50 %; si no,
+    // cada uno genera un día de descanso compensatorio.
+    for (const fila of dias) {
+        if (fila.esperado.tipo !== "laboral" || fila.esperado.festivo !== true) {
+            continue
+        }
+        const ausente = fila.marca && fila.marca.estado_aprobacion === "aprobada" && TIPOS_DIA_COMPLETO.includes(fila.marca.tipo)
+        if (ausente) {
+            continue
+        }
+        fila.festivoTrabajado = true
+        totales.festivos_trabajados++
+        if (jornadaEn(tramosJornada, fila.fecha)?.festivo_compensacion === "pago") {
+            const ordinarios = minutosDelTurno(fila.esperado) - Number(fila.esperado.colacion ?? 0)
+            totales.minutos_festivo_pago += Math.max(0, ordinarios - (fila.cuenta ? fila.minutosDescuento : 0))
+        } else {
+            fila.festivoPorCompensar = true
+            totales.festivos_por_compensar++
+        }
+    }
+
     if (!tramosJornada.some((t) => Array.isArray(t.dias))) {
         advertencias.push("El contrato no tiene plantilla de jornada: asígnale una (por anexo) para calcular atrasos y horas extra")
     }
@@ -260,4 +317,4 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
     return { dias, totales, advertencias }
 }
 
-module.exports = { TOLERANCIA_MINUTOS, TIPOS_DIA_COMPLETO, calcularLibro, calcularDiaLaboral, esperadoDelDia, jornadaEn, diaDeLaSemana, minutosDe }
+module.exports = { TOLERANCIA_MINUTOS, TIPOS_DIA_COMPLETO, TIPOS_FESTIVO, calcularLibro, calcularDiaLaboral, esperadoDelDia, jornadaEn, diaDeLaSemana, minutosDe }

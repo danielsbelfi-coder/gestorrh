@@ -31,7 +31,8 @@ const tabla = crearTabla({
     columnas: [
         { titulo: "Nombre", valor: (j) => j.nombre },
         { titulo: "Tipo", valor: (j) => TIPOS_JORNADA[j.tipo ?? "semanal"] },
-        { titulo: "Distribución", valor: (j) => j.tipo === "art25" ? `${Number(j.horas_mensuales)} horas mensuales · según la programación de servicios` : textoDistribucion(j.dias, j.tipo) + (j.tipo && j.tipo !== "semanal" && j.inicio_ciclo ? ` · ciclo de ${j.ciclo_dias} días desde el ${fechaCorta(j.inicio_ciclo)}` : "") },
+        { titulo: "Distribución", valor: (j) => j.tipo === "art25" ? `${Number(j.horas_mensuales)} horas mensuales · según la programación de servicios` : textoDistribucion(j.dias, j.tipo) + (j.tipo && j.tipo !== "semanal" && j.inicio_ciclo ? ` · ciclo de ${j.ciclo_dias} días desde el ${fechaCorta(j.inicio_ciclo)}` : "")
+            + (j.festivos === "turno" ? ` · festivos según el turno, ${j.festivo_compensacion === "pago" ? "pagados con recargo" : "con día compensatorio"}` : "") },
         { titulo: "Horas semanales", valor: (j) => Number(j.horas_semanales), numero: true },
         { titulo: "Días por semana", valor: (j) => Number(j.dias_trabajados), numero: true },
         { titulo: "Estado", valor: (j) => textoEstado("jornada", String(j.activo)), html: (j) => insignia("jornada", String(j.activo)) },
@@ -106,6 +107,11 @@ function leerDias() {
     }))
 }
 
+// Paquete AD: la compensación solo se elige si los festivos se trabajan según el turno.
+function aplicarFestivos() {
+    document.getElementById("campoCompensacion").hidden = document.getElementById("festivos").value !== "turno"
+}
+
 // Muestra u oculta los campos del ciclo y de la resolución según el tipo.
 function aplicarTipo() {
     const tipo = tipoActual()
@@ -113,6 +119,8 @@ function aplicarTipo() {
     document.querySelectorAll("[data-art25]").forEach((el) => { el.hidden = tipo !== "art25" })
     document.getElementById("tablaDias").hidden = tipo === "art25"
     document.querySelectorAll("[data-excepcional]").forEach((el) => { el.hidden = tipo !== "excepcional" })
+    document.querySelectorAll("[data-festivos]").forEach((el) => { el.hidden = tipo === "art25" })
+    aplicarFestivos()
     const ciclo = document.getElementById("cicloDias")
     if (tipo === "promedio") {
         ciclo.min = 14
@@ -215,6 +223,8 @@ document.getElementById("filasDias").addEventListener("input", recalcular)
 document.getElementById("horasMensuales").addEventListener("input", recalcular)
 
 document.getElementById("tipo").addEventListener("change", function () {
+    // Paquete AD: en el sistema excepcional y el bisemanal los festivos se trabajan según el turno, por defecto.
+    document.getElementById("festivos").value = ["excepcional", "bisemanal"].includes(tipoActual()) ? "turno" : "descanso"
     aplicarTipo()
     if (tipoActual() === "promedio" && ![14, 21, 28].includes(Number(document.getElementById("cicloDias").value))) {
         document.getElementById("cicloDias").value = 14
@@ -224,6 +234,7 @@ document.getElementById("tipo").addEventListener("change", function () {
 
 // Cambiar el largo del ciclo conserva los días ya cargados que siguen existiendo.
 document.getElementById("cicloDias").addEventListener("change", () => dibujarFilas(leerDias()))
+document.getElementById("festivos").addEventListener("change", aplicarFestivos)
 document.getElementById("inicioCiclo").addEventListener("change", () => dibujarFilas(leerDias()))
 
 // «Armar el ciclo»: N días de trabajo con el mismo horario y luego M de descanso.
@@ -299,6 +310,10 @@ formulario.addEventListener("submit", async function (evento) {
         cuerpo.ciclo_dias = largoCiclo()
         cuerpo.inicio_ciclo = document.getElementById("inicioCiclo").value
     }
+    if (tipo !== "art25") {
+        cuerpo.festivos = document.getElementById("festivos").value
+        cuerpo.festivo_compensacion = document.getElementById("festivoCompensacion").value
+    }
     if (tipo === "excepcional") {
         cuerpo.resolucion_numero = document.getElementById("resolucionNumero").value.trim()
         cuerpo.resolucion_fecha = document.getElementById("resolucionFecha").value
@@ -335,6 +350,8 @@ document.getElementById("tablaJornadas").addEventListener("click", async functio
         document.getElementById("resolucionVigencia").value = jornadaEnEdicion.resolucion_vigencia_hasta ?? ""
         document.getElementById("horasMensuales").value = Number(jornadaEnEdicion.horas_mensuales ?? 180)
         document.getElementById("diasReferencia").value = Number(jornadaEnEdicion.dias_trabajados ?? 6)
+        document.getElementById("festivos").value = jornadaEnEdicion.festivos ?? "descanso"
+        document.getElementById("festivoCompensacion").value = jornadaEnEdicion.festivo_compensacion ?? "descanso"
         aplicarTipo()
         dibujarFilas(jornadaEnEdicion.dias)
         document.getElementById("tituloPanel").textContent = `Editar: ${jornadaEnEdicion.nombre}`
