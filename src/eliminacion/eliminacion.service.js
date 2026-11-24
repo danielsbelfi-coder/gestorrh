@@ -11,6 +11,7 @@ const PASOS_EMPRESA = [
     { tabla: "asistencia_correcciones", filtro: `asistencia_id IN (SELECT id FROM asistencias WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "asistencias", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "turnos_conduccion", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
+    { tabla: "descansos_compensatorios", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "liquidaciones_eliminadas", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },
     { tabla: "liquidacion_lineas", filtro: `liquidacion_id IN (SELECT id FROM liquidaciones WHERE trabajador_id IN (${TRABAJADORES_DE_EMPRESA}))` },
     { tabla: "liquidaciones", filtro: `trabajador_id IN (${TRABAJADORES_DE_EMPRESA})` },

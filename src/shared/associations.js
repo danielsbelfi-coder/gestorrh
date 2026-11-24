@@ -50,6 +50,11 @@ TipoEspera.belongsTo(Empresa, { foreignKey: "empresa_id" })
 TurnoConduccion.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
 Trabajador.hasMany(TurnoConduccion, { foreignKey: "trabajador_id" })
 
+// Paquete AC: descansos compensatorios otorgados (rebajan el saldo de tiempo compensatorio).
+const { DescansoCompensatorio } = require("../asistencia/descanso_compensatorio.model.js")
+DescansoCompensatorio.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
+Trabajador.hasMany(DescansoCompensatorio, { foreignKey: "trabajador_id" })
+
 
 Trabajador.belongsTo(Persona, {
     foreignKey: "persona_id"
@@ -430,5 +435,6 @@ module.exports = {
     Jornada,
     ParametroHistorial,
     TipoEspera,
-    TurnoConduccion
+    TurnoConduccion,
+    DescansoCompensatorio
 }

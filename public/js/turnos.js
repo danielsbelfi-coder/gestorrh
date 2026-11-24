@@ -11,6 +11,9 @@ let datosMes = null
 const CLASES = { terminal: "Terminal", cruce: "Cruce", aduana: "Aduana", mantencion: "Mantención", retraso_operativo: "Retraso operativo", descanso_bordo: "Descanso a bordo", descanso_tierra: "Descanso en tierra", otro: "Otro" }
 
 function horas(minutos) {
+    if (Number(minutos) < 0) {
+        return `−${horas(-Number(minutos))}`
+    }
     const m = Math.round(Number(minutos) || 0)
     const h = Math.floor(m / 60)
     const resto = m % 60
@@ -162,7 +165,7 @@ async function cargarTrabajadores() {
 async function cargarMes() {
     const id = selectorTrabajador.value
     const visible = Boolean(id)
-    for (const elemento of ["resumenTurnos", "panelTurno", "contenedorTurnos", "aprobarMes"]) {
+    for (const elemento of ["resumenTurnos", "panelCompensatorio", "panelTurno", "contenedorTurnos", "aprobarMes"]) {
         document.getElementById(elemento).hidden = !visible
     }
     if (!visible) {
@@ -224,7 +227,78 @@ function dibujarMes() {
     if (!document.getElementById("diasRepetir").hidden) {
         dibujarCalendario()
     }
+    dibujarCompensatorio()
 }
+
+// ---------- Tiempo compensatorio (paquete AC) ----------
+
+function dibujarCompensatorio() {
+    const c = datosMes.compensatorio
+    if (!c) {
+        return
+    }
+    const tarjetas = [
+        ["Saldo al inicio del mes", horas(c.saldoInicial), ""],
+        ["Ganado en el mes", horas(c.ganado), ""],
+        ["Descanso otorgado", horas(c.usado), ""],
+        ["Saldo al cierre del mes", horas(c.saldoFinal), c.saldoFinal < 0 ? "peligro" : ""],
+        ["Descanso por aprobar", horas(c.pendientes), c.pendientes ? "advertencia" : ""]
+    ]
+    document.getElementById("totalesCompensatorio").innerHTML = tarjetas.map(([titulo, valor, clase]) => `
+        <div class="libro-total ${clase}"><span>${escaparHtml(titulo)}</span><strong>${escaparHtml(valor)}</strong></div>`).join("")
+    document.getElementById("avisosCompensatorio").innerHTML = (c.avisos ?? []).map((a) => `<li class="aviso">${escaparHtml(a)}</li>`).join("")
+    document.getElementById("filasDescansos").innerHTML = c.descansos.length
+        ? c.descansos.map((d) => `<tr>
+            <td>${escaparHtml(fechaCorta(d.fecha))}</td>
+            <td class="numero">${escaparHtml(horas(d.minutos))}</td>
+            <td>${escaparHtml(d.observaciones ?? "")}</td>
+            <td>${d.estado_aprobacion === "aprobado" ? "Aprobado" : "Pendiente"}</td>
+            <td>${d.estado_aprobacion !== "aprobado" ? `<button type="button" class="chico" data-aprobar-descanso="${d.id}">Aprobar</button>` : ""}
+                <button type="button" class="chico secundario" data-eliminar-descanso="${d.id}">Eliminar</button></td>
+        </tr>`).join("")
+        : `<tr><td colspan="5" class="texto-suave">Sin descansos compensatorios en el mes.</td></tr>`
+}
+
+document.getElementById("formDescanso").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const r = await llamarApi("/api/turnos-conduccion/descansos", {
+        method: "POST",
+        body: JSON.stringify({
+            trabajador_id: Number(selectorTrabajador.value),
+            fecha: document.getElementById("descansoFecha").value,
+            horas: document.getElementById("descansoHoras").value,
+            observaciones: document.getElementById("descansoObs").value
+        })
+    })
+    if (r.status !== 201) {
+        mensaje("error", r.datos?.error ?? "No se pudo registrar el descanso")
+        return
+    }
+    mensaje("info", "Descanso registrado (pendiente de aprobación).")
+    this.reset()
+    cargarMes()
+})
+
+document.getElementById("filasDescansos").addEventListener("click", async function (evento) {
+    const aprobar = evento.target.closest("[data-aprobar-descanso]")?.dataset.aprobarDescanso
+    const eliminar = evento.target.closest("[data-eliminar-descanso]")?.dataset.eliminarDescanso
+    if (!aprobar && !eliminar) {
+        return
+    }
+    limpiarMensajes()
+    if (eliminar && !confirm("¿Eliminar este descanso compensatorio?")) {
+        return
+    }
+    const r = aprobar
+        ? await llamarApi(`/api/turnos-conduccion/descansos/${aprobar}/aprobar`, { method: "PATCH" })
+        : await llamarApi(`/api/turnos-conduccion/descansos/${eliminar}`, { method: "DELETE" })
+    if (r.status !== 200 && r.status !== 204) {
+        mensaje("error", r.datos?.error ?? "No se pudo completar la acción")
+        return
+    }
+    cargarMes()
+})
 
 // ---------- Formulario de turno ----------
 

@@ -75,6 +75,25 @@
             <div id="tablaEsperas"></div>
         </section>
 
+        <section class="tarjeta" id="panelCompensatorio" hidden>
+            <h3>Tiempo compensatorio</h3>
+            <p class="texto-suave">Las esperas que se compensan con descanso suman al saldo (una hora de espera, una hora de descanso). El saldo no vence y pasa al mes siguiente; si la relación termina con saldo, se paga en la última liquidación al valor hora de esa liquidación.</p>
+            <div class="libro-totales" id="totalesCompensatorio"></div>
+            <ul class="problemas-jornada" id="avisosCompensatorio"></ul>
+            <form id="formDescanso" class="rejilla">
+                <label>Fecha del descanso<input type="date" id="descansoFecha" required></label>
+                <label>Horas de descanso (HH:MM)<input type="text" id="descansoHoras" required placeholder="02:00" pattern="\d{1,2}:[0-5]\d" inputmode="numeric"></label>
+                <label class="campo-ancho">Observaciones<input type="text" id="descansoObs" maxlength="300" placeholder="Ej.: salió a las 16:00 en vez de las 18:00"></label>
+                <div class="acciones-grupo"><button type="submit">Registrar descanso</button></div>
+            </form>
+            <div class="tabla-marco">
+                <table>
+                    <thead><tr><th>Fecha</th><th class="numero">Horas</th><th>Observaciones</th><th>Estado</th><th></th></tr></thead>
+                    <tbody id="filasDescansos"></tbody>
+                </table>
+            </div>
+        </section>
+
         <details class="tarjeta plegable" id="panelTurno" hidden>
             <summary id="tituloTurno">＋ Registrar turno</summary>
             <form id="formTurno">

@@ -5,6 +5,10 @@ const router = express.Router()
 // Turnos de conducción del art. 25 (paquete V).
 router.get("/", c.listar)
 router.get("/trabajadores", c.trabajadores)
+// Paquete AC: descansos compensatorios (rebajan el saldo de tiempo compensatorio).
+router.post("/descansos", c.crearDescanso)
+router.patch("/descansos/:id/aprobar", c.aprobarDescanso)
+router.delete("/descansos/:id", c.eliminarDescanso)
 router.post("/", c.crear)
 router.post("/aprobar-mes", c.aprobarMes)
 router.post("/lote", c.crearLote)

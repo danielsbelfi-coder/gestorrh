@@ -282,6 +282,16 @@ async function huellaAsistencia(trabajadorId, periodo) {
     if (turnos.length > 0) {
         texto += "#" + turnos.map((t) => [t.id, t.fecha, t.hora_inicio, t.hora_fin, t.estado_aprobacion, JSON.stringify(t.pausas ?? [])].join("|")).join(";")
     }
+    // Descansos compensatorios (paquete AC): cambian el saldo que se paga al término. Solo si hay.
+    const { DescansoCompensatorio } = require("../shared/associations.js")
+    const descansos = await DescansoCompensatorio.findAll({
+        where: { trabajador_id: trabajadorId, fecha: { [Op.lte]: ultimoDia } },
+        attributes: ["id", "fecha", "minutos", "estado_aprobacion"],
+        order: [["id", "ASC"]]
+    })
+    if (descansos.length > 0) {
+        texto += "~" + descansos.map((d) => [d.id, d.fecha, d.minutos, d.estado_aprobacion].join("|")).join(";")
+    }
     return require("crypto").createHash("sha256").update(texto).digest("hex")
 }
 
@@ -825,6 +835,14 @@ async function prepararCalculo(periodo, trabajador) {
         conceptos
     }
 
+    // Paquete AC: al término de la relación, el saldo de tiempo compensatorio sin usar se paga al valor hora de esta
+    // liquidación (el mismo que usan las horas extra del mes, sin recargo).
+    const { variableSaldoAlTermino } = require("../asistencia/descanso_compensatorio.service.js")
+    const saldoCompensatorio = await variableSaldoAlTermino(trabajador, periodo, datos.valorHoraContrato ?? valorHoraOrdinaria(datos.sueldoBase, datos.horasSemanales))
+    if (saldoCompensatorio.variable !== null) {
+        datos.variables = [...datos.variables, saldoCompensatorio.variable]
+    }
+
     let resultado
     try {
         resultado = calcularLiquidacionPorLineas(datos)
@@ -903,7 +921,7 @@ async function prepararCalculo(periodo, trabajador) {
         horasLibro[50] = Math.round((horasLibro[50] + promedio.propuestas.reduce((suma, p) => suma + p.horas, 0)) * 100) / 100
         return [...avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales: libro.totales }), ...promedio.avisos]
     })()
-    const avisos = [...porDias.avisos, ...avisosLibro, ...(resultado.nuevoSaldoPendiente > 0
+    const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : [])]
     // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
@@ -956,6 +974,7 @@ async function prepararCalculo(periodo, trabajador) {
             minutosAtraso: resumen.minutos_atraso
         },
         sueldo: { tramos: tramosConDias },
+        ...(saldoCompensatorio.detalle ? { saldoCompensatorio: saldoCompensatorio.detalle } : {}),
         // Fecha de pago según la regla de la empresa al calcular (null si no tiene). El PDF y la nómina la muestran.
         fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
         cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },

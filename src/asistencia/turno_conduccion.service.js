@@ -370,7 +370,9 @@ async function turnosDelMes({ trabajador_id, anio, mes }, empresasPermitidas) {
         topeHoras,
         tipos,
         turnos: filas.map(({ turno, calculo }) => ({ ...turno, calculo })),
-        resumen
+        resumen,
+        // Paquete AC: saldo de tiempo compensatorio del mes y descansos otorgados.
+        compensatorio: await require("./descanso_compensatorio.service.js").compensatorioDelMes(trabajador, a, m)
     }
 }
 
@@ -426,6 +428,9 @@ async function datosParaRemuneraciones(trabajador, anio, mes) {
 }
 
 module.exports = {
+    mapaDeTipos,
+    trabajadorPermitido,
+    exigirPeriodoAbierto,
     datosParaRemuneraciones,
     listarTiposEspera,
     crearTipoEspera,

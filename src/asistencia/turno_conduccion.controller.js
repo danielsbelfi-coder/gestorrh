@@ -47,4 +47,19 @@ async function aprobarMes(req, res) {
     res.status(200).json(await servicio.aprobarMes(req.body ?? {}, req.empresasPermitidas, req.usuario.id))
 }
 
-module.exports = { listarTipos, crearTipo, actualizarTipo, listar, trabajadores, crear, crearLote, actualizar, eliminar, aprobar, aprobarMes }
+const descansos = require("./descanso_compensatorio.service.js")
+
+async function crearDescanso(req, res) {
+    res.status(201).json(await descansos.registrarDescanso(req.body ?? {}, req.empresasPermitidas, req.usuario.id))
+}
+
+async function aprobarDescanso(req, res) {
+    res.status(200).json(await descansos.aprobarDescanso(req.params.id, req.empresasPermitidas, req.usuario.id))
+}
+
+async function eliminarDescanso(req, res) {
+    await descansos.eliminarDescanso(req.params.id, req.empresasPermitidas, req.usuario.id)
+    res.status(204).end()
+}
+
+module.exports = { crearDescanso, aprobarDescanso, eliminarDescanso, listarTipos, crearTipo, actualizarTipo, listar, trabajadores, crear, crearLote, actualizar, eliminar, aprobar, aprobarMes }
