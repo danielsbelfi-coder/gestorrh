@@ -260,4 +260,4 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
     return { dias, totales, advertencias }
 }
 
-module.exports = { TOLERANCIA_MINUTOS, calcularLibro, calcularDiaLaboral, esperadoDelDia, jornadaEn, diaDeLaSemana, minutosDe }
+module.exports = { TOLERANCIA_MINUTOS, TIPOS_DIA_COMPLETO, calcularLibro, calcularDiaLaboral, esperadoDelDia, jornadaEn, diaDeLaSemana, minutosDe }

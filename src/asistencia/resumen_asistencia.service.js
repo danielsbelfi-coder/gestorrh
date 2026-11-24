@@ -10,6 +10,7 @@ const { sequelize } = require("../shared/database.js")
 const { diasLicenciaEnMes, anotarDiasTrabajados } = require("../remuneraciones/dias_pago.js")
 const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 const { RECARGOS, horasPorRecargo } = require("../remuneraciones/horas_extra.js")
+const { horasPromedioDelPeriodo } = require("./promedio_ciclo.service.js")
 
 
 
@@ -232,50 +233,64 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
         resultado.turnos = { jornada_horas: Math.round(turnos.minutosJornada / 60 * 100) / 100, tope_horas: turnos.topeHoras, pendientes: turnos.pendientes, con_errores: turnos.conErrores }
         resultado.tiempo_espera = await sincronizarTiempoEspera(trabajador, periodo, turnos, usuarioId, transaction)
     }
+    // Paquete AB: término a mitad de un ciclo del 22 bis. Las horas sobre el promedio se proponen como horas extra
+    // al 50 %, en variables aparte (con su glosa y, si son de un mes anterior ya cerrado, su mes de origen).
+    const propuestas = RECARGOS.filter((recargo) => horas[recargo] > 0)
+        .map((recargo) => ({ recargo, cantidad: horas[recargo], mes_origen: null, glosa: glosaHoras }))
+    const promedio = await horasPromedioDelPeriodo(trabajador, periodo, transaction)
+    for (const p of promedio.propuestas) {
+        propuestas.push({ recargo: 50, cantidad: p.horas, mes_origen: p.mes_origen, glosa: p.glosa })
+    }
+    if (promedio.propuestas.length > 0 || promedio.avisos.length > 0) {
+        resultado.promedio_22_bis = {
+            horas: Math.round(promedio.propuestas.reduce((suma, p) => suma + p.horas, 0) * 100) / 100,
+            avisos: promedio.avisos
+        }
+    }
+
     const filtroHoras = {
         periodo_id: periodo.id,
         trabajador_id: trabajador.id,
         concepto_id: Object.values(conceptosHoras).map((c) => c.id),
         fuente: "asistencia"
     }
+    const claveVariable = (recargo, cantidad, mesOrigen) => `${recargo}|${Math.round(Number(cantidad) * 100) / 100}|${mesOrigen ? String(mesOrigen).slice(0, 7) : ""}`
+    const totalPor = (lista, recargo) => Math.round(lista.filter((x) => x.recargo === recargo).reduce((suma, x) => suma + Number(x.cantidad), 0) * 100) / 100
 
     // Horas ya aprobadas desde el libro: si siguen iguales, no se tocan. Si el libro cambió (se modificó una marca después
     // de aprobar), la propuesta se reemplaza y queda pendiente de aprobar otra vez (el libro es el origen de las horas).
-    const aprobadas = await VariablePeriodo.findAll({ where: { ...filtroHoras, estado: "aprobada" }, transaction })
+    const aprobadas = (await VariablePeriodo.findAll({ where: { ...filtroHoras, estado: "aprobada" }, transaction }))
+        .map((v) => ({ recargo: RECARGOS.find((r) => conceptosHoras[r].id === v.concepto_id), cantidad: Number(v.cantidad ?? 0), mes_origen: v.mes_origen }))
     if (aprobadas.length > 0) {
-        const aprobadoPor = (recargo) => Math.round(aprobadas
-            .filter((v) => v.concepto_id === conceptosHoras[recargo].id)
-            .reduce((suma, v) => suma + Number(v.cantidad ?? 0), 0) * 100) / 100
-        const iguales = RECARGOS.every((recargo) => aprobadoPor(recargo) === horas[recargo])
-        if (iguales) {
+        const lado = (lista) => lista.map((x) => claveVariable(x.recargo, x.cantidad, x.mes_origen)).sort().join(";")
+        if (lado(aprobadas) === lado(propuestas)) {
             resultado.horas_extra = "sin cambios: las horas aprobadas coinciden con el libro"
             return resultado
         }
         resultado.horas_extra_reemplazadas = RECARGOS
-            .filter((recargo) => aprobadoPor(recargo) !== horas[recargo])
-            .map((recargo) => `al ${recargo} %: ${aprobadoPor(recargo)} h aprobadas → ${horas[recargo]} h en el libro`)
-            .join("; ")
+            .filter((recargo) => totalPor(aprobadas, recargo) !== totalPor(propuestas, recargo))
+            .map((recargo) => `al ${recargo} %: ${totalPor(aprobadas, recargo)} h aprobadas → ${totalPor(propuestas, recargo)} h en el libro`)
+            .join("; ") || "cambió el mes de origen de las horas"
     }
 
     await VariablePeriodo.destroy({ where: filtroHoras, transaction })
 
-    for (const recargo of RECARGOS) {
-        if (horas[recargo] > 0) {
-            await VariablePeriodo.create({
-                periodo_id: periodo.id,
-                trabajador_id: trabajador.id,
-                concepto_id: conceptosHoras[recargo].id,
-                fuente: "asistencia",
-                cantidad: horas[recargo],
-                monto: null,
-                mes_origen: null,
-                glosa: glosaHoras,
-                estado: "pendiente",
-                usuario_registro_id: usuarioId
-            }, { transaction })
-        }
+    for (const propuesta of propuestas) {
+        await VariablePeriodo.create({
+            periodo_id: periodo.id,
+            trabajador_id: trabajador.id,
+            concepto_id: conceptosHoras[propuesta.recargo].id,
+            fuente: "asistencia",
+            cantidad: propuesta.cantidad,
+            monto: null,
+            mes_origen: propuesta.mes_origen,
+            glosa: propuesta.glosa,
+            estado: "pendiente",
+            usuario_registro_id: usuarioId
+        }, { transaction })
     }
 
+    horas = { 50: totalPor(propuestas, 50), 100: totalPor(propuestas, 100) }
     resultado.horas_extra = Math.round((horas[50] + horas[100]) * 100) / 100
     resultado.horas_extra_50 = horas[50]
     resultado.horas_extra_100 = horas[100]

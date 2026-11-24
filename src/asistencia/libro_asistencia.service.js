@@ -61,7 +61,7 @@ async function tramosDeJornada(contrato, transaction) {
 }
 
 // Libro del mes de un trabajador (sin revisar permisos: lo usan obtenerLibro y la generación del resumen).
-async function libroDelTrabajador(trabajador, anio, mes, transaction) {
+async function libroDelTrabajador(trabajador, anio, mes, transaction, { conSemanas = true } = {}) {
     const { primerDia, ultimoDia } = rangoDelMes(anio, mes)
     const contrato = await contratoDelMes(trabajador.id, primerDia, ultimoDia, transaction)
 
@@ -89,6 +89,14 @@ async function libroDelTrabajador(trabajador, anio, mes, transaction) {
         licencias: licencias.map((l) => l.toJSON()),
         marcas: marcas.map((m) => m.toJSON())
     })
+
+    // Jornada en promedio (22 bis): máximo de 52 h semanales entre ordinarias y extra (art. 31). Se revisan las semanas
+    // que terminan en el mes, con los días del mes anterior para la primera (paquete AB).
+    if (conSemanas && tramos.some((t) => t.tipo === "promedio")) {
+        const { semanasSobreMaximo } = require("./promedio_ciclo.js")
+        const anterior = await libroDelTrabajador(trabajador, mes === 1 ? anio - 1 : anio, mes === 1 ? 12 : mes - 1, transaction, { conSemanas: false })
+        libro.advertencias.push(...semanasSobreMaximo({ dias: [...anterior.dias, ...libro.dias], tramos, desde: primerDia, hasta: ultimoDia }))
+    }
 
     if (!contrato.comuna_prestacion) {
         libro.advertencias.push("El contrato no tiene comuna de prestación: solo se consideran los feriados nacionales")
@@ -118,4 +126,4 @@ async function obtenerLibro({ trabajador_id, anio, mes }, empresasPermitidas) {
 
 module.exports = {
     rangoDelMes,
-    contratoDelMes, obtenerLibro, libroDelTrabajador }
+    contratoDelMes, tramosDeJornada, obtenerLibro, libroDelTrabajador }

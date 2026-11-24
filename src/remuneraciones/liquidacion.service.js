@@ -896,7 +896,12 @@ async function prepararCalculo(periodo, trabajador) {
             }
             return avisos
         }
-        return avisosLibroDesincronizado({ horasLibro: horasPorRecargo(libro.totales), aprobadas, resumen, totales: libro.totales })
+        // Paquete AB: las horas sobre el promedio del ciclo del 22 bis al término también vienen del libro.
+        const { horasPromedioDelPeriodo } = require("../asistencia/promedio_ciclo.service.js")
+        const promedio = await horasPromedioDelPeriodo(trabajador, periodo)
+        const horasLibro = horasPorRecargo(libro.totales)
+        horasLibro[50] = Math.round((horasLibro[50] + promedio.propuestas.reduce((suma, p) => suma + p.horas, 0)) * 100) / 100
+        return [...avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales: libro.totales }), ...promedio.avisos]
     })()
     const avisos = [...porDias.avisos, ...avisosLibro, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]

@@ -176,15 +176,29 @@ document.getElementById("btnGenerar").addEventListener("click", async function (
     }
     const resultados = Array.isArray(resultado.datos) ? resultado.datos : []
     const horas = resultados.reduce((suma, r) => suma + (Number(r.horas_extra) || 0), 0)
-    mensaje("info", `Resúmenes generados para ${resultados.length} trabajador(es).${horas > 0 ? ` Se propusieron ${horas} horas extra como variables pendientes: revísalas en Variables.` : ""}`)
+    // Término a mitad de un ciclo del 22 bis (paquete AB): horas sobre el promedio propuestas como horas extra.
+    const conPromedio = resultados.filter((r) => r.promedio_22_bis?.horas > 0)
+    const horasPromedio = conPromedio.reduce((suma, r) => suma + r.promedio_22_bis.horas, 0)
+    mensaje("info", `Resúmenes generados para ${resultados.length} trabajador(es).${horas > 0 ? ` Se propusieron ${horas} horas extra como variables pendientes: revísalas en Variables.` : ""}` +
+        (horasPromedio > 0 ? ` De ellas, ${horasPromedio} h son de ${conPromedio.length} término(s) a mitad de un ciclo en promedio (art. 22 bis): las horas sobre el promedio del ciclo se pagan como horas extra al 50 %.` : ""))
+    // Los avisos se juntan en un solo mensaje (cada mensaje reemplaza al anterior).
+    const errores = []
     // El libro cambió después de aprobar: horas extra reemplazadas y resúmenes aprobados que ya no coinciden.
     const reemplazadas = resultados.filter((r) => r.horas_extra_reemplazadas)
     if (reemplazadas.length > 0) {
-        mensaje("error", `El libro de asistencia cambió después de aprobar las horas extra de ${reemplazadas.length} trabajador(es) (${reemplazadas.map((r) => r.horas_extra_reemplazadas).join(" · ")}). La propuesta se reemplazó por la del libro y quedó pendiente: apruébala en Variables y vuelve a calcular.`)
+        errores.push(`El libro de asistencia cambió después de aprobar las horas extra de ${reemplazadas.length} trabajador(es) (${reemplazadas.map((r) => r.horas_extra_reemplazadas).join(" · ")}). La propuesta se reemplazó por la del libro y quedó pendiente: apruébala en Variables y vuelve a calcular.`)
     }
     const desactualizados = resultados.filter((r) => r.resumen_desactualizado)
     if (desactualizados.length > 0) {
-        mensaje("error", `${desactualizados.length} resumen(es) aprobado(s) ya no coinciden con el libro de asistencia (días o atrasos). Para tomar el libro: Desaprobar el resumen, «Generar desde la asistencia» y aprobar.`)
+        errores.push(`${desactualizados.length} resumen(es) aprobado(s) ya no coinciden con el libro de asistencia (días o atrasos). Para tomar el libro: Desaprobar el resumen, «Generar desde la asistencia» y aprobar.`)
+    }
+    for (const r of resultados) {
+        for (const aviso of r.promedio_22_bis?.avisos ?? []) {
+            errores.push(`${filas.find((f) => f.trabajador.id === r.trabajador_id)?.trabajador.nombre ?? "Trabajador " + r.trabajador_id}: ${aviso}.`)
+        }
+    }
+    if (errores.length > 0) {
+        mensaje("error", errores.join(" "))
     }
     cargarResumenes()
 })
