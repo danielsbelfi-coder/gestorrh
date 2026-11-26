@@ -41,10 +41,22 @@ test("validarPrevision: salud obligatoria, AFP válida u omitida (técnico extra
 
 test("normalizarPrevision: Fonasa sin isapre ni plan; plan con coma decimal", () => {
     assert.deepEqual(p.normalizarPrevision({ desde: "2027-03", afp_id: "2", sistema_salud: "Fonasa", isapre_id: 4, plan_isapre_uf: 3 }),
-        { desde: "2027-03-01", afp_id: 2, sistema_salud: "Fonasa", isapre_id: null, plan_isapre_uf: null })
+        { desde: "2027-03-01", regimen: "AFP", ex_caja_regimen_id: null, cotiza_desahucio: false, afp_id: 2, sistema_salud: "Fonasa", isapre_id: null, plan_isapre_uf: null })
     assert.deepEqual(p.normalizarPrevision({ desde: "siempre", afp_id: 1, sistema_salud: "Isapre", isapre_id: "4", plan_isapre_uf: "3,25" }),
-        { desde: "1900-01-01", afp_id: 1, sistema_salud: "Isapre", isapre_id: 4, plan_isapre_uf: 3.25 })
+        { desde: "1900-01-01", regimen: "AFP", ex_caja_regimen_id: null, cotiza_desahucio: false, afp_id: 1, sistema_salud: "Isapre", isapre_id: 4, plan_isapre_uf: 3.25 })
     assert.equal(p.normalizarPrevision({ desde: "2027-03", afp_id: "", sistema_salud: "Fonasa" }).afp_id, null)
+})
+
+test("previsión IPS: exige ex-caja, rechaza AFP y normaliza el desahucio", () => {
+    assert.deepEqual(p.validarPrevision({ desde: "2027-03", regimen: "IPS", ex_caja_regimen_id: 85, sistema_salud: "Fonasa" }), [])
+    assert.ok(p.validarPrevision({ desde: "2027-03", regimen: "IPS", sistema_salud: "Fonasa" }).length > 0)
+    assert.ok(p.validarPrevision({ desde: "2027-03", regimen: "IPS", ex_caja_regimen_id: 85, afp_id: 2, sistema_salud: "Fonasa" }).length > 0)
+    assert.ok(p.validarPrevision({ desde: "2027-03", regimen: "otro", sistema_salud: "Fonasa" }).length > 0)
+    const n = p.normalizarPrevision({ desde: "2027-03", regimen: "IPS", ex_caja_regimen_id: "85", afp_id: 2, sistema_salud: "Fonasa" })
+    assert.equal(n.ex_caja_regimen_id, 85)
+    assert.equal(n.afp_id, null)
+    assert.equal(n.cotiza_desahucio, true)
+    assert.equal(p.normalizarPrevision({ desde: "2027-03", regimen: "IPS", ex_caja_regimen_id: 85, cotiza_desahucio: "false", sistema_salud: "Fonasa" }).cotiza_desahucio, false)
 })
 
 test("mesesCerradosAlcanzados: solo los meses cerrados desde el cambio en adelante", () => {

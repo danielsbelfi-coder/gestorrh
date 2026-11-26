@@ -9,6 +9,10 @@ const PrevisionPersona = sequelize.define("PrevisionPersona", {
     sistema_salud: { type: DataTypes.ENUM("Fonasa", "Isapre"), allowNull: true },
     isapre_id: { type: DataTypes.INTEGER, allowNull: true },
     plan_isapre_uf: { type: DataTypes.DECIMAL(8, 4), allowNull: true },
+    // Paquete AG: régimen previsional (AFP o IPS, ex INP), ex-caja y régimen, y si cotiza desahucio.
+    regimen: { type: DataTypes.ENUM("AFP", "IPS"), allowNull: false, defaultValue: "AFP" },
+    ex_caja_regimen_id: { type: DataTypes.INTEGER, allowNull: true },
+    cotiza_desahucio: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     usuario_registro_id: { type: DataTypes.INTEGER, allowNull: true }
 }, {
     tableName: "previsiones_persona",

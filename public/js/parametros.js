@@ -85,6 +85,7 @@ async function cargarMes() {
     mostrarCargaMes(datos.faltantes)
     tablaTramos.mostrar(datos.tramos)
     await cargarFactores()
+    await cargarExCajas()
 
     const nombreMes = nombrePeriodo({ mes: Number(mesTexto().slice(5, 7)), anio: Number(mesTexto().slice(0, 4)) })
     document.getElementById("estadoMes").innerHTML = datos.faltantes.length === 0
@@ -221,6 +222,60 @@ document.getElementById("tablaParametros").addEventListener("click", async funct
     mensaje("info", `${parametro.codigo} actualizado.`)
 })
 
+// ---------- Ex-cajas del IPS (paquete AG) ----------
+const porcentaje = (n) => `${Number(n).toLocaleString("es-CL", { minimumFractionDigits: 2 })} %`
+
+const tablaExCajas = crearTabla({
+    contenedor: "tablaExCajas",
+    textoBuscar: "Buscar ex-caja…",
+    vacio: "No hay ex-cajas.",
+    columnas: [
+        { titulo: "LRE", valor: (c) => c.codigo_lre, numero: true },
+        { titulo: "Previred", valor: (c) => c.codigo_previred },
+        { titulo: "Ex-caja", valor: (c) => c.caja },
+        { titulo: "Régimen", valor: (c) => c.regimen, numero: true },
+        { titulo: "Previsión", valor: (c) => c.tasa?.tasa_prevision ?? -1, html: (c) => c.tasa ? escaparHtml(porcentaje(c.tasa.tasa_prevision)) : `<span class="insignia advertencia">Sin tasa</span>`, numero: true },
+        { titulo: "Desahucio", valor: (c) => c.tasa?.tasa_desahucio ?? -1, html: (c) => c.codigo_desahucio ? (c.tasa ? escaparHtml(porcentaje(c.tasa.tasa_desahucio)) : "") : "No aplica", numero: true },
+        { titulo: "Desde", valor: (c) => c.tasa?.desde ?? "", html: (c) => c.tasa ? escaparHtml(fechaCorta(c.tasa.desde)) : "" },
+        { titulo: "Fuente", valor: (c) => c.tasa?.fuente ?? "" }
+    ]
+})
+
+async function cargarExCajas() {
+    const resultado = await llamarApi(`/api/ex-cajas?fecha=${mesTexto()}-01`)
+    if (resultado.status !== 200) {
+        return
+    }
+    // Primero las que tienen tasa (las que se usan), luego el resto por código.
+    tablaExCajas.mostrar([...resultado.datos].sort((a, b) => (b.tasa ? 1 : 0) - (a.tasa ? 1 : 0) || a.codigo_lre - b.codigo_lre))
+    const select = document.getElementById("tasaExCaja")
+    if (select.options.length === 0) {
+        llenarSelect(select, resultado.datos.map((c) => ({ id: c.id, texto: `${c.codigo_lre} · ${c.caja} – régimen ${c.regimen}` })), "Elige la ex-caja")
+    }
+}
+
+document.getElementById("formTasaExCaja").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const id = document.getElementById("tasaExCaja").value
+    const resultado = await llamarApi(`/api/ex-cajas/${id}/tasas`, {
+        method: "POST",
+        body: JSON.stringify({
+            desde: document.getElementById("tasaExDesde").value,
+            tasa_prevision: document.getElementById("tasaExPrevision").value,
+            tasa_desahucio: document.getElementById("tasaExDesahucio").value,
+            fuente: document.getElementById("tasaExFuente").value
+        })
+    })
+    if (resultado.status !== 201) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo registrar la tasa")
+        return
+    }
+    mensaje("info", "Tasa registrada.")
+    this.reset()
+    await cargarExCajas()
+})
+
 // ---------- Historial de cambios (solo soporte) ----------
 const ACCIONES_HISTORIAL = { correccion: "Corrección", apertura_mes: "Apertura de mes" }
 
@@ -255,6 +310,7 @@ document.addEventListener("usuario-listo", function (evento) {
     esSoporte = evento.detail.rol_plataforma === "soporte"
     document.getElementById("panelSoporte").hidden = !esSoporte
     document.getElementById("panelCambios").hidden = !esSoporte
+    document.getElementById("formTasaExCaja").hidden = !esSoporte
     if (esSoporte) {
         cargarCambios()
     }

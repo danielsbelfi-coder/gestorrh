@@ -72,7 +72,9 @@ function armarDocumento(liquidacion, cargo, { fechaPago = null } = {}) {
             cargo: cargo ? cargo.nombre : "",
             fechaIngreso: fechaChilena(liquidacion.Trabajador.fecha_ingreso),
             tipoContrato: TIPOS_CONTRATO[liquidacion.snapshot_contrato.tipo_contrato] ?? "",
-            afp: persona.Afp ? persona.Afp.nombre : "",
+            // Imponente IPS (paquete AG): en vez de la AFP, la ex-caja y su régimen.
+            etiquetaPrevision: detalle.ips ? "Previsión" : "AFP",
+            afp: detalle.ips ? `IPS (ex INP) ${detalle.ips.caja} régimen ${detalle.ips.regimen}` : persona.Afp ? persona.Afp.nombre : "",
             salud: persona.sistema_salud === "Isapre" ? (persona.Isapre ? persona.Isapre.nombre : "Isapre") : "Fonasa",
             sueldoBase: Number(liquidacion.snapshot_contrato.sueldo_base),
             diasTrabajados: liquidacion.dias_trabajados

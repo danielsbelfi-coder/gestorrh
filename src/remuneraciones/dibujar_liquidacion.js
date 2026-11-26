@@ -28,7 +28,7 @@ function datosTrabajador(doc, d) {
         ["Nombre", t.nombre, "RUT", t.rut],
         ["Cargo", t.cargo, "Fecha de ingreso", t.fechaIngreso],
         ["Tipo de contrato", t.tipoContrato, "Sueldo base", pesos(t.sueldoBase)],
-        ["AFP", t.afp, "Salud", t.salud],
+        [t.etiquetaPrevision ?? "AFP", t.afp, "Salud", t.salud],
         ["Días trabajados", String(t.diasTrabajados), d.fechaPago ? "Fecha de pago" : "", d.fechaPago ?? ""]
     ]
     const mitad = ANCHO / 2

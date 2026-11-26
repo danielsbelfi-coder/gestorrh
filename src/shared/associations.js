@@ -50,6 +50,12 @@ TipoEspera.belongsTo(Empresa, { foreignKey: "empresa_id" })
 TurnoConduccion.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
 Trabajador.hasMany(TurnoConduccion, { foreignKey: "trabajador_id" })
 
+// Paquete AG: ex-cajas de previsión (IPS, ex INP) y la previsión de la persona en una de ellas.
+const { ExCajaRegimen, TasaExCaja } = require("../remuneraciones/ex_caja.model.js")
+TasaExCaja.belongsTo(ExCajaRegimen, { foreignKey: "ex_caja_regimen_id" })
+ExCajaRegimen.hasMany(TasaExCaja, { foreignKey: "ex_caja_regimen_id" })
+PrevisionPersona.belongsTo(ExCajaRegimen, { foreignKey: "ex_caja_regimen_id" })
+
 // Paquete AC: descansos compensatorios otorgados (rebajan el saldo de tiempo compensatorio).
 const { DescansoCompensatorio } = require("../asistencia/descanso_compensatorio.model.js")
 DescansoCompensatorio.belongsTo(Trabajador, { foreignKey: "trabajador_id" })
@@ -436,5 +442,7 @@ module.exports = {
     ParametroHistorial,
     TipoEspera,
     TurnoConduccion,
-    DescansoCompensatorio
+    DescansoCompensatorio,
+    ExCajaRegimen,
+    TasaExCaja
 }

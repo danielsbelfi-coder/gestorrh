@@ -336,3 +336,21 @@ test("depósito convenido sobre 900 UF en el año: el exceso es haber tributable
     assert.ok(monto(pasa, "IMPUESTO_UNICO") > monto(dentro, "IMPUESTO_UNICO"))
     assert.deepStrictEqual({ tope: pasa.ahorros.depositoConvenido.tope, exceso: pasa.ahorros.depositoConvenido.exceso }, { tope: 36000000, exceso: 1000000 })
 })
+
+test("imponente IPS (EMPART): 20,70 % de pensión y 1,14 % de desahucio sobre la renta topada en 60 UF, sin AFP", () => {
+    const conIps = { ...CONCEPTOS, COTIZACION_IPS: concepto("COTIZACION_IPS", "descuento"), COTIZACION_DESAHUCIO: concepto("COTIZACION_DESAHUCIO", "descuento") }
+    const r = liquidar({ sueldoBase: 900000, conceptos: conIps, tasaAfp: 0, tasaIps: 20.70, tasaDesahucio: 1.14, topeImponibleUF: 60 })
+    assert.strictEqual(r.rentaImponible, 1097917)
+    assert.strictEqual(monto(r, "AFP"), 0)
+    assert.strictEqual(monto(r, "COTIZACION_IPS"), Math.round(1097917 * 0.207))
+    assert.strictEqual(monto(r, "COTIZACION_DESAHUCIO"), Math.round(1097917 * 0.0114))
+
+    // Sobre el tope: 60 UF × 40.000 = 2.400.000
+    const alto = liquidar({ sueldoBase: 3000000, conceptos: conIps, tasaAfp: 0, tasaIps: 20.70, tasaDesahucio: 1.14, topeImponibleUF: 60 })
+    assert.strictEqual(monto(alto, "COTIZACION_IPS"), Math.round(2400000 * 0.207))
+    assert.strictEqual(monto(alto, "SALUD"), Math.round(2400000 * 0.07))
+
+    // Ambas rebajan la base tributable, igual que la AFP
+    const afp = liquidar({ sueldoBase: 900000 })
+    assert.ok(r.baseTributable < afp.baseTributable)
+})

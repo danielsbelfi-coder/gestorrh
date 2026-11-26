@@ -188,3 +188,25 @@ test("segundo contrato: la línea madre va con tipo 02 y sus movimientos como 01
     assert.strictEqual(adicional[13], "01")
     assert.strictEqual(lineas(datos)[0].split(";")[13], "00")
 })
+
+test("imponente IPS EMPART: sin AFP ni SIS; ex-caja, tasa, renta y cotización en 62-65 y desahucio en 66-69", () => {
+    const ips = { codigo: "0101", tasa: 20.7, cotizacion: 221966, codigoDesahucio: "0101", tasaDesahucio: 1.14, desahucio: 12224 }
+    const campos = asignar(lineaVacia(), camposPrevision({ ...prevision, codigoAfp: "00", rentaAfp: 0, afp: 0, cuentaIndividual: 0, sis: 0, ips }))
+
+    assert.deepStrictEqual(campos.slice(25, 29), ["00", 0, 0, 0])
+    assert.deepStrictEqual(campos.slice(61, 70), ["0101", "20,70", 1072299, 221966, 1072299, "0101", "01,14", 12224, 75061])
+
+    // Sin desahucio (pensionado IPS o quien no cotiza): 66-69 quedan con su relleno
+    const sinDesahucio = asignar(lineaVacia(), camposPrevision({ ...prevision, codigoAfp: "00", rentaAfp: 0, afp: 0, sis: 0, ips: { ...ips, desahucio: 0 } }))
+    assert.deepStrictEqual(sinDesahucio.slice(65, 69), [0, "0000", "00,00", 0])
+
+    // Pensionado IPS: no cotiza pensión (62-65 vacíos), sí desahucio si se configuró
+    const pensionado = asignar(lineaVacia(), camposPrevision({ ...prevision, codigoAfp: "00", rentaAfp: 0, afp: 0, sis: 0, ips: { ...ips, cotizacion: 0 } }))
+    assert.deepStrictEqual(pensionado.slice(61, 63), ["0000", "00,00"])
+    assert.strictEqual(pensionado[64], 0)
+    assert.strictEqual(pensionado[68], 12224)
+})
+
+test("régimen INP en el campo 11", () => {
+    assert.strictEqual(camposTrabajador({ ...ana, regimen: "INP" })[11], "INP")
+})

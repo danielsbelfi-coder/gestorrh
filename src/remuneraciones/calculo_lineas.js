@@ -137,6 +137,9 @@ function calcularLiquidacionPorLineas(datos) {
     const baseCotizaciones = Math.min(rentaImponible, Math.max(0, topeImponible - Number(anterior?.baseCotizaciones ?? 0)))
 
     const descuentoAFP = Math.round(baseCotizaciones * tasaAfp / 100)
+    // Paquete AG: imponente del IPS (ex INP): previsión de su ex-caja y desahucio, sobre la misma base (tope 60 UF).
+    const descuentoIps = Math.round(baseCotizaciones * Number(datos.tasaIps ?? 0) / 100)
+    const descuentoDesahucio = Math.round(baseCotizaciones * Number(datos.tasaDesahucio ?? 0) / 100)
     const descuentoSaludLegal = Math.round(baseCotizaciones * tasaSalud / 100)
     const descuentoPlanPactado = Math.round(planSaludUF * valorUF)
     const descuentoSalud = Math.max(descuentoSaludLegal, descuentoPlanPactado)
@@ -157,7 +160,7 @@ function calcularLiquidacionPorLineas(datos) {
         }
     }
 
-    const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoSaludLegal + descuentoCesantia) - ahorros.rebajaTributable)
+    const baseTributable = Math.max(0, sumarSegun(lineas, "tributable") - (descuentoAFP + descuentoIps + descuentoDesahucio + descuentoSaludLegal + descuentoCesantia) - ahorros.rebajaTributable)
     const baseTributableMes = baseTributable + Number(anterior?.baseTributable ?? 0)
     const baseEnUTM = baseTributableMes / valorUTM
     const tramo = buscarTramo(tramos, baseEnUTM)
@@ -166,6 +169,8 @@ function calcularLiquidacionPorLineas(datos) {
 
     const legales = [
         { concepto: conceptos.AFP, monto: descuentoAFP },
+        { concepto: conceptos.COTIZACION_IPS, monto: descuentoIps },
+        { concepto: conceptos.COTIZACION_DESAHUCIO, monto: descuentoDesahucio },
         { concepto: conceptos.SALUD, monto: descuentoSaludLegal },
         { concepto: conceptos.SALUD_ADICIONAL_ISAPRE, monto: descuentoAdicionalIsapre },
         { concepto: conceptos.CESANTIA, monto: descuentoCesantia },
@@ -209,6 +214,8 @@ function calcularLiquidacionPorLineas(datos) {
         rentaImponible,
         topeImponible,
         baseCotizaciones,
+        descuentoIps,
+        descuentoDesahucio,
         descuentoSaludLegal,
         descuentoPlanPactado,
         descuentoAdicionalIsapre,

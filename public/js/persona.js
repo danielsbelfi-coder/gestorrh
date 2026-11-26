@@ -139,7 +139,7 @@ async function cargarPersona() {
     document.getElementById("seccionProgresivo").hidden = false
     mostrarProgresivo()
     mostrarCamposAhorro()
-    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarTramos(), cargarCargas(), cargarAhorros(), cargarSaldos()])
+    await Promise.all([cargarRelaciones(), cargarSituaciones(), cargarPrevisiones(), cargarExCajas(), cargarTramos(), cargarCargas(), cargarAhorros(), cargarSaldos()])
     avisoSinTramo()
 }
 
@@ -322,6 +322,34 @@ function textoDesde(desde) {
     return texto === DESDE_SIEMPRE ? "Desde siempre" : texto.slice(0, 7).split("-").reverse().join("-")
 }
 
+// Paquete AG: imponente de una ex-caja del IPS (ex INP).
+function textoPrevision(p) {
+    if (p.regimen === "IPS") {
+        const caja = p.ExCajaRegimen ? `${p.ExCajaRegimen.caja} régimen ${p.ExCajaRegimen.regimen}` : "ex-caja"
+        return `IPS: ${caja}${p.ExCajaRegimen?.codigo_desahucio ? (p.cotiza_desahucio ? ", con desahucio" : ", sin desahucio") : ""}`
+    }
+    return p.Afp?.nombre ?? "Sin AFP"
+}
+
+async function cargarExCajas() {
+    const resultado = await llamarApi("/api/ex-cajas")
+    if (resultado.status !== 200) {
+        return
+    }
+    llenarSelect(document.getElementById("prevExCaja"), resultado.datos.map((c) => ({
+        id: c.id,
+        texto: `${c.caja} – régimen ${c.regimen}${c.tasa ? ` (${c.tasa.tasa_prevision.toLocaleString("es-CL")} %)` : " (sin tasa)"}`
+    })), "Elige la ex-caja")
+}
+
+function mostrarCamposRegimenPrevision() {
+    const esIps = valor("prevRegimen") === "IPS"
+    document.querySelectorAll(".solo-ips-prev").forEach((campo) => { campo.hidden = !esIps })
+    document.querySelectorAll(".solo-afp-prev").forEach((campo) => { campo.hidden = esIps })
+    document.getElementById("prevExCaja").required = esIps
+}
+document.getElementById("prevRegimen").addEventListener("change", mostrarCamposRegimenPrevision)
+
 async function cargarPrevisiones() {
     const resultado = await llamarApi(`/api/personas/${personaId}/previsiones`)
     if (resultado.status !== 200) {
@@ -329,11 +357,11 @@ async function cargarPrevisiones() {
         return
     }
     document.getElementById("previsiones").innerHTML = `<table>
-        <thead><tr><th>Desde</th><th>AFP</th><th>Salud</th><th>Plan (UF)</th><th></th></tr></thead>
+        <thead><tr><th>Desde</th><th>Previsión</th><th>Salud</th><th>Plan (UF)</th><th></th></tr></thead>
         <tbody>${resultado.datos.map((p) => `
             <tr>
                 <td>${escaparHtml(textoDesde(p.desde))}</td>
-                <td>${escaparHtml(p.Afp?.nombre ?? "Sin AFP")}</td>
+                <td>${escaparHtml(textoPrevision(p))}</td>
                 <td>${escaparHtml(p.sistema_salud === "Isapre" ? (p.Isapre?.nombre ?? "Isapre") : (p.sistema_salud ?? "Sin informar"))}</td>
                 <td class="numero">${p.sistema_salud === "Isapre" ? escaparHtml(Number(p.plan_isapre_uf).toLocaleString("es-CL", { maximumFractionDigits: 4 })) : ""}</td>
                 <td>${String(p.desde).slice(0, 10) === DESDE_SIEMPRE ? "" : `<button type="button" class="chico secundario" data-eliminar-prevision="${p.id}">Eliminar</button>`}</td>
@@ -369,11 +397,15 @@ document.getElementById("formPrevision").addEventListener("submit", async functi
     evento.preventDefault()
     limpiarMensajes()
     const esIsapre = valor("prevSistema") === "Isapre"
+    const esIps = valor("prevRegimen") === "IPS"
     const inicial = document.getElementById("prevInicial").checked
 
     const creada = await crearRegistro(`/api/personas/${personaId}/previsiones`, {
         desde: inicial ? "siempre" : valor("prevDesde"),
-        afp_id: numeroONulo("prevAfp"),
+        regimen: esIps ? "IPS" : "AFP",
+        ex_caja_regimen_id: esIps ? numeroONulo("prevExCaja") : null,
+        cotiza_desahucio: esIps && document.getElementById("prevDesahucio").checked,
+        afp_id: esIps ? null : numeroONulo("prevAfp"),
         sistema_salud: valor("prevSistema"),
         isapre_id: esIsapre ? numeroONulo("prevIsapre") : null,
         plan_isapre_uf: esIsapre ? valor("prevPlan") : null
@@ -383,6 +415,7 @@ document.getElementById("formPrevision").addEventListener("submit", async functi
         this.reset()
         document.getElementById("prevDesde").disabled = false
         mostrarCamposIsaprePrevision()
+        mostrarCamposRegimenPrevision()
         await Promise.all([cargarPrevisiones(), refrescarVigente()])
     }
 })

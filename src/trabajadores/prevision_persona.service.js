@@ -1,13 +1,13 @@
 // Historial de previsión (AFP y salud) por mes. Ver «Historial de previsión» en el SPEC.
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
-const { PrevisionPersona, Persona, Afp, Isapre, Liquidacion, PeriodoRemuneracion, Trabajador } = require("../shared/associations.js")
+const { PrevisionPersona, Persona, Afp, Isapre, Liquidacion, PeriodoRemuneracion, Trabajador, ExCajaRegimen } = require("../shared/associations.js")
 const { obtenerPersonaPorId } = require("./persona.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { DESDE_SIEMPRE, previsionDelMes, validarPrevision, normalizarPrevision, mesesCerradosAlcanzados } = require("./prevision_del_mes.js")
 
-const INCLUIR_INSTITUCIONES = [{ model: Afp, attributes: ["id", "nombre"] }, { model: Isapre, attributes: ["id", "nombre"] }]
+const INCLUIR_INSTITUCIONES = [{ model: Afp, attributes: ["id", "nombre"] }, { model: Isapre, attributes: ["id", "nombre"] }, { model: ExCajaRegimen }]
 
 async function listarPrevisiones(personaId, empresasPermitidas) {
     const persona = await obtenerPersonaPorId(personaId, empresasPermitidas)
@@ -45,6 +45,9 @@ async function sincronizarPersona(personaId, transaction, hoy = new Date()) {
 }
 
 async function exigirInstituciones(datos) {
+    if (datos.regimen === "IPS" && (await ExCajaRegimen.findByPk(datos.ex_caja_regimen_id)) === null) {
+        throw new ValidationError("La ex-caja y el régimen indicados no existen")
+    }
     const afp = datos.afp_id === null ? null : await Afp.findByPk(datos.afp_id)
     if (datos.afp_id !== null && (afp === null || afp.estado === "inactivo")) {
         throw new ValidationError("La AFP indicada no existe o no está activa")
@@ -112,13 +115,22 @@ async function eliminarPrevision(personaId, id, empresasPermitidas, usuarioId) {
 async function previsionEnMes(persona, anio, mes) {
     const filas = await PrevisionPersona.findAll({
         where: { persona_id: persona.id, desde: { [Op.lte]: `${anio}-${String(mes).padStart(2, "0")}-01` } },
-        include: [Afp, Isapre]
+        include: [Afp, Isapre, ExCajaRegimen]
     })
     const fila = previsionDelMes(filas, anio, mes)
     if (fila === null) {
-        return { afp: persona.Afp ?? null, sistema_salud: persona.sistema_salud, isapre: persona.Isapre ?? null, plan_isapre_uf: persona.plan_isapre_uf }
+        return { regimen: "AFP", exCaja: null, cotizaDesahucio: false, afp: persona.Afp ?? null, sistema_salud: persona.sistema_salud, isapre: persona.Isapre ?? null, plan_isapre_uf: persona.plan_isapre_uf }
     }
-    return { afp: fila.Afp, sistema_salud: fila.sistema_salud, isapre: fila.Isapre, plan_isapre_uf: fila.plan_isapre_uf }
+    // Paquete AG: imponente del IPS (ex INP): su ex-caja y régimen, y si cotiza desahucio.
+    return {
+        regimen: fila.regimen ?? "AFP",
+        exCaja: fila.ExCajaRegimen ?? null,
+        cotizaDesahucio: fila.cotiza_desahucio !== false,
+        afp: fila.Afp,
+        sistema_salud: fila.sistema_salud,
+        isapre: fila.Isapre,
+        plan_isapre_uf: fila.plan_isapre_uf
+    }
 }
 
 module.exports = { listarPrevisiones, registrarPrevision, eliminarPrevision, sincronizarPersona, previsionEnMes }

@@ -32,9 +32,21 @@ function validarPrevision(datos) {
     if (desdeDeTexto(datos?.desde) === null) {
         errores.push("El mes desde el que rige debe tener el formato AAAA-MM")
     }
-    // Sin AFP (null o vacío) solo corresponde al técnico extranjero (Ley 18.156); el cálculo lo exige en los demás.
+    // Sin AFP (null o vacío) solo corresponde al técnico extranjero (Ley 18.156) o al imponente IPS (paquete AG);
+    // el cálculo la exige en los demás.
+    const regimen = datos?.regimen ?? "AFP"
+    if (regimen !== "AFP" && regimen !== "IPS") {
+        errores.push("El régimen previsional debe ser AFP o IPS (ex INP)")
+    }
     const sinAfp = datos?.afp_id === null || datos?.afp_id === undefined || datos?.afp_id === ""
-    if (!sinAfp && (!Number.isInteger(Number(datos.afp_id)) || Number(datos.afp_id) <= 0)) {
+    if (regimen === "IPS") {
+        if (!sinAfp) {
+            errores.push("Un imponente del IPS (ex INP) no tiene AFP")
+        }
+        if (!Number.isInteger(Number(datos?.ex_caja_regimen_id)) || Number(datos?.ex_caja_regimen_id) <= 0) {
+            errores.push("Indica la ex-caja y el régimen del IPS")
+        }
+    } else if (!sinAfp && (!Number.isInteger(Number(datos.afp_id)) || Number(datos.afp_id) <= 0)) {
         errores.push("La AFP indicada no es válida")
     }
     if (datos?.sistema_salud !== "Fonasa" && datos?.sistema_salud !== "Isapre") {
@@ -57,7 +69,10 @@ function normalizarPrevision(datos) {
     const isapre = datos.sistema_salud === "Isapre"
     return {
         desde: desdeDeTexto(datos.desde),
-        afp_id: datos.afp_id === null || datos.afp_id === undefined || datos.afp_id === "" ? null : Number(datos.afp_id),
+        regimen: datos.regimen === "IPS" ? "IPS" : "AFP",
+        ex_caja_regimen_id: datos.regimen === "IPS" ? Number(datos.ex_caja_regimen_id) : null,
+        cotiza_desahucio: datos.regimen === "IPS" && datos.cotiza_desahucio !== false && datos.cotiza_desahucio !== "false",
+        afp_id: datos.regimen === "IPS" || datos.afp_id === null || datos.afp_id === undefined || datos.afp_id === "" ? null : Number(datos.afp_id),
         sistema_salud: datos.sistema_salud,
         isapre_id: isapre ? Number(datos.isapre_id) : null,
         plan_isapre_uf: isapre ? Number(String(datos.plan_isapre_uf).replace(",", ".")) : null

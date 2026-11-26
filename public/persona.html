@@ -129,11 +129,19 @@
 
         <section class="tarjeta" id="seccionPrevision" hidden>
             <h2>Historial de previsión</h2>
-            <p class="texto-suave">AFP y salud por mes. Cada registro rige desde su mes hasta el siguiente; el cálculo de cada liquidación usa el que regía ese mes. No se aceptan cambios que alcancen meses ya cerrados.</p>
+            <p class="texto-suave">AFP (o ex-caja del IPS) y salud por mes. Cada registro rige desde su mes hasta el siguiente; el cálculo de cada liquidación usa el que regía ese mes. No se aceptan cambios que alcancen meses ya cerrados.</p>
             <div id="previsiones"></div>
             <form id="formPrevision">
                 <label>Desde (mes)<input type="month" id="prevDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
-                <label>AFP<select id="prevAfp"></select></label>
+                <label>Régimen previsional
+                    <select id="prevRegimen">
+                        <option value="AFP">AFP</option>
+                        <option value="IPS">IPS (ex INP, caja antigua)</option>
+                    </select>
+                </label>
+                <label class="solo-afp-prev">AFP<select id="prevAfp"></select></label>
+                <label class="solo-ips-prev" hidden>Ex-caja y régimen<select id="prevExCaja"></select></label>
+                <label class="solo-ips-prev credencial-confirma" hidden><input type="checkbox" id="prevDesahucio" checked> Cotiza desahucio (si su régimen lo tiene)</label>
                 <label>Sistema de salud
                     <select id="prevSistema" required>
                         <option value="Fonasa">Fonasa</option>

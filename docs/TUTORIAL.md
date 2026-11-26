@@ -83,6 +83,9 @@ Soporte **no ve** tus empresas por defecto, y aunque tenga acceso trabaja con **
 ### Historial de previsión (ficha de la persona)
 La AFP, el sistema de salud y el plan de isapre se registran **por mes** en la ficha de la persona, sección **Historial de previsión**: «Registrar cambio» indicando desde qué mes rige. Cada liquidación se calcula con la previsión que regía en su mes, y el PDF, el LRE y Previred de meses anteriores siguen mostrando la de ese mes aunque la persona cambie después. Arriba, en «Previsión y salud», se ve la vigente hoy. No se aceptan cambios que alcancen meses ya cerrados: en ese caso se reabre el periodo o se regulariza en Previred o con la isapre.
 
+### Imponentes del IPS (ex INP, «caja antigua»)
+Para quien sigue en el antiguo sistema de pensiones, en el **Historial de previsión** elige **Régimen previsional: IPS (ex INP)**, la **ex-caja y régimen** (están las 110 de la tabla del LRE; hoy la de uso habitual es EMPART) y si **cotiza desahucio** (solo si su régimen lo tiene). No lleva AFP. La liquidación descuenta la **Cotización IPS** y, aparte, la **Cotización de desahucio**, sobre la renta topada en **60 UF**; no hay SIS ni aportes de la reforma; salud 7 % (con caja de compensación: 3,1 % a la caja y 3,9 % a Fonasa) y seguro de cesantía como cualquier trabajador. El **pensionado del IPS** (Situación previsional → pensionado) no cotiza pensión; el desahucio queda según la casilla. En Previred va con régimen INP, AFP 00, la ex-caja y la tasa en los campos 62-65 y el desahucio en 66-69; en el LRE con «No está en AFP» (1141 = 100), la ex-caja en el 1142 y pensión + desahucio sumados en el 3141. Las tasas de cada ex-caja las mantiene soporte en **Parámetros → Ex-cajas del IPS**, con el mes desde el que rigen; una ex-caja sin tasa no se puede calcular.
+
 ### Técnico extranjero, Ley 18.156 (ficha de la persona)
 En **Situación previsional**, marca **Técnico extranjero (Ley 18.156)** desde el mes en que rige. No cotiza en la AFP y no se pagan el SIS ni los aportes de la reforma; sí la salud (7 %), el seguro de cesantía (trabajador y empleador) y la mutual. En el historial de previsión la AFP puede quedar en «Sin AFP (técnico extranjero)». En Previred va con régimen SIP, tipo 8 y AFP 00; en el LRE con «No está en AFP» y la marca de técnico extranjero. Si la situación rige al inicio del contrato, el PDF del contrato incluye la cláusula en que el trabajador mantiene su afiliación extranjera. Guarda en la carpeta del trabajador el título legalizado o apostillado y el certificado de afiliación de su país.
 
@@ -233,6 +236,7 @@ Gracias por ayudar. Esto es una versión en desarrollo: se espera encontrar erro
 14. **Anexos**: renovar un plazo fijo, corregir y descartar un anexo pendiente, y revisar que el PDF salga fechado con la vigencia.
 15. **Variables permanentes y préstamos en cuotas**: una colación permanente proporcional y un préstamo en cuotas que quede con saldo en un finiquito.
 16. **Carga masiva de variables**: una planilla con RUT, Nombre y Anticipo, y otra con dos o más conceptos; probar errores (RUT mal escrito, monto con letras).
+17. **Caja antigua (IPS)**: pasar a un trabajador a EMPART régimen 1 con desahucio desde un mes abierto, liquidar y revisar las líneas, Previred (campos 11, 26 y 62-69) y el LRE (1141, 1142 y 3141); probar uno sin desahucio y uno con sueldo sobre 60 UF.
 
 ## Intenta romperlo
 - Entrar con la contraseña mal 6 veces: debe bloquearte unos minutos. Lo mismo con 5 códigos de verificación incorrectos.

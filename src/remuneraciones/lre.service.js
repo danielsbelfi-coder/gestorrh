@@ -111,7 +111,7 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
         if (terminoEnElMes && trabajador.causal_termino === null) {
             motivos.push("Tiene fecha de término pero no causal de término")
         }
-        if (!detalle.cotizante.tecnicoExtranjero && (persona.Afp?.codigo_lre === null || persona.Afp?.codigo_lre === undefined)) {
+        if (!detalle.ips && !detalle.cotizante.tecnicoExtranjero && (persona.Afp?.codigo_lre === null || persona.Afp?.codigo_lre === undefined)) {
             motivos.push("La AFP de la persona no tiene código LRE")
         }
         if (detalle.salud.sistema === "Isapre" && (persona.Isapre?.codigo_lre === null || persona.Isapre?.codigo_lre === undefined)) {
@@ -166,7 +166,9 @@ async function generarLre(periodo_id, empresasPermitidas, usuarioId) {
             tipoJornada: contrato.tipo_jornada,
             tipoDistribucion: contrato.jornada_id ? (await Jornada.findByPk(contrato.jornada_id))?.tipo ?? null : null,
             tipoPension: detalle.cotizante.tipoPension,
-            afpLre: detalle.cotizante.tecnicoExtranjero ? AFP_LRE_SIN_AFP : persona.Afp.codigo_lre,
+            // Imponente IPS (paquete AG): 1141 = 100 («no está en AFP») y la ex-caja y régimen en el 1142.
+            afpLre: detalle.cotizante.tecnicoExtranjero || detalle.ips ? AFP_LRE_SIN_AFP : persona.Afp.codigo_lre,
+            ipsLre: detalle.ips?.codigoLre ?? 0,
             tecnicoExtranjero: detalle.cotizante.tecnicoExtranjero === true,
             sistemaSalud: detalle.salud.sistema,
             isapreLre: persona.Isapre?.codigo_lre ?? null,

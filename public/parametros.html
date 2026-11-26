@@ -63,6 +63,23 @@
             </div>
         </section>
 
+        <h2>Ex-cajas del IPS (ex INP): tasas vigentes en el mes</h2>
+        <section class="tarjeta">
+            <p class="texto-suave">Para imponentes del antiguo sistema de pensiones. Tasa de previsión (pensión, campo 63 de Previred; va al 3141 del LRE) y de desahucio (aparte en Previred, sumada en el 3141). Una ex-caja sin tasa no se puede usar en el cálculo.</p>
+            <div id="tablaExCajas"></div>
+            <form id="formTasaExCaja" hidden>
+                <h3>Registrar tasa (solo soporte)</h3>
+                <div class="campos">
+                    <label>Ex-caja y régimen<select id="tasaExCaja" required></select></label>
+                    <label>Desde (mes)<input type="month" id="tasaExDesde" placeholder="AAAA-MM" pattern="\d{4}-\d{2}" required></label>
+                    <label>Previsión (%)<input type="text" inputmode="decimal" id="tasaExPrevision" placeholder="Ej.: 20,70" required></label>
+                    <label>Desahucio (%)<input type="text" inputmode="decimal" id="tasaExDesahucio" placeholder="Ej.: 1,14"></label>
+                    <label>Fuente<input type="text" id="tasaExFuente" placeholder="Ej.: Previred, indicadores del mes"></label>
+                </div>
+                <div class="acciones-grupo"><button type="submit">Registrar tasa</button></div>
+            </form>
+        </section>
+
         <section id="panelCambios" hidden>
             <h2>Historial de cambios (solo soporte)</h2>
             <p class="texto-suave">Quién cargó o corrigió cada parámetro y cuándo. "Después del inicio" indica que se cargó o corrigió cuando el mes ya había empezado a regir.</p>

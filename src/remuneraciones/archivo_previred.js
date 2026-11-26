@@ -55,6 +55,21 @@ function camposTrabajador(datos) {
     }
 }
 
+function tasaPrevired(tasa) {
+    return Number(tasa).toFixed(2).replace(".", ",").padStart(5, "0")
+}
+
+// Imponente de una ex-caja del IPS (paquete AG): 62 código ex-caja y régimen, 63 tasa, 64 renta, 65 cotización;
+// el desahucio va aparte en 66-69 (renta, código, tasa y monto). El pensionado del IPS no cotiza pensión: 62-63 en
+// blanco, pero puede cotizar desahucio.
+function camposIps(ips, renta) {
+    const campos = ips.cotizacion > 0 ? { 62: ips.codigo, 63: tasaPrevired(ips.tasa), 64: renta, 65: ips.cotizacion } : {}
+    if (ips.desahucio > 0) {
+        Object.assign(campos, { 66: renta, 67: ips.codigoDesahucio, 68: tasaPrevired(ips.tasaDesahucio), 69: ips.desahucio })
+    }
+    return campos
+}
+
 function camposPrevision(datos) {
     const renta = datos.rentaImponible
 
@@ -62,7 +77,8 @@ function camposPrevision(datos) {
         26: datos.codigoAfp,
         27: datos.rentaAfp ?? renta,
         28: datos.afp + datos.cuentaIndividual,
-        29: datos.sis
+        29: datos.sis,
+        ...(datos.ips ? camposIps(datos.ips, renta) : {})
     }
 
     if (datos.salud.sistema === "Fonasa") {

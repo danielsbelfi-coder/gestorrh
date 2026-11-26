@@ -60,7 +60,7 @@ const CODIGOS_SISTEMA = [
     "APORTE_CESANTIA", "APORTE_MUTUAL", "APORTE_SANNA",
     "APORTE_SIS", "APORTE_EXPECTATIVA_VIDA", "APORTE_CUENTA_INDIVIDUAL", "APORTE_RENTABILIDAD_PROTEGIDA",
     "APVI_A", "APVI_B", "APVC_A", "APVC_B", "DEPOSITO_CONVENIDO", "DEPOSITO_CONVENIDO_EXCESO", "DESCUENTO_DEPOSITO_CONVENIDO", "APORTE_APVC",
-    "REMUNERACION_VARIABLE_VACACIONES", "SEMANA_CORRIDA"
+    "REMUNERACION_VARIABLE_VACACIONES", "SEMANA_CORRIDA", "COTIZACION_IPS", "COTIZACION_DESAHUCIO"
 ]
 
 async function obtenerConceptosSistema() {
@@ -585,6 +585,15 @@ async function obtenerTrabajadorDelPeriodo(periodo, trabajadorId) {
 // Valor hora de las horas extra y atrasos con sueldo mensual (ver valor_hora.js y «Valor hora: día y mes de origen» en el
 // SPEC). Devuelve las variables con su valorHora (cuando corresponde), el valor hora de los atrasos y lo que se guarda
 // en el detalle para el informe de horas extra y atrasos.
+// Paquete AG: tope imponible de los imponentes del IPS (ex INP), en UF.
+async function topeImponibleIps(fecha) {
+    const parametro = await obtenerParametroVigente("TOPE_IMPONIBLE_IPS_UF", fecha)
+    if (parametro === null) {
+        throw new ConflictError("No existe un parámetro TOPE_IMPONIBLE_IPS_UF vigente para la fecha del periodo")
+    }
+    return Number(parametro.valor)
+}
+
 async function valoresHoraDelMes({ periodo, trabajador, contratoVigente, anexos, contrato, tramosSueldo, aprobadas }) {
     const vh = require("./valor_hora.js")
     const { sueldoMensualDe } = require("./contrato_del_mes.js")
@@ -678,10 +687,23 @@ async function prepararCalculo(periodo, trabajador) {
     const situacionesPersona = await SituacionPrevisional.findAll({ where: { persona_id: persona.id } })
     const situacionInicioMes = situacionDelMes(situacionesPersona.map((s) => s.toJSON()), `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`)
     const tecnicoExtranjero = situacionInicioMes.tecnico_extranjero === true
-    if (!prevision.afp && !tecnicoExtranjero) {
+    // Paquete AG: imponente del antiguo sistema (IPS, ex INP): cotiza en su ex-caja, no en una AFP.
+    const imponenteIps = prevision.regimen === "IPS"
+    let tasaExCaja = null
+    if (imponenteIps) {
+        if (!prevision.exCaja) {
+            throw new ConflictError("El trabajador es imponente del IPS pero no tiene ex-caja y régimen para este mes")
+        }
+        const { tasaVigente } = require("./ex_caja.service.js")
+        tasaExCaja = await tasaVigente(prevision.exCaja.id, `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}-01`)
+        if (tasaExCaja === null) {
+            throw new ConflictError(`La ex-caja ${prevision.exCaja.caja} régimen ${prevision.exCaja.regimen} no tiene tasa vigente para este mes: soporte debe registrarla en Parámetros → Ex-cajas del IPS`)
+        }
+    }
+    if (!prevision.afp && !tecnicoExtranjero && !imponenteIps) {
         throw new ConflictError("El trabajador no tiene una AFP asignada para este mes")
     }
-    if (prevision.afp && prevision.afp.comision === null && !tecnicoExtranjero) {
+    if (prevision.afp && prevision.afp.comision === null && !tecnicoExtranjero && !imponenteIps) {
         throw new ConflictError("La AFP del trabajador no tiene comisión registrada")
     }
     if (!prevision.sistema_salud) {
@@ -782,7 +804,9 @@ async function prepararCalculo(periodo, trabajador) {
     const situaciones = await SituacionPrevisional.findAll({ where: { persona_id: persona.id } })
     const situacion = situacionDelMes(situaciones.map((s) => s.toJSON()), primerDia)
     const tipoCotizanteMes = tipoCotizante(situacion, edadAl(persona.fecha_nacimiento, primerDia))
-    const reglas = reglasCotizante(tipoCotizanteMes)
+    // Paquete AG: el imponente IPS no cotiza en AFP ni tiene SIS ni los aportes del empleador de la reforma; su cotización
+    // va a la ex-caja (pensionado: solo el desahucio, si lo cotiza).
+    const reglas = imponenteIps ? { ...reglasCotizante(tipoCotizanteMes), afp: false, seguroSocial: false } : reglasCotizante(tipoCotizanteMes)
     const siSeguroSocial = (tasa) => reglas.seguroSocial ? tasa : 0
     const parametros = await obtenerParametrosDelMes(primerDia)
     const tramos = await obtenerTramos(primerDia)
@@ -818,7 +842,9 @@ async function prepararCalculo(periodo, trabajador) {
         tasaAfp: reglas.afp ? parametros.cotizacionAfp + Number(prevision.afp.comision) : 0,
         tasaSalud: parametros.tasaSalud,
         planSaludUF: prevision.sistema_salud === "Isapre" ? Number(prevision.plan_isapre_uf) : 0,
-        topeImponibleUF: parametros.topeImponibleUF,
+        topeImponibleUF: imponenteIps ? await topeImponibleIps(primerDia) : parametros.topeImponibleUF,
+        tasaIps: imponenteIps && !situacion.pensionado ? Number(tasaExCaja.tasa_prevision) : 0,
+        tasaDesahucio: imponenteIps && prevision.cotizaDesahucio && prevision.exCaja.codigo_desahucio ? Number(tasaExCaja.tasa_desahucio) : 0,
         valorUF: parametros.valorUF,
         valorUTM: parametros.valorUTM,
         tasaCesantia: reglas.cesantia && trabajadorCotizaCesantia(contrato, trabajador, primerDia) ? parametros.tasaCesantia : 0,
@@ -914,7 +940,8 @@ async function prepararCalculo(periodo, trabajador) {
     let saludCcaf = 0
     let tasaSaludCcaf = null
     if (empresa.ccaf) {
-        const codigoTasa = codigoTasaSaludCcaf(situacion.pensionado)
+        // Paquete AG: imponente IPS activo: del 7 % de salud, 3,1 % a la caja y 3,9 % a Fonasa.
+        const codigoTasa = imponenteIps && !situacion.pensionado ? "TASA_SALUD_CCAF_IPS" : codigoTasaSaludCcaf(situacion.pensionado)
         const tasaCcaf = await obtenerParametroVigente(codigoTasa, primerDia)
         if (tasaCcaf === null) {
             throw new ConflictError(`No existe un parámetro ${codigoTasa} vigente para la fecha del periodo`)
@@ -1033,6 +1060,22 @@ async function prepararCalculo(periodo, trabajador) {
         cotizaciones: { rentaImponible: resultado.rentaImponible, topeImponible: resultado.topeImponible, baseCotizaciones: resultado.baseCotizaciones },
         // Los identificadores permiten que el PDF, el LRE y Previred usen la previsión de este mes aunque la persona cambie después.
         afp: { id: prevision.afp?.id ?? null, codigo: prevision.afp?.codigo ?? null, tasa: datos.tasaAfp },
+        // Paquete AG: imponente del IPS (ex INP): ex-caja, códigos (LRE 1142, Previred 62 y 67), tasas y montos.
+        ...(imponenteIps ? {
+            ips: {
+                exCajaId: prevision.exCaja.id,
+                caja: prevision.exCaja.caja,
+                regimen: prevision.exCaja.regimen,
+                codigoLre: prevision.exCaja.codigo_lre,
+                codigoPrevired: prevision.exCaja.codigo_previred,
+                codigoDesahucio: datos.tasaDesahucio > 0 ? prevision.exCaja.codigo_desahucio : null,
+                tasaPrevision: datos.tasaIps,
+                tasaDesahucio: datos.tasaDesahucio,
+                base: resultado.baseCotizaciones,
+                cotizacion: resultado.descuentoIps,
+                desahucio: resultado.descuentoDesahucio
+            }
+        } : {}),
         salud: { sistema: prevision.sistema_salud, isapre_id: prevision.sistema_salud === "Isapre" ? prevision.isapre?.id ?? null : null, planUF: datos.planSaludUF, legal: resultado.descuentoSaludLegal, adicionalIsapre: resultado.descuentoAdicionalIsapre },
         // Tramo y número de cargas del mes: Previred y el LRE los informan aunque la persona cambie después.
         asignacionFamiliar,

@@ -50,7 +50,7 @@ function camposIdentificacionLre(datos) {
         1108: INVALIDEZ_LRE[datos.tipoPension] ?? 0,
         1109: datos.tipoPension === "vejez" ? 1 : 0,
         1141: datos.afpLre,
-        1142: 0,
+        1142: datos.ipsLre ?? 0,
         1143: datos.sistemaSalud === "Fonasa" ? FONASA_LRE : datos.isapreLre,
         1151: datos.cotizaCesantia ? 1 : 0,
         1110: datos.ccafLre ?? 0,
