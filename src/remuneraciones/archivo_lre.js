@@ -140,9 +140,7 @@ function lineasFiniquitoLre(finiquito) {
         { codigo: "FINIQUITO_FERIADO", codigo_lre: 2313, tipo: "haber", monto: finiquito.monto_feriado },
         { codigo: "FINIQUITO_ANIOS_SERVICIO", codigo_lre: 2314, tipo: "haber", monto: finiquito.monto_anios_servicio },
         { codigo: "FINIQUITO_AVISO_PREVIO", codigo_lre: 2315, tipo: "haber", monto: finiquito.monto_aviso_previo },
-        // Paquete AF: domingos del art. 38 bis no otorgados (Ord. DT 806/14). Se informa como otra indemnización por
-        // término no tributable (2331): POR CONFIRMAR con Daniel.
-        { codigo: "FINIQUITO_DOMINGOS_38BIS", codigo_lre: 2331, tipo: "haber", monto: finiquito.monto_domingos_38bis ?? 0 },
+        // Los domingos del art. 38 bis no otorgados van en la última liquidación (paquete AJ, LRE 2123), no aquí.
         { codigo: "FINIQUITO_IMPUTACION_AFC", codigo_lre: CODIGO_IMPUTACION_AFC, tipo: "descuento", monto: finiquito.imputacion_afc },
         ...finiquito.descuentos.map((d) => ({ codigo: "FINIQUITO_DESCUENTO", codigo_lre: d.codigo_lre, tipo: "descuento", monto: d.monto }))
     ].filter((linea) => linea.monto > 0)

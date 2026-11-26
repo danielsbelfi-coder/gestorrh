@@ -102,3 +102,9 @@ test("finiquito: los domingos del 38 bis no otorgados suman a los haberes", () =
     assert.strictEqual(con.montoDomingos38bis, 60000)
     assert.strictEqual(con.totalHaberes - sin.totalHaberes, 60000)
 })
+
+test("paquete AJ: el LRE del finiquito ya no informa domingos del 38 bis (van en la liquidación, 2123)", () => {
+    const { lineasFiniquitoLre } = require("../src/remuneraciones/archivo_lre.js")
+    const lineas = lineasFiniquitoLre({ monto_feriado: 100000, monto_anios_servicio: 0, monto_aviso_previo: 0, monto_domingos_38bis: 60000, imputacion_afc: 0, descuentos: [] })
+    assert.deepStrictEqual(lineas.map((l) => l.codigo_lre), [2313])
+})

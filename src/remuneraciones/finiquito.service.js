@@ -219,18 +219,10 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
     const contratoRelacion = await contratoDeLaRelacion(ContratoTrabajo, trabajador.id)
     const obraFaena = contratoRelacion?.tipo_contrato === "obra_faena"
 
-    // Paquete AF: art. 38 bis (N° 7). Al término sin completar la anualidad, los domingos no otorgados se pagan
-    // (Ord. DT 806/14): 7 menos los ya dados, a un día de sueldo cada uno (sueldo mensual / 30; en el diario, el jornal).
-    let domingos38bis = null
-    const d38 = require("../asistencia/domingos_38bis.service.js")
-    if (contratoRelacion && d38.aplica(contratoRelacion)) {
-        const avance = await d38.progreso38bis(trabajador, contratoRelacion, String(trabajador.fecha_termino).slice(0, 10))
-        const valorDia = sueldoMensual / 30
-        domingos38bis = { ...avance, valorDia: Math.round(valorDia * 100) / 100, monto: Math.round(avance.pendientes * valorDia) }
-    }
+    // Los domingos del art. 38 bis no otorgados ya no van en el finiquito: se pagan como remuneración en la última
+    // liquidación (paquete AJ).
 
     const calcularMontos = (lista) => montosFiniquito({
-        montoDomingos38bis: domingos38bis?.monto ?? 0,
         obraFaena,
         causal: trabajador.causal_termino,
         avisoPrevioDado: datos.aviso_previo_dado,
@@ -305,7 +297,6 @@ async function calcularFiniquito(datos, empresasPermitidas, usuarioId) {
                 anticipados: feriado.anticipados, anticipadasNoRecuperadas, periodos: feriado.periodos
             },
             saldoPagoExceso: { saldo: saldoPendiente, descontado: saldoDescontado, noRecuperado: saldoPendiente - saldoDescontado },
-            domingos38bis
         }
     }
 

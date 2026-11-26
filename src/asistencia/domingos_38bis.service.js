@@ -4,10 +4,13 @@
 // - Anualidad: cada año de vigencia desde la fecha de ingreso (regla general) o el año calendario, si se acordó.
 // - Cuentan los domingos de descanso que pasan de dos en cada mes calendario (los dos del art. 38 inc. 4° son aparte) y
 //   hasta 3 sábados libres (acuerdo escrito, cada uno junto a un domingo de descanso).
-// - No se compensan en dinero ni se acumulan; al término sin completar la anualidad, los no otorgados se pagan en el
-//   finiquito (Ord. DT 806/14): criterio de Daniel, 7 menos los ya dados, a un día de sueldo cada uno.
+// - No se compensan en dinero ni se acumulan; al término sin completar la anualidad, los no otorgados se pagan
+//   (Ord. DT 806/14): criterio de Daniel, 7 menos los ya dados, a un día de sueldo cada uno. Desde el paquete AJ se pagan
+//   como remuneración en la última liquidación (imponible y tributable, LRE 2123), no en el finiquito.
 const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 const { reglasDomingo } = require("./domingos_art38.js")
+const { ConceptoRemuneracion } = require("../shared/associations.js")
+const { ConflictError } = require("../shared/errors.js")
 
 const DOMINGOS_38BIS = 7
 const SABADOS_MAXIMO = 3
@@ -91,4 +94,27 @@ function avisos38bis(progreso, ultimoDiaDelMes) {
         : []
 }
 
-module.exports = { DOMINGOS_38BIS, SABADOS_MAXIMO, aplica, anualidadDe, progreso38bis, avisos38bis }
+// Línea de la última liquidación (paquete AJ): domingos del 38 bis no otorgados al término × un día de sueldo.
+async function variable38bisAlTermino(trabajador, contrato, periodo, valorDia) {
+    const termino = trabajador.fecha_termino ? String(trabajador.fecha_termino).slice(0, 10) : null
+    const clave = `${periodo.anio}-${String(periodo.mes).padStart(2, "0")}`
+    if (termino === null || termino.slice(0, 7) !== clave || !contrato || !aplica(contrato)) {
+        return { variable: null, avisos: [], detalle: null }
+    }
+    const avance = await progreso38bis(trabajador, contrato, termino)
+    if (avance.pendientes <= 0) {
+        return { variable: null, avisos: [], detalle: null }
+    }
+    const concepto = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "DOMINGOS_38BIS" } })
+    if (concepto === null) {
+        throw new ConflictError("Falta el concepto común DOMINGOS_38BIS")
+    }
+    const monto = Math.round(avance.pendientes * valorDia)
+    return {
+        variable: { concepto, cantidad: null, monto, fuente: "asistencia", mes_origen: null },
+        avisos: [`Término de la relación: se pagan ${avance.pendientes} domingo(s) del art. 38 bis no otorgados en la anualidad (${avance.otorgados} de 7 dados), a un día de sueldo cada uno ($${Math.round(valorDia).toLocaleString("es-CL")})`],
+        detalle: { ...avance, valorDia: Math.round(valorDia * 100) / 100, monto }
+    }
+}
+
+module.exports = { DOMINGOS_38BIS, SABADOS_MAXIMO, aplica, anualidadDe, progreso38bis, avisos38bis, variable38bisAlTermino }

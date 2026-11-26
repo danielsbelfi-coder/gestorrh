@@ -906,6 +906,12 @@ async function prepararCalculo(periodo, trabajador) {
     if (festivosTermino.variable !== null) {
         datos.variables = [...datos.variables, festivosTermino.variable]
     }
+    // Paquete AJ: domingos del art. 38 bis no otorgados al término (Ord. DT 806/14), al mismo valor día, como remuneración.
+    const { variable38bisAlTermino } = require("../asistencia/domingos_38bis.service.js")
+    const domingos38bisTermino = await variable38bisAlTermino(trabajador, contrato, periodo, valorDia)
+    if (domingos38bisTermino.variable !== null) {
+        datos.variables = [...datos.variables, domingos38bisTermino.variable]
+    }
 
     let resultado
     try {
@@ -994,7 +1000,7 @@ async function prepararCalculo(periodo, trabajador) {
         }
         return [...avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales: libro.totales }), ...promedio.avisos]
     })()
-    const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...festivosTermino.avisos, ...(resultado.nuevoSaldoPendiente > 0
+    const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...festivosTermino.avisos, ...domingos38bisTermino.avisos, ...(resultado.nuevoSaldoPendiente > 0
         ? [`Los descuentos superan los haberes: queda un saldo de $${resultado.nuevoSaldoPendiente.toLocaleString("es-CL")} que se descontará el mes siguiente. Revise los descuentos voluntarios (CCAF, APV, anticipos)`]
         : [])]
     // Art. 58: descuentos voluntarios sobre el 15 % de los haberes imponibles. Solo se avisa.
@@ -1049,6 +1055,7 @@ async function prepararCalculo(periodo, trabajador) {
         sueldo: { tramos: tramosConDias },
         ...(saldoCompensatorio.detalle ? { saldoCompensatorio: saldoCompensatorio.detalle } : {}),
         ...(festivosTermino.detalle ? { festivosCompensatorios: festivosTermino.detalle } : {}),
+        ...(domingos38bisTermino.detalle ? { domingos38bis: domingos38bisTermino.detalle } : {}),
         ...(recargoDomingo ? { recargoDomingo } : {}),
         // Fecha de pago según la regla de la empresa al calcular (null si no tiene). El PDF y la nómina la muestran.
         fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
