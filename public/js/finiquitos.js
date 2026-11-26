@@ -276,6 +276,7 @@ function mostrarDetalle(fila) {
                     ${filaMonto(d.indemnizacionObra
                         ? `Indemnización por término de obra o faena (${d.indemnizacionObra.meses} meses × 2,5 = ${dias(d.indemnizacionObra.dias)} días)`
                         : `Indemnización por años de servicio (${d.anios ?? 0} años)`, f.monto_anios_servicio)}
+                    ${Number(f.monto_domingos_38bis ?? 0) > 0 ? filaMonto(`Domingos del art. 38 bis no otorgados (${d.domingos38bis?.pendientes ?? 0} de 7, anualidad del ${fechaCorta(d.domingos38bis?.desde)} al ${fechaCorta(d.domingos38bis?.hasta)})`, f.monto_domingos_38bis) : ""}
                 </tbody>
             </table>
             <table>

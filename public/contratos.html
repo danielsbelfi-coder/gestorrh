@@ -90,6 +90,13 @@
                     </select>
                 </label>
                 <label id="campoRecargoDomingo">Recargo de domingo (%)<input type="number" id="recargoDomingo" min="30" max="300" step="0.5" value="30"></label>
+                <label class="solo-n7">Año de los 7 domingos adicionales (art. 38 bis)
+                    <select id="anio38bis">
+                        <option value="contrato">Cada año de vigencia, desde la fecha de ingreso</option>
+                        <option value="calendario">Año calendario (por acuerdo)</option>
+                    </select>
+                </label>
+                <label class="casilla solo-n7"><input type="checkbox" id="pactoSabados"> Acuerdo escrito: hasta 3 de los 7 domingos se cambian por sábados (cada uno junto a un domingo de descanso)</label>
                 <label class="casilla" id="campoSoloFinSemana"><input type="checkbox" id="soloFinSemana"> Contratado solo para sábados, domingos o festivos</label>
                 <div class="acciones-grupo">
                     <button type="submit">Guardar</button>

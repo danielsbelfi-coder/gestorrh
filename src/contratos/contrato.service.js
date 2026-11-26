@@ -226,7 +226,13 @@ async function actualizarDomingos(id, datos, empresasPermitidas, usuarioId) {
             throw new ValidationError(`El recargo de domingo del N° 7 es a lo menos ${RECARGO_DOMINGO_MINIMO} % (art. 38 inc. 2°)`)
         }
     }
+    const anio38bis = datos?.domingos_38bis_anio ?? contrato.domingos_38bis_anio ?? "contrato"
+    if (!["contrato", "calendario"].includes(anio38bis)) {
+        throw new ValidationError("El año de los domingos del art. 38 bis es el de vigencia del contrato o el calendario")
+    }
     return await contrato.update({
+        domingos_38bis_anio: causal === "n7" ? anio38bis : "contrato",
+        pacto_sabados_38bis: causal === "n7" && (datos?.pacto_sabados_38bis === true || (datos?.pacto_sabados_38bis === undefined && contrato.pacto_sabados_38bis)),
         art38_causal: causal,
         solo_fin_semana: causal === "ninguna" ? false : datos?.solo_fin_semana === true || (datos?.solo_fin_semana === undefined && contrato.solo_fin_semana),
         recargo_domingo: recargo

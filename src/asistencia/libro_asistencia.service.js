@@ -137,7 +137,19 @@ async function obtenerLibro({ trabajador_id, anio, mes }, empresasPermitidas) {
     // Paquete AD: saldo de días de descanso compensatorio por festivos trabajados (si corresponde).
     const { festivosDelMes } = require("./festivos_compensatorios.service.js")
     const festivos = await festivosDelMes(trabajador, año, numeroMes, libro.tramos)
-    return { trabajador_id: trabajador.id, anio: año, mes: numeroMes, ...libro, festivos }
+    // Paquete AF: avance de los 7 domingos del art. 38 bis (N° 7 sin excepciones).
+    let domingos38bis = null
+    if (libro.contrato) {
+        const contrato = await ContratoTrabajo.findByPk(libro.contrato.id)
+        const d38 = require("./domingos_38bis.service.js")
+        if (d38.aplica(contrato)) {
+            const { ultimoDia } = rangoDelMes(año, numeroMes)
+            const termino = trabajador.fecha_termino ? String(trabajador.fecha_termino).slice(0, 10) : null
+            domingos38bis = await d38.progreso38bis(trabajador, contrato, termino && termino < ultimoDia ? termino : ultimoDia)
+            libro.advertencias.push(...d38.avisos38bis(domingos38bis, ultimoDia))
+        }
+    }
+    return { trabajador_id: trabajador.id, anio: año, mes: numeroMes, ...libro, festivos, domingos38bis }
 }
 
 module.exports = {

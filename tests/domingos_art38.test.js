@@ -76,3 +76,29 @@ test("jornada semanal rotativa: domingo sí, domingo no, cada semana revisada co
     assert.strictEqual(enero.dias.find((d) => d.fecha === "2027-01-10").esperado.tipo, "laboral")
     assert.strictEqual(enero.dias.find((d) => d.fecha === "2027-01-17").esperado.tipo, "libre")
 })
+
+const { anualidadDe, avisos38bis } = require("../src/asistencia/domingos_38bis.service.js")
+const { montosFiniquito } = require("../src/remuneraciones/calculo_finiquito.js")
+
+test("art. 38 bis: anualidad desde el ingreso o por año calendario", () => {
+    assert.deepStrictEqual(anualidadDe("2025-03-15", { domingos_38bis_anio: "contrato" }, "2026-11-30"), { desde: "2026-03-15", hasta: "2027-03-14" })
+    assert.deepStrictEqual(anualidadDe("2025-03-15", { domingos_38bis_anio: "contrato" }, "2026-03-14"), { desde: "2025-03-15", hasta: "2026-03-14" })
+    assert.deepStrictEqual(anualidadDe("2024-02-29", { domingos_38bis_anio: "contrato" }, "2025-03-01"), { desde: "2025-02-28", hasta: "2026-02-27" })
+    assert.deepStrictEqual(anualidadDe("2026-06-10", { domingos_38bis_anio: "calendario" }, "2026-11-30"), { desde: "2026-06-10", hasta: "2026-12-31" })
+})
+
+test("art. 38 bis: avisos al cerrar la anualidad incompleta y cuando quedan 2 meses o menos", () => {
+    const base = { desde: "2026-03-15", hasta: "2027-03-14", otorgados: 4, pendientes: 3 }
+    assert.deepStrictEqual(avisos38bis(base, "2026-11-30"), [])
+    assert.match(avisos38bis(base, "2027-01-31")[0], /faltan 3 de 7/)
+    assert.match(avisos38bis(base, "2027-03-31")[0], /terminó con 4 de 7/)
+    assert.deepStrictEqual(avisos38bis({ ...base, otorgados: 7, pendientes: 0 }, "2027-03-31"), [])
+})
+
+test("finiquito: los domingos del 38 bis no otorgados suman a los haberes", () => {
+    const comun = { causal: 159, avisoPrevioDado: true, tiempo: { anios: 0, meses: 8, dias: 0 }, baseIndemnizacion: 600000, baseFeriado: 600000, topeUF: 90, valorUF: 39000, diasPendientes: 0, diasInhabiles: 0, imputacionAfc: 0, descuentos: [] }
+    const sin = montosFiniquito(comun)
+    const con = montosFiniquito({ ...comun, montoDomingos38bis: 60000 })
+    assert.strictEqual(con.montoDomingos38bis, 60000)
+    assert.strictEqual(con.totalHaberes - sin.totalHaberes, 60000)
+})

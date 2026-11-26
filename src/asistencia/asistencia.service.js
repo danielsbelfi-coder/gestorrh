@@ -4,7 +4,7 @@ const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 const { calcularDiaLaboral } = require("./libro_asistencia.js")
 
 // Tipos que se registran en el libro. licencia_medica no: las licencias se cargan en su propio módulo.
-const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones", "festivo_libre", "descanso_compensatorio", "domingo_libre"]
+const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones", "festivo_libre", "descanso_compensatorio", "domingo_libre", "sabado_38bis"]
 const TIPOS_CON_HORA = ["normal", "atraso"]
 const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "recargo_hora_extra", "observaciones", "fecha_reemplazo"]
 
@@ -103,6 +103,39 @@ async function validarMarca(trabajador, entrada, idActual = null) {
             if (delOtro.tipo !== "libre") {
                 throw new ConflictError("El día de reemplazo debe ser un día libre de la jornada")
             }
+        }
+    }
+
+    // Paquete AF: sábado libre del art. 38 bis (hasta 3 en la anualidad, con acuerdo escrito, junto a un domingo de
+    // descanso). El domingo siguiente debe estar en el mismo mes para poder revisarlo.
+    if (datos.tipo === "sabado_38bis") {
+        if (esperado.tipo !== "laboral" || dia.diaSemana !== 6) {
+            throw new ConflictError("«Sábado libre (art. 38 bis)» se registra en un sábado de trabajo")
+        }
+        const { contratoDelMes } = require("./libro_asistencia.service.js")
+        const contrato = await contratoDelMes(trabajador.id, datos.fecha, datos.fecha)
+        const d38 = require("./domingos_38bis.service.js")
+        if (contrato === null || !d38.aplica(contrato)) {
+            throw new ConflictError("El sábado libre del art. 38 bis corresponde a trabajadores del N° 7 del art. 38 (sin las excepciones legales)")
+        }
+        if (!contrato.pacto_sabados_38bis) {
+            throw new ConflictError("Falta el acuerdo escrito para cambiar domingos del art. 38 bis por sábados: márcalo en Contratos → Domingos")
+        }
+        const siguiente = new Date(`${datos.fecha}T00:00:00Z`)
+        siguiente.setUTCDate(siguiente.getUTCDate() + 1)
+        const domingo = libro.dias.find((d) => d.fecha === siguiente.toISOString().slice(0, 10))
+        if (!domingo) {
+            throw new ConflictError("El domingo siguiente es del mes siguiente: el sistema no puede revisarlo. Da el sábado del art. 38 bis en una semana que termine dentro del mes")
+        }
+        if (!["libre", "feriado"].includes(domingo.esperado.tipo)) {
+            throw new ConflictError("El sábado del art. 38 bis debe ir junto a un domingo de descanso: el domingo siguiente es de trabajo (dalo libre primero con «Domingo libre (art. 38)»)")
+        }
+        const { desde, hasta } = d38.anualidadDe(trabajador.fecha_ingreso, contrato, datos.fecha)
+        const otros = await Asistencia.count({
+            where: { trabajador_id: trabajador.id, tipo: "sabado_38bis", estado_aprobacion: { [Op.ne]: "rechazada" }, fecha: { [Op.between]: [desde, hasta] }, ...(idActual ? { id: { [Op.ne]: idActual } } : {}) }
+        })
+        if (otros >= d38.SABADOS_MAXIMO) {
+            throw new ConflictError(`Ya hay ${d38.SABADOS_MAXIMO} sábados del art. 38 bis en la anualidad: es el máximo`)
         }
     }
 

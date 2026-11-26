@@ -129,7 +129,7 @@ async function datosDj1887({ empresa_id: empresaId, anio: anioTexto }, empresasP
         const finiquito = finiquitoDe.get(trabajador.id)
         const { primerDia, ultimoDia } = rangoDelPeriodo({ anio, mes })
         if (finiquito && trabajador.fecha_termino >= primerDia && trabajador.fecha_termino <= ultimoDia) {
-            meses[mes].noGravada += finiquito.monto_feriado + finiquito.monto_anios_servicio + finiquito.monto_aviso_previo
+            meses[mes].noGravada += finiquito.monto_feriado + finiquito.monto_anios_servicio + finiquito.monto_aviso_previo + Number(finiquito.monto_domingos_38bis ?? 0)
         }
     }
 

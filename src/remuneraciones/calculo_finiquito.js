@@ -79,7 +79,8 @@ function basesFiniquito({ sueldoMensual, meses, mesesFeriado = meses, sinSemanaC
 }
 
 // obraFaena: el contrato de la relación es por obra o faena (con la causal 159 N° 5 da la indemnización de la Ley 21.122).
-function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, baseFeriado, topeUF, valorUF, diasPendientes, diasInhabiles, imputacionAfc, descuentos, obraFaena = false }) {
+// montoDomingos38bis (paquete AF): domingos del art. 38 bis no otorgados en la anualidad incompleta, ya valorizados.
+function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, baseFeriado, topeUF, valorUF, diasPendientes, diasInhabiles, imputacionAfc, descuentos, obraFaena = false, montoDomingos38bis = 0 }) {
     const art161 = CAUSALES_ART_161.includes(causal)
     const baseTopada = Math.min(baseIndemnizacion, Math.round(topeUF * valorUF))
     const anios = aniosIndemnizacion(tiempo)
@@ -95,7 +96,7 @@ function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, b
     // Imputación del seguro de cesantía: art. 161 y, por la Ley 21.122 (art. 13 inc. 2° Ley 19.728), la de obra o faena.
     const imputacion = art161 || obra.dias > 0 ? Math.min(imputacionAfc, montoAniosServicio) : 0
     const totalDescuentos = imputacion + descuentos.reduce((suma, descuento) => suma + descuento.monto, 0)
-    const totalHaberes = montoFeriado + montoAvisoPrevio + montoAniosServicio
+    const totalHaberes = montoFeriado + montoAvisoPrevio + montoAniosServicio + montoDomingos38bis
 
     if (totalDescuentos > totalHaberes) {
         throw new Error("Los descuentos superan los haberes del finiquito")
@@ -104,7 +105,7 @@ function montosFiniquito({ causal, avisoPrevioDado, tiempo, baseIndemnizacion, b
     return {
         anios, baseTopada, diasFeriado, imputacion,
         indemnizacionObra: obra.dias > 0 ? obra : null,
-        montoFeriado, montoAvisoPrevio, montoAniosServicio,
+        montoFeriado, montoAvisoPrevio, montoAniosServicio, montoDomingos38bis,
         totalHaberes, totalDescuentos, totalAPagar: totalHaberes - totalDescuentos
     }
 }

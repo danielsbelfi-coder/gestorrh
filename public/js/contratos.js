@@ -363,6 +363,7 @@ document.getElementById("cancelarCorreccion").addEventListener("click", () => {
 function aplicarCausal() {
     const causal = document.getElementById("art38Causal").value
     document.getElementById("campoRecargoDomingo").hidden = causal !== "n7"
+    document.querySelectorAll("#formDomingos .solo-n7").forEach((campo) => { campo.hidden = causal !== "n7" })
     document.getElementById("campoSoloFinSemana").hidden = causal === "ninguna"
 }
 
@@ -375,6 +376,8 @@ function abrirDomingos(id) {
     document.getElementById("art38Causal").value = contratoDomingos.art38_causal ?? "ninguna"
     document.getElementById("recargoDomingo").value = Number(contratoDomingos.recargo_domingo ?? 30)
     document.getElementById("soloFinSemana").checked = contratoDomingos.solo_fin_semana === true
+    document.getElementById("anio38bis").value = contratoDomingos.domingos_38bis_anio ?? "contrato"
+    document.getElementById("pactoSabados").checked = contratoDomingos.pacto_sabados_38bis === true
     aplicarCausal()
     const panel = document.getElementById("panelDomingos")
     panel.hidden = false
@@ -393,7 +396,9 @@ document.getElementById("formDomingos").addEventListener("submit", async functio
         body: JSON.stringify({
             art38_causal: causal,
             recargo_domingo: causal === "n7" ? Number(document.getElementById("recargoDomingo").value) : null,
-            solo_fin_semana: document.getElementById("soloFinSemana").checked
+            solo_fin_semana: document.getElementById("soloFinSemana").checked,
+            domingos_38bis_anio: document.getElementById("anio38bis").value,
+            pacto_sabados_38bis: document.getElementById("pactoSabados").checked
         })
     })
     if (resultado.status !== 200) {

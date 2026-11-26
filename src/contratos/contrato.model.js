@@ -91,6 +91,17 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.DECIMAL(5, 2),
         allowNull: true
     },
+    // Paquete AF: art. 38 bis (N° 7): año de los 7 domingos y acuerdo escrito para cambiar hasta 3 por sábados.
+    domingos_38bis_anio: {
+        type: DataTypes.ENUM("contrato", "calendario"),
+        allowNull: false,
+        defaultValue: "contrato"
+    },
+    pacto_sabados_38bis: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     estado_firma: {
         type: DataTypes.ENUM("pendiente", "firmado", "rechazado"),
         defaultValue: "pendiente"

@@ -20,6 +20,10 @@ function armarFiniquito({ finiquito, empresa, cargo, lugarServicios }) {
                 ? `Indemnización por término de obra o faena (art. 163 inc. 3°, ${String(detalle.indemnizacionObra.dias).replace(".", ",")} días)`
                 : "Indemnización por años de servicio",
             monto: finiquito.monto_anios_servicio
+        },
+        {
+            nombre: `Domingos de descanso del art. 38 bis no otorgados (${detalle?.domingos38bis?.pendientes ?? 0} días)`,
+            monto: finiquito.monto_domingos_38bis ?? 0
         }
     ].filter((fila) => fila.monto > 0)
 

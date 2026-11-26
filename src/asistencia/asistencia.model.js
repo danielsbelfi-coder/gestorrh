@@ -34,7 +34,8 @@ const Asistencia = sequelize.define("Asistencia", {
             "licencia_medica",
             "festivo_libre",
             "descanso_compensatorio",
-            "domingo_libre"
+            "domingo_libre",
+            "sabado_38bis"
         ),
         allowNull: false
     },

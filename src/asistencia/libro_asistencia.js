@@ -168,7 +168,7 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
     const marcaPorFecha = new Map(marcas.map((m) => [String(m.fecha).slice(0, 10), m]))
     const totales = { minutos_atraso: 0, minutos_extra: 0, minutos_extra_50: 0, minutos_extra_100: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0,
         festivos_trabajados: 0, festivos_por_compensar: 0, minutos_festivo_pago: 0, dias_descanso_compensatorio: 0,
-        domingos_libres: 0, domingos_trabajados: 0, domingos_no_disponibles: 0, minutos_domingo_ordinarios: 0, minutos_extra_domingo_50: 0 }
+        domingos_libres: 0, domingos_trabajados: 0, domingos_no_disponibles: 0, minutos_domingo_ordinarios: 0, minutos_extra_domingo_50: 0, sabados_38bis: 0 }
     const advertencias = []
 
     // Paquete AE: domingos libres (art. 38) con un día de reemplazo: ese día libre de la misma semana pasa a ser de
@@ -250,6 +250,21 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
                 if (reemplazo !== null && !reemplazos.has(reemplazo)) {
                     fila.advertencias.push("El día de reemplazo no está en el libro o no es un día libre: no se considera el reemplazo")
                 }
+            }
+            return fila
+        }
+
+        // Paquete AF: sábado de trabajo que se da libre en reemplazo de un domingo del art. 38 bis.
+        if (marca.tipo === "sabado_38bis") {
+            if (esperado.tipo !== "laboral" || fila.diaSemana !== 6) {
+                fila.advertencias.push("Sábado libre (art. 38 bis): solo corresponde en un sábado de trabajo; no se considera")
+                fila.cuenta = false
+                return fila
+            }
+            if (aprobada) {
+                fila.esperadoOriginal = esperado
+                fila.esperado = { tipo: "libre", colacion: esperado.colacion, sabado38bis: true }
+                totales.sabados_38bis++
             }
             return fila
         }
@@ -364,6 +379,7 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
             if (fila.cuenta && fila.minutosExtra > 0) {
                 totales.domingos_trabajados++
             } else {
+                fila.domingoDeDescanso = true
                 totales.domingos_libres++
             }
         }

@@ -13,6 +13,8 @@ const Finiquito = sequelize.define("Finiquito", {
     monto_feriado: { type: DataTypes.INTEGER, allowNull: false },
     monto_aviso_previo: { type: DataTypes.INTEGER, allowNull: false },
     monto_anios_servicio: { type: DataTypes.INTEGER, allowNull: false },
+    // Paquete AF: domingos del art. 38 bis no otorgados en la anualidad incompleta (Ord. DT 806/14).
+    monto_domingos_38bis: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     total_descuentos: { type: DataTypes.INTEGER, allowNull: false },
     total_a_pagar: { type: DataTypes.INTEGER, allowNull: false },
     detalle_calculo: { type: DataTypes.JSONB, allowNull: false },

@@ -8,7 +8,8 @@ const TIPOS_MARCA = {
     vacaciones: "Vacaciones",
     festivo_libre: "Festivo libre (no trabajó el festivo de turno)",
     descanso_compensatorio: "Descanso compensatorio por festivo trabajado",
-    domingo_libre: "Domingo libre (art. 38)"
+    domingo_libre: "Domingo libre (art. 38)",
+    sabado_38bis: "Sábado libre en reemplazo de un domingo (art. 38 bis)"
 }
 const DIAS_CORTOS = ["", "lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
@@ -40,7 +41,7 @@ function minutosATexto(minutos) {
 function textoEsperado(esperado) {
     switch (esperado.tipo) {
         case "laboral": return `${esperado.festivo ? `Festivo de turno · ${esperado.nombre} · ` : ""}${esperado.reemplazo ? "Reemplazo del domingo libre · " : ""}${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
-        case "libre": return esperado.compensatorio ? "Libre (descanso compensatorio)" : esperado.domingoLibre ? "Libre (domingo libre, art. 38)" : "Libre"
+        case "libre": return esperado.compensatorio ? "Libre (descanso compensatorio)" : esperado.domingoLibre ? "Libre (domingo libre, art. 38)" : esperado.sabado38bis ? "Libre (sábado del art. 38 bis)" : "Libre"
         case "feriado": return `Feriado · ${esperado.nombre}`
         case "licencia": return "Licencia médica"
         case "fuera_contrato": return "Fuera de contrato"
@@ -148,6 +149,11 @@ function dibujarResumen() {
             tarjetas.push([`Horas de domingo con recargo (${String(d.recargo).replace(".", ",")} %)`, minutosATexto(t.minutos_domingo_ordinarios), "exito"])
         }
     }
+    // Paquete AF: siete domingos adicionales del art. 38 bis.
+    const b = libro.domingos38bis
+    if (b) {
+        tarjetas.push([`Domingos art. 38 bis (anualidad ${fechaCorta(b.desde)} – ${fechaCorta(b.hasta)})`, `${b.otorgados} de 7${b.sabados ? ` (${b.sabados} sábado${b.sabados === 1 ? "" : "s"})` : ""}`, b.pendientes > 0 && b.hasta <= b.contadoHasta ? "advertencia" : ""])
+    }
     const f = libro.festivos
     if (f) {
         tarjetas.push(["Días compensatorios por festivos", `${f.saldoInicial} + ${f.ganados} − ${f.otorgados} = ${f.saldoFinal}`, f.saldoFinal < 0 ? "peligro" : ""])
@@ -213,7 +219,8 @@ function editorDeFila(dia) {
     const deFestivo = (v) => (v === "festivo_libre" && esperado.festivo === true)
         || (v === "descanso_compensatorio" && !esperado.festivo && libro.festivos !== null && libro.festivos !== undefined)
         || (v === "domingo_libre" && dia.diaSemana === 7)
-        || !["festivo_libre", "descanso_compensatorio", "domingo_libre"].includes(v)
+        || (v === "sabado_38bis" && dia.diaSemana === 6 && libro.domingos38bis)
+        || !["festivo_libre", "descanso_compensatorio", "domingo_libre", "sabado_38bis"].includes(v)
     const tipos = noLaboral ? { normal: TIPOS_MARCA.normal } : Object.fromEntries(Object.entries(TIPOS_MARCA).filter(([v]) => deFestivo(v)))
     const ayuda = noLaboral
         ? "Trabajo en día libre o feriado: indica entrada y salida. Todas las horas se proponen como extra."
