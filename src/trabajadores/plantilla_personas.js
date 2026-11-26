@@ -22,6 +22,8 @@ const AYUDA_COLUMNAS = [
     ["telefono", "no", "Teléfono de contacto."],
     ["email", "no", "Correo electrónico."],
     ["afp", "no", "Una AFP de la hoja Valores válidos; se acepta sin «AFP» y sin importar mayúsculas ni tildes (Habitat, ProVida, Pro Vida). Vacío si no tiene."],
+    ["ex_caja", "solo caja antigua", "Solo para imponentes del IPS (ex INP): la ex-caja y régimen de la hoja Valores válidos (Empart régimen 1) o su código Previred de 4 dígitos. Con ex-caja, la columna afp va vacía."],
+    ["cotiza_desahucio", "no", "Solo con ex_caja: sí o no (vacío = sí, si su régimen tiene desahucio)."],
     ["afiliado_afc", "no", "sí o no (vacío = sí)."],
     ["sistema_salud", "no", "Fonasa o Isapre."],
     ["isapre", "si es Isapre", "Una isapre de la hoja Valores válidos; se acepta el nombre corto (Colmena, Mas Vida)."],
@@ -34,8 +36,8 @@ const AYUDA_COLUMNAS = [
     ["fecha_ingreso", "si crea postulante", "dd-mm-aaaa."]
 ]
 
-async function generarPlantillaPersonas(catalogos) {
-    const guia = valoresValidos(catalogos)
+// Plantilla genérica: hoja de datos con listas desplegables, «Valores válidos» y «Cómo llenar».
+function generarPlantilla({ hoja, columnas, guia, ayuda }) {
     const maximo = Math.max(...guia.map((g) => g.valores.length))
 
     // Hoja de valores: una columna por campo, con los valores uno bajo otro.
@@ -44,24 +46,35 @@ async function generarPlantillaPersonas(catalogos) {
         filasValores.push(guia.map((g) => g.valores[i] ?? ""))
     }
 
-    // Lista desplegable en la hoja Personas para cada columna con valores fijos.
+    // Lista desplegable en la hoja de datos para cada columna con valores fijos.
     const validaciones = guia.map((g, indice) => {
-        const columnaPersonas = letraDeColumna(COLUMNAS.indexOf(g.columna))
+        const columnaDatos = letraDeColumna(columnas.indexOf(g.columna))
         const columnaValores = letraDeColumna(indice)
         return {
-            rango: `${columnaPersonas}2:${columnaPersonas}${MAXIMO_FILAS + 1}`,
+            rango: `${columnaDatos}2:${columnaDatos}${MAXIMO_FILAS + 1}`,
             formula: `'${HOJA_VALORES}'!$${columnaValores}$2:$${columnaValores}$${g.valores.length + 1}`
         }
     })
 
     return crearXlsx([
-        { nombre: "Personas", filas: [COLUMNAS], anchos: COLUMNAS.map((c) => Math.max(14, c.length + 4)), validaciones },
+        { nombre: hoja, filas: [columnas], anchos: columnas.map((c) => Math.max(14, c.length + 4)), validaciones },
         { nombre: HOJA_VALORES, filas: filasValores, anchos: guia.map((g) => Math.max(18, g.columna.length + 4, ...g.valores.map((v) => v.length + 2))) },
-        { nombre: "Cómo llenar", filas: [["columna", "obligatoria", "cómo se llena"], ...AYUDA_COLUMNAS], anchos: [20, 18, 110] }
+        { nombre: "Cómo llenar", filas: [["columna", "obligatoria", "cómo se llena"], ...ayuda], anchos: [20, 18, 110] }
     ])
+}
+
+async function generarPlantillaPersonas(catalogos) {
+    return generarPlantilla({ hoja: "Personas", columnas: COLUMNAS, guia: valoresValidos(catalogos), ayuda: AYUDA_COLUMNAS })
+}
+
+// Paquete AH: cambios de previsión de personas ya registradas.
+async function generarPlantillaPrevisiones(catalogos) {
+    const previsiones = require("./importacion_previsiones.js")
+    return generarPlantilla({ hoja: "Previsión", columnas: previsiones.COLUMNAS, guia: previsiones.valoresValidos(catalogos), ayuda: previsiones.AYUDA_COLUMNAS })
 }
 
 module.exports = {
     AYUDA_COLUMNAS,
-    generarPlantillaPersonas
+    generarPlantillaPersonas,
+    generarPlantillaPrevisiones
 }

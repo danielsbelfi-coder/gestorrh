@@ -2,7 +2,7 @@
 const { Op } = require("sequelize")
 const { sequelize } = require("../shared/database.js")
 const { PrevisionPersona, Persona, Afp, Isapre, Liquidacion, PeriodoRemuneracion, Trabajador, ExCajaRegimen } = require("../shared/associations.js")
-const { obtenerPersonaPorId } = require("./persona.service.js")
+const { obtenerPersonaPorId, catalogosDeImportacion } = require("./persona.service.js")
 const { exigirRol, PERMISOS } = require("../shared/permisos.js")
 const { NotFoundError, ConflictError, ValidationError } = require("../shared/errors.js")
 const { DESDE_SIEMPRE, previsionDelMes, validarPrevision, normalizarPrevision, mesesCerradosAlcanzados } = require("./prevision_del_mes.js")
@@ -110,6 +110,95 @@ async function eliminarPrevision(personaId, id, empresasPermitidas, usuarioId) {
     })
 }
 
+// Paquete AH: carga masiva de cambios de previsión de personas de una empresa. Revisa todas las filas (incluido que
+// ningún cambio alcance meses cerrados) y solo con confirmar = true y sin errores los registra, todos o ninguno.
+async function importarPrevisiones(datos, empresasPermitidas, usuarioId) {
+    const { validarCambiosPrevision } = require("./importacion_previsiones.js")
+    const empresaId = Number(datos?.empresa_id)
+    if (!empresasPermitidas.includes(empresaId)) {
+        throw new NotFoundError("Empresa no encontrada")
+    }
+    await exigirRol(usuarioId, empresaId, PERMISOS.GESTIONAR_FICHAS)
+
+    const filas = datos.filas
+    if (!Array.isArray(filas) || filas.length === 0) {
+        throw new ValidationError("La planilla no tiene filas")
+    }
+
+    const [catalogos, personas] = await Promise.all([
+        catalogosDeImportacion(),
+        Persona.findAll({ where: { empresa_id: empresaId }, attributes: ["id", "rut", "dv", "nombres", "apellido_paterno", "apellido_materno"], include: [{ model: PrevisionPersona }] })
+    ])
+    const porRut = new Map(personas.map((p) => [p.rut, {
+        id: p.id,
+        dv: p.dv,
+        nombre: [p.nombres, p.apellido_paterno, p.apellido_materno].filter(Boolean).join(" "),
+        previsiones: (p.PrevisionesPersona ?? []).map((f) => f.toJSON())
+    }]))
+
+    const { cambios, errores } = validarCambiosPrevision(filas, { ...catalogos, personas: porRut })
+
+    // Meses cerrados: la misma regla que un cambio desde la ficha.
+    for (const cambio of cambios) {
+        try {
+            await exigirSinMesesCerrados({ id: cambio.persona_id }, cambio.datos.desde)
+        } catch (error) {
+            if (!(error instanceof ConflictError)) {
+                throw error
+            }
+            errores.push({ fila: cambio.fila, rut: cambio.rut, motivos: [error.message] })
+        }
+    }
+    errores.sort((a, b) => a.fila - b.fila)
+
+    // Para la revisión en pantalla: los nombres de las instituciones.
+    const { nombreExCaja } = require("./ex_caja_texto.js")
+    const nombreDe = (lista, id, fn = (x) => x.nombre) => { const item = lista.find((x) => x.id === id); return item ? fn(item) : null }
+    const resumen = cambios.map((c) => ({
+        fila: c.fila,
+        rut: c.rut,
+        nombre: c.nombre,
+        ...c.datos,
+        afp: nombreDe(catalogos.afps, c.datos.afp_id),
+        ex_caja: nombreDe(catalogos.exCajas, c.datos.ex_caja_regimen_id, nombreExCaja),
+        isapre: nombreDe(catalogos.isapres, c.datos.isapre_id)
+    }))
+    if (errores.length > 0 || datos.confirmar !== true) {
+        return { confirmado: false, total: filas.length, cambios: errores.length > 0 ? [] : resumen, errores }
+    }
+
+    await sequelize.transaction(async (transaction) => {
+        for (const cambio of cambios) {
+            const existente = await PrevisionPersona.findOne({ where: { persona_id: cambio.persona_id, desde: cambio.datos.desde }, transaction })
+            if (existente !== null && cambio.datos.desde === DESDE_SIEMPRE) {
+                await existente.update({ ...cambio.datos, usuario_registro_id: usuarioId }, { transaction })
+            } else if (existente !== null) {
+                throw new ConflictError(`Fila ${cambio.fila}: ya hay un cambio de previsión desde ese mes`)
+            } else {
+                await PrevisionPersona.create({ ...cambio.datos, persona_id: cambio.persona_id, usuario_registro_id: usuarioId }, { transaction })
+            }
+        }
+        for (const personaId of new Set(cambios.map((c) => c.persona_id))) {
+            await sincronizarPersona(personaId, transaction)
+        }
+    })
+
+    return { confirmado: true, registrados: cambios.length, personas: new Set(cambios.map((c) => c.persona_id)).size, cambios: resumen, errores: [] }
+}
+
+async function guiaPrevisiones() {
+    const { valoresValidos, AYUDA_COLUMNAS } = require("./importacion_previsiones.js")
+    return {
+        valores: valoresValidos(await catalogosDeImportacion()),
+        columnas: AYUDA_COLUMNAS.map(([columna, obligatoria, ayuda]) => ({ columna, obligatoria, ayuda }))
+    }
+}
+
+async function plantillaPrevisiones() {
+    const { generarPlantillaPrevisiones } = require("./plantilla_personas.js")
+    return generarPlantillaPrevisiones(await catalogosDeImportacion())
+}
+
 // Para el cálculo de un mes: { afp, sistema_salud, isapre, plan_isapre_uf } con las instituciones completas.
 // Si la persona no tiene historial (no debería pasar después de la migración), se usan sus campos actuales.
 async function previsionEnMes(persona, anio, mes) {
@@ -133,4 +222,4 @@ async function previsionEnMes(persona, anio, mes) {
     }
 }
 
-module.exports = { listarPrevisiones, registrarPrevision, eliminarPrevision, sincronizarPersona, previsionEnMes }
+module.exports = { listarPrevisiones, registrarPrevision, eliminarPrevision, sincronizarPersona, previsionEnMes, importarPrevisiones, guiaPrevisiones, plantillaPrevisiones }

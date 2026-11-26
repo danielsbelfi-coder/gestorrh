@@ -97,3 +97,31 @@ test("«Cheque» escrito en tipo_cuenta: el error dice que va en forma_pago", ()
     assert.strictEqual(errores.length, 1)
     assert.match(errores[0].motivos.join(" "), /forma de pago: va en la columna forma_pago/)
 })
+
+test("caja antigua: ex_caja por nombre, abreviada o código Previred; sin AFP; desahucio vacío = sí", () => {
+    const exCajas = [{ id: 85, caja: "Empart", regimen: 1, codigo_previred: "0101", codigo_desahucio: "0101" }, { id: 105, caja: "Servicio de Seguro Social", regimen: 1, codigo_previred: "0901", codigo_desahucio: null }]
+    const conCajas = { ...catalogos, exCajas }
+    const { personas, errores } = validarImportacion([
+        fila({ afp: "", ex_caja: "Empart régimen 1" }),
+        fila({ rut: "9.999.999", dv: "3", afp: "", ex_caja: "empart r1", cotiza_desahucio: "no" }),
+        fila({ rut: "8.888.888", dv: "K", afp: "", ex_caja: "0901" }),
+        fila({ rut: "7.777.777", dv: "6" })
+    ], conCajas)
+    assert.deepStrictEqual(errores, [])
+    assert.deepStrictEqual(personas.map((p) => p.prevision), [
+        { regimen: "IPS", ex_caja_regimen_id: 85, cotiza_desahucio: true },
+        { regimen: "IPS", ex_caja_regimen_id: 85, cotiza_desahucio: false },
+        { regimen: "IPS", ex_caja_regimen_id: 105, cotiza_desahucio: false },
+        { regimen: "AFP", ex_caja_regimen_id: null, cotiza_desahucio: false }
+    ])
+    assert.strictEqual(personas[0].persona.afp_id, null)
+
+    const malos = validarImportacion([
+        fila({ ex_caja: "Empart régimen 1" }),
+        fila({ rut: "9.999.999", dv: "3", afp: "", ex_caja: "Empart 9" }),
+        fila({ rut: "8.888.888", dv: "K", cotiza_desahucio: "sí" })
+    ], conCajas).errores
+    assert.match(malos[0].motivos.join(), /no lleva AFP/)
+    assert.match(malos[1].motivos.join(), /no existe/)
+    assert.match(malos[2].motivos.join(), /junto con ex_caja/)
+})

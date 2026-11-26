@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestorRH - Cambios de previsión masivos</title>
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <main class="contenido" data-empresa data-menu="personas.html" data-titulo="Cambios de previsión masivos">
+        <a class="volver-lista" href="personas.html">← Volver a Personas</a>
+        <div class="encabezado-pagina">
+            <div>
+                <h1>Cambios de previsión masivos</h1>
+                <p>Registra de una vez cambios de AFP, de ex-caja del IPS (caja antigua) o de salud de personas ya inscritas, cada uno desde su mes, igual que «Registrar cambio» en el historial de previsión de la ficha. Lo que dejes vacío se mantiene como regía ese mes. Si una sola fila tiene errores, no se carga ninguna.</p>
+            </div>
+        </div>
+        <p id="mensajeError" role="alert"></p>
+        <p id="mensajeInfo" role="status"></p>
+
+        <div class="rejilla rejilla-ancha">
+            <section class="tarjeta paso-carga">
+                <h2>1. Descarga la plantilla</h2>
+                <p class="texto-suave">Una fila por cambio en la hoja «Previsión». Las columnas con opciones tienen lista desplegable, y las hojas «Valores válidos» y «Cómo llenar» te guían. Al terminar, con la hoja «Previsión» a la vista, usa Guardar como → CSV UTF-8.</p>
+                <button type="button" class="secundario" id="btnPlantilla">Descargar plantilla (Excel)</button>
+                <button type="button" class="enlace" id="btnPlantillaCsv">o solo los títulos en CSV</button>
+            </section>
+            <section class="tarjeta paso-carga">
+                <h2>2. Sube la planilla</h2>
+                <p class="texto-suave">El sistema revisa todas las filas, incluido que ningún cambio alcance meses ya cerrados, y te muestra cómo quedará cada uno antes de cargar.</p>
+                <input type="file" id="archivo" accept=".csv,text/csv" class="oculto-accesible">
+                <div class="subir-archivo">
+                    <label for="archivo" class="boton secundario">Elegir planilla (CSV)</label>
+                    <span id="nombreArchivo" class="texto-suave">Ningún archivo elegido</span>
+                </div>
+                <button type="button" id="btnRevisar" disabled>Subir y revisar</button>
+            </section>
+        </div>
+
+        <details class="tarjeta">
+            <summary>Cómo llenar cada columna</summary>
+            <div id="tablaColumnas"></div>
+        </details>
+
+        <details class="tarjeta">
+            <summary>Valores válidos de cada columna</summary>
+            <p class="texto-suave">Son los mismos de la hoja «Valores válidos» de la plantilla. No importan mayúsculas ni tildes.</p>
+            <div id="tablaValores"></div>
+        </details>
+
+        <section class="tarjeta" id="panelRevision" hidden>
+            <div class="encabezado-seccion">
+                <h2>3. Revisión</h2>
+                <button type="button" id="btnConfirmar" hidden>Registrar cambios</button>
+            </div>
+            <p id="resumenRevision"></p>
+            <div id="tablaRevision"></div>
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/avisos.js"></script>
+    <script src="js/componentes.js"></script>
+    <script src="js/importar-previsiones.js"></script>
+</body>
+
+</html>

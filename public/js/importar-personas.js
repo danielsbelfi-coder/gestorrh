@@ -3,12 +3,12 @@ requiereLogin()
 // Mismas columnas que src/trabajadores/importacion_personas.js
 const COLUMNAS = [
     "rut", "dv", "nombres", "apellido_paterno", "apellido_materno", "nacionalidad", "fecha_nacimiento",
-    "sexo", "estado_civil", "direccion", "telefono", "email", "afp", "afiliado_afc", "sistema_salud",
-    "isapre", "plan_isapre_uf", "forma_pago", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
+    "sexo", "estado_civil", "direccion", "telefono", "email", "afp", "ex_caja", "cotiza_desahucio", "afiliado_afc",
+    "sistema_salud", "isapre", "plan_isapre_uf", "forma_pago", "banco", "tipo_cuenta", "numero_cuenta", "crear_postulante", "fecha_ingreso"
 ]
 
 // Una planilla descargada antes de existir esta columna sigue sirviendo (queda en blanco = transferencia).
-const COLUMNAS_OPCIONALES = ["forma_pago"]
+const COLUMNAS_OPCIONALES = ["forma_pago", "ex_caja", "cotiza_desahucio"]
 
 let filas = []
 

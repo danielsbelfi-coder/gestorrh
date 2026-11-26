@@ -1,4 +1,4 @@
-const { Persona, Usuario, Trabajador, Afp, Isapre, PrevisionPersona } = require("../shared/associations.js")
+const { Persona, Usuario, Trabajador, Afp, Isapre, PrevisionPersona, ExCajaRegimen } = require("../shared/associations.js")
 const { DESDE_SIEMPRE } = require("./prevision_del_mes.js")
 const { sequelize } = require("../shared/database.js")
 const { validarImportacion, valoresValidos, MAXIMO_FILAS } = require("./importacion_personas.js")
@@ -16,10 +16,14 @@ const CAMPOS_EDITABLES = ["nombres", "apellido_paterno", "apellido_materno", "na
 // Después solo cambian con el historial de previsión (prevision_persona.service.js), que mantiene estos campos al día.
 const CAMPOS_PREVISION = ["afp_id", "sistema_salud", "isapre_id", "plan_isapre_uf"]
 
-async function crearPrevisionInicial(persona, transaction) {
+// regimen: { regimen, ex_caja_regimen_id, cotiza_desahucio } para el imponente del IPS (paquete AH).
+async function crearPrevisionInicial(persona, transaction, regimen = null) {
     await PrevisionPersona.create({
         persona_id: persona.id,
         desde: DESDE_SIEMPRE,
+        regimen: regimen?.regimen ?? "AFP",
+        ex_caja_regimen_id: regimen?.ex_caja_regimen_id ?? null,
+        cotiza_desahucio: regimen?.cotiza_desahucio ?? false,
         afp_id: persona.afp_id ?? null,
         sistema_salud: persona.sistema_salud ?? null,
         isapre_id: persona.isapre_id ?? null,
@@ -104,8 +108,12 @@ async function actualizarPersona(id, datos, empresasPermitidas, usuarioId) {
 }
 
 async function catalogosDeImportacion() {
-    const [afps, isapres] = await Promise.all([Afp.findAll({ order: [["nombre", "ASC"]] }), Isapre.findAll({ order: [["nombre", "ASC"]] })])
-    return { afps, isapres }
+    const [afps, isapres, exCajas] = await Promise.all([
+        Afp.findAll({ order: [["nombre", "ASC"]] }),
+        Isapre.findAll({ order: [["nombre", "ASC"]] }),
+        ExCajaRegimen.findAll({ order: [["codigo_lre", "ASC"]] })
+    ])
+    return { afps, isapres, exCajas }
 }
 
 // Guía para llenar la planilla: valores válidos por columna y cómo se llena cada una.
@@ -138,15 +146,15 @@ async function importarPersonas(datos, empresasPermitidas, usuarioId) {
         throw new ValidationError(`La planilla no puede tener más de ${MAXIMO_FILAS} filas`)
     }
 
-    const [afps, isapres, existentes] = await Promise.all([
-        Afp.findAll(),
-        Isapre.findAll(),
+    const [{ afps, isapres, exCajas }, existentes] = await Promise.all([
+        catalogosDeImportacion(),
         Persona.findAll({ where: { empresa_id: empresaId }, attributes: ["rut"] })
     ])
 
     const { personas, errores } = validarImportacion(filas, {
         afps,
         isapres,
+        exCajas,
         rutsExistentes: new Set(existentes.map((p) => p.rut))
     })
     const postulantes = personas.filter((p) => p.postulante !== null).length
@@ -156,12 +164,12 @@ async function importarPersonas(datos, empresasPermitidas, usuarioId) {
     }
 
     await sequelize.transaction(async (transaction) => {
-        for (const { persona, postulante } of personas) {
+        for (const { persona, prevision, postulante } of personas) {
             const creada = await Persona.create({ ...persona, empresa_id: empresaId }, {
                 fields: ["empresa_id", "rut", "dv", ...CAMPOS_EDITABLES, ...CAMPOS_PREVISION],
                 transaction
             })
-            await crearPrevisionInicial(creada, transaction)
+            await crearPrevisionInicial(creada, transaction, prevision)
 
             if (postulante !== null) {
                 await Trabajador.create({ persona_id: creada.id, empresa_id: empresaId, fecha_ingreso: postulante.fecha_ingreso }, {
@@ -176,6 +184,7 @@ async function importarPersonas(datos, empresasPermitidas, usuarioId) {
 }
 
 module.exports = {
+    catalogosDeImportacion,
     crearPersona,
     listarPersonas,
     obtenerPersonaPorId,
