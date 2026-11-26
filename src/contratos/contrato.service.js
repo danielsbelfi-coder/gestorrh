@@ -201,6 +201,38 @@ async function obtenerContratoPorId(id, empresasPermitidas) {
 
 }
 
+// Paquete AE: descanso dominical (art. 38). Causal (ninguna, N° 2, N° 7, otra), «contratado solo para sábados, domingos
+// o festivos» y, para el N° 7, el recargo de domingo pactado (a lo menos 30 %, art. 38 inc. 2°; reemplaza un «bono
+// domingo» propio). Son datos de gestión del contrato vigente: se cambian sin anexo.
+const CAUSALES_ART38 = ["ninguna", "n2", "n7", "otra"]
+const RECARGO_DOMINGO_MINIMO = 30
+
+async function actualizarDomingos(id, datos, empresasPermitidas, usuarioId) {
+    const contrato = await obtenerContratoPorId(id, empresasPermitidas)
+    await exigirRol(usuarioId, contrato.Trabajador.empresa_id, PERMISOS.GESTIONAR_FICHAS)
+    if (contrato.estado !== "vigente") {
+        throw new ConflictError("Solo se actualiza el descanso dominical de un contrato vigente")
+    }
+    const causal = datos?.art38_causal ?? contrato.art38_causal
+    if (!CAUSALES_ART38.includes(causal)) {
+        throw new ValidationError("La causal del art. 38 debe ser ninguna, N° 2, N° 7 u otra")
+    }
+    let recargo = null
+    if (causal === "n7") {
+        recargo = datos?.recargo_domingo === undefined || datos?.recargo_domingo === null || datos?.recargo_domingo === ""
+            ? Number(contrato.recargo_domingo ?? RECARGO_DOMINGO_MINIMO)
+            : Number(datos.recargo_domingo)
+        if (!Number.isFinite(recargo) || recargo < RECARGO_DOMINGO_MINIMO || recargo > 300) {
+            throw new ValidationError(`El recargo de domingo del N° 7 es a lo menos ${RECARGO_DOMINGO_MINIMO} % (art. 38 inc. 2°)`)
+        }
+    }
+    return await contrato.update({
+        art38_causal: causal,
+        solo_fin_semana: causal === "ninguna" ? false : datos?.solo_fin_semana === true || (datos?.solo_fin_semana === undefined && contrato.solo_fin_semana),
+        recargo_domingo: recargo
+    })
+}
+
 async function firmarContrato(id, fechaFirma, empresasPermitidas, usuarioId) {
     const contrato = await obtenerContratoPorId(id, empresasPermitidas)
 
@@ -405,5 +437,6 @@ module.exports = {
     firmarContrato,
     documentoContrato,
     corregirContrato,
-    anularContrato
+    anularContrato,
+    actualizarDomingos
 }

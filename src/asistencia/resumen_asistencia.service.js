@@ -243,6 +243,20 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
         propuestas.push({ recargo: 50, cantidad: horasFestivo, mes_origen: null, glosa: `Festivos trabajados según el turno (art. 38 inc. 5°): ${totales.festivos_trabajados - totales.festivos_por_compensar} festivo(s), sus horas con recargo del 50 %` })
         resultado.festivos_pagados = horasFestivo
     }
+    // Paquete AE: N° 7 del art. 38. Las horas extra al 50 % trabajadas en domingo se calculan sobre la hora ordinaria con
+    // el recargo de domingo (inc. 2°): van aparte, como «Horas extra en domingo» (recargo 95 %, o según el % pactado).
+    const horasDomingo = libro.domingos?.n7 ? Math.round(Number(totales.minutos_extra_domingo_50 ?? 0) / 60 * 100) / 100 : 0
+    if (horasDomingo > 0 && conceptosHoras[95]) {
+        const delLibro = propuestas.find((x) => x.recargo === 50 && x.glosa === glosaHoras)
+        if (delLibro) {
+            delLibro.cantidad = Math.round((delLibro.cantidad - horasDomingo) * 100) / 100
+            if (delLibro.cantidad <= 0) {
+                propuestas.splice(propuestas.indexOf(delLibro), 1)
+            }
+        }
+        propuestas.push({ recargo: 95, cantidad: horasDomingo, mes_origen: null, glosa: "Horas extra en domingo (art. 38 inc. 2°): base con el recargo de domingo, más el 50 %" })
+        resultado.horas_extra_domingo = horasDomingo
+    }
     const promedio = await horasPromedioDelPeriodo(trabajador, periodo, transaction)
     for (const p of promedio.propuestas) {
         propuestas.push({ recargo: 50, cantidad: p.horas, mes_origen: p.mes_origen, glosa: p.glosa })
@@ -266,14 +280,14 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
     // Horas ya aprobadas desde el libro: si siguen iguales, no se tocan. Si el libro cambió (se modificó una marca después
     // de aprobar), la propuesta se reemplaza y queda pendiente de aprobar otra vez (el libro es el origen de las horas).
     const aprobadas = (await VariablePeriodo.findAll({ where: { ...filtroHoras, estado: "aprobada" }, transaction }))
-        .map((v) => ({ recargo: RECARGOS.find((r) => conceptosHoras[r].id === v.concepto_id), cantidad: Number(v.cantidad ?? 0), mes_origen: v.mes_origen }))
+        .map((v) => ({ recargo: Object.keys(conceptosHoras).map(Number).find((r) => conceptosHoras[r].id === v.concepto_id), cantidad: Number(v.cantidad ?? 0), mes_origen: v.mes_origen }))
     if (aprobadas.length > 0) {
         const lado = (lista) => lista.map((x) => claveVariable(x.recargo, x.cantidad, x.mes_origen)).sort().join(";")
         if (lado(aprobadas) === lado(propuestas)) {
             resultado.horas_extra = "sin cambios: las horas aprobadas coinciden con el libro"
             return resultado
         }
-        resultado.horas_extra_reemplazadas = RECARGOS
+        resultado.horas_extra_reemplazadas = [...RECARGOS, 95]
             .filter((recargo) => totalPor(aprobadas, recargo) !== totalPor(propuestas, recargo))
             .map((recargo) => `al ${recargo} %: ${totalPor(aprobadas, recargo)} h aprobadas → ${totalPor(propuestas, recargo)} h en el libro`)
             .join("; ") || "cambió el mes de origen de las horas"
@@ -296,8 +310,8 @@ async function generarParaTrabajador(trabajador, periodo, conceptosHoras, usuari
         }, { transaction })
     }
 
-    horas = { 50: totalPor(propuestas, 50), 100: totalPor(propuestas, 100) }
-    resultado.horas_extra = Math.round((horas[50] + horas[100]) * 100) / 100
+    horas = { 50: totalPor(propuestas, 50), 100: totalPor(propuestas, 100), 95: totalPor(propuestas, 95) }
+    resultado.horas_extra = Math.round((horas[50] + horas[100] + horas[95]) * 100) / 100
     resultado.horas_extra_50 = horas[50]
     resultado.horas_extra_100 = horas[100]
     return resultado
@@ -342,7 +356,7 @@ async function generarDesdeAsistencia(periodoId, empresasPermitidas, usuarioId) 
 
     const trabajadores = await trabajadoresDelPeriodo(periodo)
 
-    const conceptos = await ConceptoRemuneracion.findAll({ where: { empresa_id: null, codigo: ["HORAS_EXTRA_50", "HORAS_EXTRA_100"] } })
+    const conceptos = await ConceptoRemuneracion.findAll({ where: { empresa_id: null, codigo: ["HORAS_EXTRA_50", "HORAS_EXTRA_100", "HORAS_EXTRA_DOMINGO"] } })
     const conceptosHoras = Object.fromEntries(conceptos.map((c) => [Number(c.recargo_hora_extra), c]))
     if (!conceptosHoras[50] || !conceptosHoras[100]) {
         throw new ConflictError("Faltan los conceptos comunes HORAS_EXTRA_50 y HORAS_EXTRA_100")

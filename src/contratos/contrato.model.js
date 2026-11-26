@@ -76,6 +76,21 @@ const ContratoTrabajo = sequelize.define("ContratoTrabajo", {
         type: DataTypes.ENUM("mensual", "quincenal", "semanal"),
         allowNull: false
     },
+    // Paquete AE: descanso dominical (art. 38). Datos de gestión: se cambian sin anexo.
+    art38_causal: {
+        type: DataTypes.ENUM("ninguna", "n2", "n7", "otra"),
+        allowNull: false,
+        defaultValue: "ninguna"
+    },
+    solo_fin_semana: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    recargo_domingo: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true
+    },
     estado_firma: {
         type: DataTypes.ENUM("pendiente", "firmado", "rechazado"),
         defaultValue: "pendiente"

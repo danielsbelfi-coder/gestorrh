@@ -1,6 +1,9 @@
 requiereLogin()
 
 let contratosEmpresa = []
+// Paquete AE: descanso dominical (art. 38).
+const TEXTO_ART38 = { ninguna: "", n2: "N° 2", n7: "N° 7", otra: "Otra" }
+let contratoDomingos = null
 let contratoEnCorreccion = null
 
 function sinFirmar(c) {
@@ -23,6 +26,7 @@ const tabla = crearTabla({
         { titulo: "Inicio", valor: (c) => c.fecha_inicio ?? "", html: (c) => escaparHtml(fechaCorta(c.fecha_inicio)) },
         { titulo: "Término", valor: (c) => terminoDelContrato(c), html: (c) => escaparHtml(terminoDelContrato(c)) },
         { titulo: "Sueldo base", valor: (c) => Number(c.sueldo_base), html: (c) => escaparHtml(pesos(c.sueldo_base)), numero: true },
+        { titulo: "Art. 38", valor: (c) => TEXTO_ART38[c.art38_causal] ?? "" },
         { titulo: "Firma", valor: (c) => textoEstado("firma", c.estado_firma), html: (c) => insignia("firma", c.estado_firma) },
         { titulo: "Estado", valor: (c) => textoEstado("contrato", c.estado), html: (c) => insignia("contrato", c.estado) },
         {
@@ -32,6 +36,7 @@ const tabla = crearTabla({
                 ${sinFirmar(c) ? `<button type="button" class="chico" data-firmar="${c.id}">Firmar</button>
                     <button type="button" class="chico secundario" data-corregir="${c.id}">Corregir</button>
                     <button type="button" class="chico peligro" data-anular="${c.id}">Anular</button>` : ""}
+                ${c.estado === "vigente" ? `<button type="button" class="chico secundario" data-domingos="${c.id}">Domingos</button>` : ""}
                 ${c.estado === "vigente" && c.estado_firma === "firmado" ? `<button type="button" class="chico peligro" data-anular="${c.id}" data-firmado="si">Anular (error)</button>` : ""}`
         }
     ],
@@ -353,7 +358,59 @@ document.getElementById("cancelarCorreccion").addEventListener("click", () => {
     history.replaceState(null, "", "contratos.html")
 })
 
+// ---------- Descanso dominical (paquete AE) ----------
+
+function aplicarCausal() {
+    const causal = document.getElementById("art38Causal").value
+    document.getElementById("campoRecargoDomingo").hidden = causal !== "n7"
+    document.getElementById("campoSoloFinSemana").hidden = causal === "ninguna"
+}
+
+function abrirDomingos(id) {
+    contratoDomingos = contratosEmpresa.find((c) => String(c.id) === String(id))
+    if (!contratoDomingos) {
+        return
+    }
+    document.getElementById("tituloDomingos").textContent = `Descanso dominical (art. 38): ${nombreCompleto(contratoDomingos.persona)} · contrato #${contratoDomingos.id}`
+    document.getElementById("art38Causal").value = contratoDomingos.art38_causal ?? "ninguna"
+    document.getElementById("recargoDomingo").value = Number(contratoDomingos.recargo_domingo ?? 30)
+    document.getElementById("soloFinSemana").checked = contratoDomingos.solo_fin_semana === true
+    aplicarCausal()
+    const panel = document.getElementById("panelDomingos")
+    panel.hidden = false
+    panel.scrollIntoView({ behavior: "smooth", block: "start" })
+}
+
+document.getElementById("art38Causal").addEventListener("change", aplicarCausal)
+document.getElementById("cerrarDomingos").addEventListener("click", () => { document.getElementById("panelDomingos").hidden = true })
+
+document.getElementById("formDomingos").addEventListener("submit", async function (evento) {
+    evento.preventDefault()
+    limpiarMensajes()
+    const causal = document.getElementById("art38Causal").value
+    const resultado = await llamarApi(`/api/contratos/${contratoDomingos.id}/domingos`, {
+        method: "PATCH",
+        body: JSON.stringify({
+            art38_causal: causal,
+            recargo_domingo: causal === "n7" ? Number(document.getElementById("recargoDomingo").value) : null,
+            solo_fin_semana: document.getElementById("soloFinSemana").checked
+        })
+    })
+    if (resultado.status !== 200) {
+        mensaje("error", resultado.datos?.error ?? "No se pudo guardar el descanso dominical")
+        return
+    }
+    mensaje("info", "Descanso dominical actualizado. Rige para los libros y liquidaciones que se calculen desde ahora.")
+    document.getElementById("panelDomingos").hidden = true
+    cargarContratos()
+})
+
 document.getElementById("tablaContratos").addEventListener("click", async function (evento) {
+    const domingos = evento.target.closest("[data-domingos]")?.dataset.domingos
+    if (domingos) {
+        abrirDomingos(domingos)
+        return
+    }
     const corregir = evento.target.closest("[data-corregir]")?.dataset.corregir
     if (corregir) {
         abrirCorreccion(Number(corregir))

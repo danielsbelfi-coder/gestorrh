@@ -77,6 +77,27 @@
             </form>
         </details>
 
+        <section class="tarjeta" id="panelDomingos" hidden>
+            <h3 id="tituloDomingos">Descanso dominical (art. 38)</h3>
+            <p class="texto-suave">Para los exceptuados del descanso dominical. N° 2 y N° 7: al menos dos domingos libres al mes (art. 38 inc. 4°), salvo contratos de 30 días o menos, jornadas de 20 horas semanales o menos y quienes fueron contratados solo para sábados, domingos o festivos. Solo N° 7 (comercio y servicios que atienden directamente al público): recargo de domingo sobre las horas ordinarias (a lo menos 30 %, art. 38 inc. 2°; reemplaza un «bono domingo» propio). Se cambia sin anexo.</p>
+            <form id="formDomingos" class="rejilla">
+                <label>Causal del art. 38
+                    <select id="art38Causal">
+                        <option value="ninguna">No está exceptuado del descanso dominical</option>
+                        <option value="n2">N° 2: labores que exigen continuidad o servicios de interés público</option>
+                        <option value="n7">N° 7: comercio y servicios que atienden directamente al público</option>
+                        <option value="otra">Otra causal del art. 38</option>
+                    </select>
+                </label>
+                <label id="campoRecargoDomingo">Recargo de domingo (%)<input type="number" id="recargoDomingo" min="30" max="300" step="0.5" value="30"></label>
+                <label class="casilla" id="campoSoloFinSemana"><input type="checkbox" id="soloFinSemana"> Contratado solo para sábados, domingos o festivos</label>
+                <div class="acciones-grupo">
+                    <button type="submit">Guardar</button>
+                    <button type="button" class="secundario" id="cerrarDomingos">Cerrar</button>
+                </div>
+            </form>
+        </section>
+
         <div id="tablaContratos"></div>
     </main>
 

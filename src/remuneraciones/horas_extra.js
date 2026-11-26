@@ -69,7 +69,8 @@ const textoHoras = (horas) => `${String(horas).replace(".", ",")} h`
 function avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales }) {
     const avisos = []
     const delLibro = aprobadas.filter((v) => v.fuente === "asistencia" && esHoraExtra(v.concepto))
-    for (const recargo of RECARGOS) {
+    // Paquete AE: además del 50 % y el 100 %, puede venir el 95 % (horas extra en domingo del N° 7 del art. 38).
+    for (const recargo of Object.keys(horasLibro).map(Number)) {
         const aprobado = Math.round(delLibro.filter((v) => Number(v.concepto.recargo_hora_extra) === recargo)
             .reduce((s, v) => s + Number(v.cantidad ?? 0), 0) * 100) / 100
         if (aprobado !== horasLibro[recargo]) {

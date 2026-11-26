@@ -13,9 +13,10 @@ function maximoSemanal(fecha) {
 const MAXIMO = maximoSemanal(hoyIso())
 document.getElementById("maximoLegal").textContent = MAXIMO
 
-const TIPOS_JORNADA = { semanal: "Semanal", promedio: "En promedio (22 bis)", bisemanal: "Bisemanal (art. 39)", excepcional: "Excepcional (art. 38)", art25: "Choferes interurbanos (art. 25)" }
+const TIPOS_JORNADA = { semanal: "Semanal", rotativa: "Semanal rotativa", promedio: "En promedio (22 bis)", bisemanal: "Bisemanal (art. 39)", excepcional: "Excepcional (art. 38)", art25: "Choferes interurbanos (art. 25)" }
 const AYUDA_TIPO = {
     semanal: "La misma semana se repite siempre: 4 a 6 días y hasta el máximo legal semanal.",
+    rotativa: "Un turno de 2, 3 o 4 semanas (14, 21 o 28 días) que empieza un lunes y se repite; cada semana es una jornada semanal completa (4 a 6 días y hasta el máximo legal). Sirve, por ejemplo, para alternar domingos de trabajo y de descanso (art. 38).",
     promedio: "Ciclos de 2, 3 o 4 semanas (14, 21 o 28 días) que empiezan un lunes: ninguna semana pasa de 45 horas, no más de dos semanas seguidas sobre el máximo y el promedio del ciclo no pasa del máximo legal. Requiere pacto escrito (con el sindicato si el trabajador está sindicalizado).",
     bisemanal: "Para faenas alejadas de centros urbanos: hasta 14 días seguidos de trabajo y luego el descanso compensatorio de los domingos y festivos del período, más uno. El promedio del ciclo no pasa del máximo legal.",
     excepcional: "Los sistemas 7x7, 4x4, 10x10, 14x14 u otros autorizados por resolución de la Dirección del Trabajo (hasta tres años de vigencia). Hasta 12 horas diarias; la resolución regula el sistema.",
@@ -55,6 +56,9 @@ const esArt25 = () => tipoActual() === "art25"
 const largoCiclo = () => (porCiclo() ? Math.max(2, Math.min(56, Number(document.getElementById("cicloDias").value) || 7)) : 7)
 
 function nombreDia(numero) {
+    if (tipoActual() === "rotativa") {
+        return `Semana ${Math.ceil(numero / 7)} · ${NOMBRES_DIA[(numero - 1) % 7]}`
+    }
     return porCiclo() ? `Día ${numero}` : NOMBRES_DIA[numero - 1].charAt(0).toUpperCase() + NOMBRES_DIA[numero - 1].slice(1)
 }
 
@@ -122,7 +126,7 @@ function aplicarTipo() {
     document.querySelectorAll("[data-festivos]").forEach((el) => { el.hidden = tipo === "art25" })
     aplicarFestivos()
     const ciclo = document.getElementById("cicloDias")
-    if (tipo === "promedio") {
+    if (tipo === "promedio" || tipo === "rotativa") {
         ciclo.min = 14
         ciclo.max = 28
         ciclo.step = 7
@@ -194,6 +198,26 @@ function recalcular() {
     if (tipo === "semanal" && (dias < 4 || dias > 6)) {
         errores.push(`La jornada debe distribuirse en 4 a 6 días (hay ${dias} marcados).`)
     }
+    // Paquete AE: en la semanal rotativa cada semana del turno es una jornada semanal completa.
+    if (tipo === "rotativa") {
+        const filas = [...document.querySelectorAll("#filasDias tr")]
+        for (let n = 0; n < filas.length / 7; n++) {
+            const semana = filas.slice(n * 7, n * 7 + 7).map((fila) => ({
+                trabaja: fila.querySelector(".trabaja").checked,
+                entrada: fila.querySelector(".entrada").value,
+                salida: fila.querySelector(".salida").value,
+                colacion: Number(fila.querySelector(".colacion").value || 0)
+            }))
+            const diasSemana = semana.filter((d) => d.trabaja).length
+            const horasSemana = Math.round(semana.reduce((suma, d) => suma + (d.trabaja ? horasDelDia(d) : 0), 0) * 100) / 100
+            if (diasSemana < 4 || diasSemana > 6) {
+                errores.push(`La semana ${n + 1} debe distribuirse en 4 a 6 días (hay ${diasSemana} marcados).`)
+            }
+            if (horasSemana > MAXIMO) {
+                errores.push(`La semana ${n + 1} suma ${horasSemana.toLocaleString("es-CL")} horas y el máximo legal vigente es ${MAXIMO}.`)
+            }
+        }
+    }
     if (porCiclo() && dias === 0) {
         errores.push("Marca los días de trabajo del ciclo (o usa «Armar el ciclo»).")
     }
@@ -226,7 +250,7 @@ document.getElementById("tipo").addEventListener("change", function () {
     // Paquete AD: en el sistema excepcional y el bisemanal los festivos se trabajan según el turno, por defecto.
     document.getElementById("festivos").value = ["excepcional", "bisemanal"].includes(tipoActual()) ? "turno" : "descanso"
     aplicarTipo()
-    if (tipoActual() === "promedio" && ![14, 21, 28].includes(Number(document.getElementById("cicloDias").value))) {
+    if (["promedio", "rotativa"].includes(tipoActual()) && ![14, 21, 28].includes(Number(document.getElementById("cicloDias").value))) {
         document.getElementById("cicloDias").value = 14
     }
     dibujarFilas(null)

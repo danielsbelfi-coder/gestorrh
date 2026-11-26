@@ -92,6 +92,16 @@ async function libroDelTrabajador(trabajador, anio, mes, transaction, { conSeman
         marcas: marcas.map((m) => m.toJSON())
     })
 
+    // Paquete AE: descanso dominical de los exceptuados del art. 38 (dos domingos libres al mes).
+    const { reglasDomingo, avisoDosDomingos } = require("./domingos_art38.js")
+    const reglas = reglasDomingo(contrato)
+    const domingosDelMes = libro.dias.filter((d) => d.diaSemana === 7).length
+    const avisoDomingos = avisoDosDomingos(reglas, libro.totales, domingosDelMes)
+    if (avisoDomingos !== null) {
+        libro.advertencias.push(avisoDomingos)
+    }
+    libro.domingos = { ...reglas, libres: libro.totales.domingos_libres, trabajados: libro.totales.domingos_trabajados }
+
     // Jornada en promedio (22 bis): máximo de 52 h semanales entre ordinarias y extra (art. 31). Se revisan las semanas
     // que terminan en el mes, con los días del mes anterior para la primera (paquete AB).
     if (conSemanas && tramos.some((t) => t.tipo === "promedio")) {

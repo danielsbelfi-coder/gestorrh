@@ -4,9 +4,9 @@ const { libroDelTrabajador } = require("./libro_asistencia.service.js")
 const { calcularDiaLaboral } = require("./libro_asistencia.js")
 
 // Tipos que se registran en el libro. licencia_medica no: las licencias se cargan en su propio módulo.
-const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones", "festivo_libre", "descanso_compensatorio"]
+const TIPOS_LIBRO = ["normal", "atraso", "inasistencia", "permiso_con_goce", "permiso_sin_goce", "vacaciones", "festivo_libre", "descanso_compensatorio", "domingo_libre"]
 const TIPOS_CON_HORA = ["normal", "atraso"]
-const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "recargo_hora_extra", "observaciones"]
+const CAMPOS_MARCA = ["fecha", "hora_entrada", "hora_salida", "tipo", "recargo_hora_extra", "observaciones", "fecha_reemplazo"]
 
 // Recargo de las horas extra de la marca: 50 (por defecto) o 100 %. Solo tiene sentido en marcas con hora.
 function leerRecargo(valor) {
@@ -49,7 +49,8 @@ async function validarMarca(trabajador, entrada, idActual = null) {
         hora_entrada: normalizarHora(entrada.hora_entrada, "entrada"),
         hora_salida: normalizarHora(entrada.hora_salida, "salida"),
         recargo_hora_extra: leerRecargo(entrada.recargo_hora_extra),
-        observaciones: typeof entrada.observaciones === "string" && entrada.observaciones.trim() !== "" ? entrada.observaciones.trim() : null
+        observaciones: typeof entrada.observaciones === "string" && entrada.observaciones.trim() !== "" ? entrada.observaciones.trim() : null,
+        fecha_reemplazo: entrada.tipo === "domingo_libre" && entrada.fecha_reemplazo ? String(entrada.fecha_reemplazo).slice(0, 10) : null
     }
 
     if (!esFechaValida(datos.fecha)) {
@@ -82,6 +83,27 @@ async function validarMarca(trabajador, entrada, idActual = null) {
     }
     if (esperado.tipo === "licencia") {
         throw new ConflictError("Ese día el trabajador tiene licencia médica")
+    }
+
+    // Paquete AE: domingo de trabajo que se da libre (art. 38), con un día de reemplazo opcional: un día libre de la misma
+    // semana (lunes a sábado) y del mismo mes, que se trabaja con el horario del domingo.
+    if (datos.tipo === "domingo_libre") {
+        if (esperado.tipo !== "laboral" || dia.diaSemana !== 7) {
+            throw new ConflictError("«Domingo libre» se registra en un domingo de trabajo")
+        }
+        if (datos.fecha_reemplazo !== null) {
+            const lunes = new Date(`${datos.fecha}T00:00:00Z`)
+            lunes.setUTCDate(lunes.getUTCDate() - 6)
+            const desde = lunes.toISOString().slice(0, 10)
+            if (!esFechaValida(datos.fecha_reemplazo) || datos.fecha_reemplazo < desde || datos.fecha_reemplazo >= datos.fecha || datos.fecha_reemplazo.slice(0, 7) !== datos.fecha.slice(0, 7)) {
+                throw new ValidationError("El día de reemplazo debe ser de la misma semana (lunes a sábado) y del mismo mes que el domingo")
+            }
+            const otro = libro.dias.find((d) => d.fecha === datos.fecha_reemplazo)
+            const delOtro = otro.esperado.reemplazo ? { tipo: "libre" } : (otro.esperadoOriginal ?? otro.esperado)
+            if (delOtro.tipo !== "libre") {
+                throw new ConflictError("El día de reemplazo debe ser un día libre de la jornada")
+            }
+        }
     }
 
     // Paquete AD: festivos que se trabajan según el turno (art. 38).
@@ -159,6 +181,7 @@ async function crearAsistencia(datos, empresasPermitidas, usuarioId) {
             "recargo_hora_extra",
             "fuente",
             "observaciones",
+            "fecha_reemplazo",
             "usuario_registro_id"
         ]
     })

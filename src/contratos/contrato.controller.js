@@ -31,6 +31,10 @@ async function anular(req, res) {
     res.status(200).json(contrato)
 }
 
+async function domingos(req, res) {
+    res.status(200).json(await require("./contrato.service").actualizarDomingos(req.params.id, req.body ?? {}, req.empresasPermitidas, req.usuario.id))
+}
+
 async function documento(req, res) {
     const datos = await documentoContrato(req.params.id, req.empresasPermitidas)
     const doc = new PDFDocument({ size: "LETTER", margin: 50 })
@@ -48,5 +52,6 @@ module.exports = {
     firmar,
     documento,
     corregir,
-    anular
+    anular,
+    domingos
 }

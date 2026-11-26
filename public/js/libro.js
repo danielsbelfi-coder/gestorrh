@@ -7,7 +7,8 @@ const TIPOS_MARCA = {
     permiso_sin_goce: "Permiso sin goce",
     vacaciones: "Vacaciones",
     festivo_libre: "Festivo libre (no trabajó el festivo de turno)",
-    descanso_compensatorio: "Descanso compensatorio por festivo trabajado"
+    descanso_compensatorio: "Descanso compensatorio por festivo trabajado",
+    domingo_libre: "Domingo libre (art. 38)"
 }
 const DIAS_CORTOS = ["", "lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
@@ -38,8 +39,8 @@ function minutosATexto(minutos) {
 
 function textoEsperado(esperado) {
     switch (esperado.tipo) {
-        case "laboral": return `${esperado.festivo ? `Festivo de turno · ${esperado.nombre} · ` : ""}${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
-        case "libre": return esperado.compensatorio ? "Libre (descanso compensatorio)" : "Libre"
+        case "laboral": return `${esperado.festivo ? `Festivo de turno · ${esperado.nombre} · ` : ""}${esperado.reemplazo ? "Reemplazo del domingo libre · " : ""}${hora(esperado.entrada)} – ${hora(esperado.salida)}${esperado.cruza ? " (día sig.)" : ""}`
+        case "libre": return esperado.compensatorio ? "Libre (descanso compensatorio)" : esperado.domingoLibre ? "Libre (domingo libre, art. 38)" : "Libre"
         case "feriado": return `Feriado · ${esperado.nombre}`
         case "licencia": return "Licencia médica"
         case "fuera_contrato": return "Fuera de contrato"
@@ -136,6 +137,17 @@ function dibujarResumen() {
     if (t.minutos_festivo_pago > 0) {
         tarjetas.push(["Horas de festivo a pagar (50 %)", minutosATexto(t.minutos_festivo_pago), "exito"])
     }
+    // Paquete AE: domingos del mes para los exceptuados del descanso dominical (art. 38).
+    const d = libro.domingos
+    if (d && d.causal !== "ninguna") {
+        tarjetas.push([`Domingos libres (art. 38, ${d.textoCausal})`, `${d.libres} libres · ${d.trabajados} trabajados`, d.dosDomingos && d.libres < 2 ? "advertencia" : ""])
+        if (d.excepciones.length > 0) {
+            tarjetas.push(["Sin mínimo de domingos", d.excepciones.join("; "), ""])
+        }
+        if (d.n7 && t.minutos_domingo_ordinarios > 0) {
+            tarjetas.push([`Horas de domingo con recargo (${String(d.recargo).replace(".", ",")} %)`, minutosATexto(t.minutos_domingo_ordinarios), "exito"])
+        }
+    }
     const f = libro.festivos
     if (f) {
         tarjetas.push(["Días compensatorios por festivos", `${f.saldoInicial} + ${f.ganados} − ${f.otorgados} = ${f.saldoFinal}`, f.saldoFinal < 0 ? "peligro" : ""])
@@ -197,9 +209,11 @@ function editorDeFila(dia) {
     const noLaboral = esperado.tipo === "libre" || esperado.tipo === "feriado"
     // Paquete AD: «Festivo libre» solo en un festivo de turno; el descanso compensatorio, en un día de trabajo que no
     // sea festivo y si la jornada compensa los festivos con días de descanso.
+    // Paquete AE: «Domingo libre (art. 38)» solo en un domingo de trabajo.
     const deFestivo = (v) => (v === "festivo_libre" && esperado.festivo === true)
         || (v === "descanso_compensatorio" && !esperado.festivo && libro.festivos !== null && libro.festivos !== undefined)
-        || !["festivo_libre", "descanso_compensatorio"].includes(v)
+        || (v === "domingo_libre" && dia.diaSemana === 7)
+        || !["festivo_libre", "descanso_compensatorio", "domingo_libre"].includes(v)
     const tipos = noLaboral ? { normal: TIPOS_MARCA.normal } : Object.fromEntries(Object.entries(TIPOS_MARCA).filter(([v]) => deFestivo(v)))
     const ayuda = noLaboral
         ? "Trabajo en día libre o feriado: indica entrada y salida. Todas las horas se proponen como extra."
@@ -214,6 +228,7 @@ function editorDeFila(dia) {
                 <option value="50"${Number(m?.recargo_hora_extra ?? 50) === 50 ? " selected" : ""}>50 %</option>
                 <option value="100"${Number(m?.recargo_hora_extra) === 100 ? " selected" : ""}>100 % (por trato o contrato)</option>
             </select></label>
+            <label class="solo-domingo">Día de reemplazo (opcional)<input type="date" id="reemplazoMarca" value="${escaparHtml(m?.fecha_reemplazo ?? "")}" title="Un día libre de la misma semana (lunes a sábado) y del mismo mes, que se trabaja con el horario del domingo"></label>
             <label class="campo-ancho">Observaciones<input type="text" id="obsMarca" maxlength="300" value="${escaparHtml(m?.observaciones ?? "")}"></label>
             <div class="acciones-grupo">
                 <button type="submit">Guardar</button>
@@ -226,8 +241,9 @@ function editorDeFila(dia) {
 }
 
 function mostrarCamposHora() {
-    const conHora = document.getElementById("tipoMarca")?.value === "normal"
-    document.querySelectorAll(".form-marca .solo-hora").forEach((campo) => { campo.hidden = !conHora })
+    const tipo = document.getElementById("tipoMarca")?.value
+    document.querySelectorAll(".form-marca .solo-hora").forEach((campo) => { campo.hidden = tipo !== "normal" })
+    document.querySelectorAll(".form-marca .solo-domingo").forEach((campo) => { campo.hidden = tipo !== "domingo_libre" })
 }
 
 function abrirEditor(fecha) {
@@ -253,7 +269,8 @@ async function guardarMarca(evento) {
         hora_entrada: tipo === "normal" ? document.getElementById("entradaMarca").value || null : null,
         hora_salida: tipo === "normal" ? document.getElementById("salidaMarca").value || null : null,
         recargo_hora_extra: tipo === "normal" ? Number(document.getElementById("recargoMarca").value) : 50,
-        observaciones: document.getElementById("obsMarca").value.trim() || null
+        observaciones: document.getElementById("obsMarca").value.trim() || null,
+        fecha_reemplazo: tipo === "domingo_libre" ? document.getElementById("reemplazoMarca").value || null : null
     }
     const resultado = dia.marca
         ? await llamarApi(`/api/asistencias/${dia.marca.id}`, { method: "PATCH", body: JSON.stringify(cuerpo) })

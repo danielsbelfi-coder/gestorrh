@@ -52,7 +52,7 @@ function horasDelDia(dia) {
     return redondear((minutosDelTurno(dia) - Number(dia.colacion ?? 0)) / 60)
 }
 
-const TIPOS = ["semanal", "promedio", "bisemanal", "excepcional", "art25"]
+const TIPOS = ["semanal", "rotativa", "promedio", "bisemanal", "excepcional", "art25"]
 // Art. 25 (choferes y auxiliares de la locomoción colectiva interurbana): 180 horas mensuales hasta el 25-04-2028;
 // desde el 26-04-2028, 40 horas semanales promedio en cómputo mensual (Ley 21.561, se puede pactar antes).
 const HORAS_MENSUALES_ART25 = 180
@@ -151,7 +151,7 @@ function validarJornada(entrada, fecha, opciones = {}) {
     const vacio = (mensaje) => ({ dias: [], horasSemanales: 0, diasTrabajados: 0, cicloDias: 0, errores: [mensaje], advertencias })
 
     if (!TIPOS.includes(tipo)) {
-        return vacio("El tipo de jornada debe ser semanal, promedio (art. 22 bis), bisemanal (art. 39), excepcional (art. 38) o de choferes interurbanos (art. 25)")
+        return vacio("El tipo de jornada debe ser semanal, semanal rotativa, promedio (art. 22 bis), bisemanal (art. 39), excepcional (art. 38) o de choferes interurbanos (art. 25)")
     }
     if (tipo === "art25") {
         return validarArt25(fecha, opciones)
@@ -163,6 +163,9 @@ function validarJornada(entrada, fecha, opciones = {}) {
     }
     if (tipo === "promedio" && !CICLOS_PROMEDIO.includes(ciclo)) {
         return vacio("La jornada en promedio (art. 22 bis) se distribuye en ciclos de 2, 3 o 4 semanas (14, 21 o 28 días)")
+    }
+    if (tipo === "rotativa" && !CICLOS_PROMEDIO.includes(ciclo)) {
+        return vacio("La jornada semanal rotativa se repite cada 2, 3 o 4 semanas (14, 21 o 28 días)")
     }
     if (!Number.isInteger(ciclo) || ciclo < 2 || ciclo > CICLO_MAXIMO) {
         return vacio(`El ciclo debe tener entre 2 y ${CICLO_MAXIMO} días`)
@@ -193,8 +196,10 @@ function validarJornada(entrada, fecha, opciones = {}) {
         if (!esFecha(inicio)) {
             errores.push("Indica la fecha en que empieza el día 1 del ciclo")
             inicio = null
-        } else if (tipo === "promedio" && new Date(`${inicio}T00:00:00Z`).getUTCDay() !== 1) {
-            errores.push("En la jornada en promedio (art. 22 bis) el ciclo se cuenta por semanas: debe empezar un lunes")
+        } else if ((tipo === "promedio" || tipo === "rotativa") && new Date(`${inicio}T00:00:00Z`).getUTCDay() !== 1) {
+            errores.push(tipo === "promedio"
+                ? "En la jornada en promedio (art. 22 bis) el ciclo se cuenta por semanas: debe empezar un lunes"
+                : "La jornada semanal rotativa se cuenta por semanas: el ciclo debe empezar un lunes")
         }
     }
 
@@ -240,6 +245,22 @@ function validarJornada(entrada, fecha, opciones = {}) {
         }
         if (horasSemanales > maximo) {
             errores.push(`La jornada suma ${horasSemanales} horas semanales y el máximo legal desde ${fecha} es ${maximo}`)
+        }
+    }
+
+    // Paquete AE: semanal rotativa (art. 22): cada semana del ciclo es una jornada semanal completa (4 a 6 días y hasta
+    // el máximo semanal). Sirve, por ejemplo, para dar domingos libres alternados (art. 38 inc. 4°).
+    if (tipo === "rotativa") {
+        for (let s = 0; s < ciclo / 7; s++) {
+            const semana = dias.slice(s * 7, s * 7 + 7)
+            const horas = redondear(semana.reduce((suma, d) => suma + horasDelDia(d), 0))
+            const trabajadosSemana = semana.filter((d) => d.trabaja).length
+            if (trabajadosSemana < DIAS_MINIMOS || trabajadosSemana > DIAS_MAXIMOS) {
+                errores.push(`La semana ${s + 1} del ciclo debe distribuirse en ${DIAS_MINIMOS} a ${DIAS_MAXIMOS} días (tiene ${trabajadosSemana})`)
+            }
+            if (horas > maximo) {
+                errores.push(`La semana ${s + 1} del ciclo suma ${horas} horas y el máximo legal desde ${fecha} es ${maximo}: en la jornada semanal rotativa cada semana respeta el máximo`)
+            }
         }
     }
 
@@ -375,6 +396,15 @@ function clausulaDistribucion(jornada, horas) {
     const inicio = jornada.inicio_ciclo ? fechaEnTextoSimple(jornada.inicio_ciclo) : ""
     if (tipo === "promedio") {
         return `La jornada ordinaria de trabajo será de ${numeroTexto(horas)} horas semanales en promedio, distribuidas en ciclos de ${ciclo / 7} semanas conforme al artículo 22 bis del Código del Trabajo, contados desde el ${inicio}, según el siguiente calendario: ${distribucion}.`
+    }
+    if (tipo === "rotativa") {
+        // Cada semana del turno se describe como una semana de lunes a domingo.
+        const semanas = []
+        for (let n = 0; n < ciclo / 7; n++) {
+            const semana = jornada.dias.slice(n * 7, n * 7 + 7).map((d, i) => ({ ...d, dia: i + 1 }))
+            semanas.push(`semana ${n + 1}: ${textoDistribucion(semana, "semanal").replace(/^./, (c) => c.toLowerCase())}`)
+        }
+        return `La jornada ordinaria de trabajo será de ${numeroTexto(horas)} horas semanales, distribuidas en un turno rotativo de ${ciclo / 7} semanas que se repite, contado desde el lunes ${inicio}: ${semanas.join("; ")}.`
     }
     if (tipo === "bisemanal") {
         return `La jornada ordinaria de trabajo será bisemanal, conforme al artículo 39 del Código del Trabajo, en ciclos de ${ciclo} días contados desde el ${inicio}, con un promedio de ${numeroTexto(horas)} horas semanales: ${distribucion}. Al término de cada período de trabajo se otorgarán los días de descanso compensatorio de los domingos y festivos ocurridos en él, aumentados en uno.`

@@ -167,11 +167,28 @@ function calcularDiaLaboral(esperado, marca) {
 function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], feriados = [], licencias = [], marcas = [] }) {
     const marcaPorFecha = new Map(marcas.map((m) => [String(m.fecha).slice(0, 10), m]))
     const totales = { minutos_atraso: 0, minutos_extra: 0, minutos_extra_50: 0, minutos_extra_100: 0, dias_inasistencia: 0, dias_permiso_sin_goce: 0, dias_vacaciones: 0, marcas_pendientes: 0,
-        festivos_trabajados: 0, festivos_por_compensar: 0, minutos_festivo_pago: 0, dias_descanso_compensatorio: 0 }
+        festivos_trabajados: 0, festivos_por_compensar: 0, minutos_festivo_pago: 0, dias_descanso_compensatorio: 0,
+        domingos_libres: 0, domingos_trabajados: 0, domingos_no_disponibles: 0, minutos_domingo_ordinarios: 0, minutos_extra_domingo_50: 0 }
     const advertencias = []
 
+    // Paquete AE: domingos libres (art. 38) con un día de reemplazo: ese día libre de la misma semana pasa a ser de
+    // trabajo con el horario del domingo.
+    const reemplazos = new Map()
+    for (const m of marcas) {
+        if (m.tipo === "domingo_libre" && m.estado_aprobacion === "aprobada" && m.fecha_reemplazo) {
+            const domingo = esperadoDelDia({ fecha: String(m.fecha).slice(0, 10), desde, hasta, tramosJornada, feriados, licencias })
+            if (domingo.tipo === "laboral") {
+                reemplazos.set(String(m.fecha_reemplazo).slice(0, 10), { tipo: "laboral", entrada: domingo.entrada, salida: domingo.salida, colacion: domingo.colacion, ...(domingo.cruza ? { cruza: true } : {}), reemplazo: true })
+            }
+        }
+    }
+
     const dias = diasDelMes(anio, mes).map((fecha) => {
-        const esperado = esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencias })
+        let esperado = esperadoDelDia({ fecha, desde, hasta, tramosJornada, feriados, licencias })
+        const reemplazoDelDia = esperado.tipo === "libre" ? reemplazos.get(fecha) : undefined
+        if (reemplazoDelDia) {
+            esperado = reemplazoDelDia
+        }
         const marca = marcaPorFecha.get(fecha) ?? null
         const fila = { fecha, diaSemana: diaDeLaSemana(fecha), esperado, marca, minutosDescuento: 0, minutosExtra: 0, recargo: 50, advertencias: [], cuenta: false }
 
@@ -214,6 +231,24 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
                     : { tipo: "libre", colacion: esperado.colacion, compensatorio: true }
                 if (marca.tipo === "descanso_compensatorio") {
                     totales.dias_descanso_compensatorio++
+                }
+            }
+            return fila
+        }
+
+        // Paquete AE: domingo de trabajo que se da libre (art. 38). El día de reemplazo, si hay, ya quedó de trabajo.
+        if (marca.tipo === "domingo_libre") {
+            if (esperado.tipo !== "laboral" || fila.diaSemana !== 7) {
+                fila.advertencias.push("Domingo libre: solo corresponde en un domingo de trabajo; no se considera")
+                fila.cuenta = false
+                return fila
+            }
+            if (aprobada) {
+                fila.esperadoOriginal = esperado
+                fila.esperado = { tipo: "libre", colacion: esperado.colacion, domingoLibre: true }
+                const reemplazo = marca.fecha_reemplazo ? String(marca.fecha_reemplazo).slice(0, 10) : null
+                if (reemplazo !== null && !reemplazos.has(reemplazo)) {
+                    fila.advertencias.push("El día de reemplazo no está en el libro o no es un día libre: no se considera el reemplazo")
                 }
             }
             return fila
@@ -304,6 +339,36 @@ function calcularLibro({ anio, mes, desde, hasta = null, tramosJornada = [], fer
         } else {
             fila.festivoPorCompensar = true
             totales.festivos_por_compensar++
+        }
+    }
+
+    // Paquete AE: domingos del mes (art. 38). Libre: día libre o feriado sin trabajo. Trabajado: de trabajo sin ausencia
+    // de día completo, o libre con horas trabajadas. No disponible: fuera del contrato, con licencia o vacaciones.
+    // Horas ordinarias de domingo (para el recargo del N° 7): las del horario menos lo descontado; horas extra al 50 %
+    // de domingo, aparte (su base lleva el recargo).
+    for (const fila of dias.filter((d) => d.diaSemana === 7)) {
+        const tipo = fila.esperado.tipo
+        const marcaAprobada = fila.marca && fila.marca.estado_aprobacion === "aprobada" ? fila.marca : null
+        if (tipo === "fuera_contrato" || tipo === "licencia" || (marcaAprobada && ["vacaciones", "licencia_medica"].includes(marcaAprobada.tipo))) {
+            totales.domingos_no_disponibles++
+            continue
+        }
+        if (tipo === "laboral") {
+            if (marcaAprobada && TIPOS_DIA_COMPLETO.includes(marcaAprobada.tipo)) {
+                continue
+            }
+            totales.domingos_trabajados++
+            const ordinarios = minutosDelTurno(fila.esperado) - Number(fila.esperado.colacion ?? 0)
+            totales.minutos_domingo_ordinarios += Math.max(0, ordinarios - (fila.cuenta ? fila.minutosDescuento : 0))
+        } else if (tipo === "libre" || tipo === "feriado") {
+            if (fila.cuenta && fila.minutosExtra > 0) {
+                totales.domingos_trabajados++
+            } else {
+                totales.domingos_libres++
+            }
+        }
+        if (fila.cuenta && fila.minutosExtra > 0 && fila.recargo === 50) {
+            totales.minutos_extra_domingo_50 += fila.minutosExtra
         }
     }
 

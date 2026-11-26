@@ -18,6 +18,11 @@ const Asistencia = sequelize.define("Asistencia", {
         type: DataTypes.TIME,
         allowNull: true
     },
+    // Paquete AE: en un «domingo_libre», el día libre de la misma semana que se trabaja en su reemplazo (opcional).
+    fecha_reemplazo: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
     tipo: {
         type: DataTypes.ENUM(
             "normal",
@@ -28,7 +33,8 @@ const Asistencia = sequelize.define("Asistencia", {
             "vacaciones",
             "licencia_medica",
             "festivo_libre",
-            "descanso_compensatorio"
+            "descanso_compensatorio",
+            "domingo_libre"
         ),
         allowNull: false
     },

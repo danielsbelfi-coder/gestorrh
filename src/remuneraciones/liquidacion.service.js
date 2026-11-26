@@ -842,6 +842,34 @@ async function prepararCalculo(periodo, trabajador) {
     if (saldoCompensatorio.variable !== null) {
         datos.variables = [...datos.variables, saldoCompensatorio.variable]
     }
+    // Paquete AE: N° 7 del art. 38 (comercio y servicios que atienden al público): las horas ordinarias trabajadas en
+    // domingo llevan el recargo pactado (a lo menos 30 %, inc. 2°) sobre el valor hora; la hora extra de domingo se
+    // calcula sobre la hora ordinaria con ese recargo (el concepto viene al 95 % = 1,3 × 1,5; con otro % se ajusta).
+    const { reglasDomingo } = require("../asistencia/domingos_art38.js")
+    const reglasDom = reglasDomingo(contrato)
+    let recargoDomingo = null
+    if (reglasDom.n7) {
+        const valorHoraBase = datos.valorHoraContrato ?? valorHoraOrdinaria(datos.sueldoBase, datos.horasSemanales)
+        const { libroDelTrabajador } = require("../asistencia/libro_asistencia.service.js")
+        const libroDom = await libroDelTrabajador(trabajador, periodo.anio, periodo.mes)
+        const minutos = Number(libroDom.totales.minutos_domingo_ordinarios ?? 0)
+        if (minutos > 0) {
+            const concepto = await ConceptoRemuneracion.findOne({ where: { empresa_id: null, codigo: "RECARGO_DOMINGO" } })
+            if (concepto === null) {
+                throw new ConflictError("Falta el concepto común RECARGO_DOMINGO")
+            }
+            const monto = Math.round(minutos / 60 * valorHoraBase * reglasDom.recargo / 100)
+            datos.variables = [...datos.variables, { concepto, cantidad: null, monto, fuente: "asistencia", mes_origen: null }]
+            recargoDomingo = { minutos, porcentaje: reglasDom.recargo, valorHora: Math.round(valorHoraBase * 100) / 100, monto }
+        }
+        if (reglasDom.recargo !== 30) {
+            const factor = (1 + reglasDom.recargo / 100) / 1.3
+            datos.variables = datos.variables.map((v) => v.concepto?.codigo === "HORAS_EXTRA_DOMINGO"
+                ? { ...v, valorHora: (v.valorHora ?? valorHoraBase) * factor }
+                : v)
+        }
+    }
+
     // Paquete AD: festivos trabajados sin día compensatorio al término, a un día de sueldo cada uno (sueldo del mes / 30;
     // en el contrato diario, el valor del día).
     const { variableFestivosAlTermino } = require("../asistencia/festivos_compensatorios.service.js")
@@ -931,6 +959,12 @@ async function prepararCalculo(periodo, trabajador) {
         // Paquete AD: y las horas de los festivos de turno que se pagan con recargo.
         const horasFestivo = Math.round(Number(libro.totales.minutos_festivo_pago ?? 0) / 60 * 100) / 100
         horasLibro[50] = Math.round((horasLibro[50] + horasFestivo + promedio.propuestas.reduce((suma, p) => suma + p.horas, 0)) * 100) / 100
+        // Paquete AE: en el N° 7 del art. 38, las horas extra al 50 % de domingo van aparte, al 95 %.
+        if (libro.domingos?.n7 && Number(libro.totales.minutos_extra_domingo_50 ?? 0) > 0) {
+            const horasDomingo = Math.round(Number(libro.totales.minutos_extra_domingo_50) / 60 * 100) / 100
+            horasLibro[50] = Math.round((horasLibro[50] - horasDomingo) * 100) / 100
+            horasLibro[95] = horasDomingo
+        }
         return [...avisosLibroDesincronizado({ horasLibro, aprobadas, resumen, totales: libro.totales }), ...promedio.avisos]
     })()
     const avisos = [...porDias.avisos, ...avisosLibro, ...saldoCompensatorio.avisos, ...festivosTermino.avisos, ...(resultado.nuevoSaldoPendiente > 0
@@ -988,6 +1022,7 @@ async function prepararCalculo(periodo, trabajador) {
         sueldo: { tramos: tramosConDias },
         ...(saldoCompensatorio.detalle ? { saldoCompensatorio: saldoCompensatorio.detalle } : {}),
         ...(festivosTermino.detalle ? { festivosCompensatorios: festivosTermino.detalle } : {}),
+        ...(recargoDomingo ? { recargoDomingo } : {}),
         // Fecha de pago según la regla de la empresa al calcular (null si no tiene). El PDF y la nómina la muestran.
         fechaPago: await fechaPagoDelPeriodo(empresa, periodo.anio, periodo.mes),
         cotizante: { tipo: tipoCotizanteMes, pensionado: situacion.pensionado, cotizaAfp: situacion.cotiza_afp, tipoPension: situacion.tipo_pension, tecnicoExtranjero: situacion.tecnico_extranjero === true },
